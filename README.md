@@ -30,6 +30,7 @@ B站 https://www.bilibili.com/video/BV15V9AYgEvL/?share_source=copy_web&vd_sourc
 4. 生成lombok和mybatisPlus的代码
 5. 优化web前端生成，如果是文件类型生成的代码列表可以直接下载，动态显隐列，长文本内容可以隐藏
 6. 批量生成数据
+7. 批量导入功能
 
 ### 集成mybatisPlus 3.5.9与lombok 1.18.24
 
