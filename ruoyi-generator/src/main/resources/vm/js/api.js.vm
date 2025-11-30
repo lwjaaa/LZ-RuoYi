@@ -42,3 +42,23 @@ export function del${BusinessName}(${pkColumn.javaField}) {
     method: 'delete'
   })
 }
+#if($enableImport)
+
+// 导入${functionName}
+export function import${BusinessName}(data) {
+  return request({
+    url: '/${moduleName}/${businessName}/importData',
+    method: 'post',
+    data: data
+  })
+}
+
+// 下载${functionName}导入模板
+export function importTemplate${BusinessName}() {
+  return request({
+    url: '/${moduleName}/${businessName}/importTemplate',
+    method: 'post',
+    responseType: 'blob'
+  })
+}
+#end

@@ -37,12 +37,8 @@ public class ${ClassName}Vo implements Serializable
 #set($comment=$column.columnComment)
 #end
 #if($parentheseIndex != -1)
-    @Excel(name = "${comment}", readConverterExp = "$column.readConverterExp()")
 #elseif($column.javaType == 'Date')
     @JsonFormat(pattern = "yyyy-MM-dd")
-    @Excel(name = "${comment}", width = 30, dateFormat = "yyyy-MM-dd")
-#else
-    @Excel(name = "${comment}")
 #end
 #end
     private $column.javaType $column.javaField;

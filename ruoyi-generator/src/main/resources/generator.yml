@@ -10,3 +10,5 @@ gen:
   tablePrefix: tb_
   # 是否允许生成文件覆盖到本地（自定义路径），默认不允许
   allowOverwrite: false
+  #是否开启生成导入功能
+  enableImport: true
