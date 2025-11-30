@@ -389,12 +389,7 @@
 
 <script>
 import { list${BusinessName}, get${BusinessName}, del${BusinessName}, add${BusinessName}, update${BusinessName} } from "@/api/${moduleName}/${businessName}";
-#foreach ($column in $columns)
-#if($column.list && $column.htmlType == "fileUpload")
-import { getFileName, getFilePath } from '@/utils/ruoyi'
-#break
-#end
-#end
+
 export default {
   name: "${BusinessName}",
 #if(${dicts} != '')
@@ -509,13 +504,6 @@ export default {
         this.loading = false;
       });
     },
-#foreach ($column in $columns)
-#if($column.list && $column.htmlType == "fileUpload")
-    getFilePath,
-    getFileName,
-#break
-#end
-#end
     // 取消按钮
     cancel() {
       this.open = false;
