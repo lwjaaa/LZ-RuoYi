@@ -1,7 +1,7 @@
 <p align="center">
 	<img alt="logo" src="https://oscimg.oschina.net/oscnet/up-d3d0a9303e11d522a06cd263f3079027715.png">
 </p>
-<h1 align="center" style="margin: 30px 0 30px; font-weight: bold;">RuoYi v3.8.9</h1>
+<h1 align="center" style="margin: 30px 0 30px; font-weight: bold;">RuoYi v3.9.1</h1>
 <h4 align="center">基于SpringBoot+Vue前后端分离的Java快速开发框架</h4>
 <p align="center">
 	<a href="https://gitee.com/y_project/RuoYi-Vue/stargazers"><img src="https://gitee.com/y_project/RuoYi-Vue/badge/star.svg?theme=dark"></a>
@@ -25,17 +25,17 @@ B站 https://www.bilibili.com/video/BV15V9AYgEvL/?share_source=copy_web&vd_sourc
 在不影响若依原本功能基础上，集成mybatisPlus、lombok、数据批量插入、优化前端代码生成
 
 1. 集成mybatisPlus 3.5.9
-2. 集成lombok 1.18.24
+2. 集成lombok 1.18.36
 3. 根据lombok、mybatisPlus与业务生成对应的dto和vo
 4. 生成lombok和mybatisPlus的代码
 5. 优化web前端生成，如果是文件类型生成的代码列表可以直接下载，动态显隐列，长文本内容可以隐藏
 6. 批量生成数据
 7. 批量导入功能
 
-### 集成mybatisPlus 3.5.9与lombok 1.18.24
+### 1、集成mybatisPlus 3.5.9与lombok 1.18.24
 
 ```xml
-        <lombok.version>1.18.24</lombok.version>
+        <lombok.version>1.18.36</lombok.version>
         <mybatis-plus.version>3.5.9</mybatis-plus.version>
 ```
 
@@ -54,7 +54,18 @@ B站 https://www.bilibili.com/video/BV15V9AYgEvL/?share_source=copy_web&vd_sourc
             </dependency>
 ```
 
-### 根据lombok、mybatisPlus与业务生成对应的dto和vo
+### 2、在自己需要导入mybatisPlus的模块导入依赖
+
+```xml
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+        </dependency>
+```
+
+![YY_2026-03-19_17-40-29](assets/YY_2026-03-19_17-40-29.png)
+
+### 3、根据lombok、mybatisPlus与业务生成对应的dto和vo
 
 ![image-20250227112112873](assets/image-20250227112112873.png)
 
