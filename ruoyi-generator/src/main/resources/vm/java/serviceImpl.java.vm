@@ -5,13 +5,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.stream.Collectors;
-import javax.validation.Validator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.ruoyi.common.utils.StringUtils;
 #if($enableImport)
 import com.ruoyi.common.exception.ServiceException;
-import com.ruoyi.common.utils.bean.BeanValidators;
 import com.ruoyi.common.utils.spring.SpringUtils;
 #end
 #foreach ($import in $importList)
@@ -48,21 +46,9 @@ import ${packageName}.model.vo.${className}.${ClassName}Vo;
 @Service
 public class ${ClassName}ServiceImpl extends ServiceImpl<${ClassName}Mapper, ${ClassName}> implements I${ClassName}Service
 {
-#if($enableImport)
-    private static final Logger log = LoggerFactory.getLogger(${ClassName}ServiceImpl.class);
-
-    /** 导入用户数据校验器 */
-    private static Validator validator;
-#end
 
     @Resource
     private ${ClassName}Mapper ${className}Mapper;
-#if($enableImport)
-
-    {
-        validator = SpringUtils.getBean(Validator.class);
-    }
-#end
 
     //region mybatis代码
     /**
@@ -260,7 +246,7 @@ public class ${ClassName}ServiceImpl extends ServiceImpl<${ClassName}Mapper, ${C
     @Override
     public String import${ClassName}Data(List<${ClassName}> ${className}List, Boolean isUpdateSupport, String operName)
     {
-        if (StringUtils.isNull(${className}List) || ${className}List.size() == 0)
+        if (StringUtils.isEmpty(${className}List))
         {
             throw new ServiceException("导入${functionName}数据不能为空！");
         }
@@ -281,7 +267,6 @@ public class ${ClassName}ServiceImpl extends ServiceImpl<${ClassName}Mapper, ${C
                 }
                 if (StringUtils.isNull(${className}Exist))
                 {
-                    BeanValidators.validateWithException(validator, ${className});
 #foreach ($column in $columns)
 #if($column.javaField == 'createTime')
                     ${className}.setCreateTime(DateUtils.getNowDate());
@@ -294,7 +279,6 @@ public class ${ClassName}ServiceImpl extends ServiceImpl<${ClassName}Mapper, ${C
                 }
                 else if (isUpdateSupport)
                 {
-                    BeanValidators.validateWithException(validator, ${className});
 #foreach ($column in $columns)
 #if($column.javaField == 'updateTime')
                     ${className}.setUpdateTime(DateUtils.getNowDate());
@@ -333,5 +317,4 @@ public class ${ClassName}ServiceImpl extends ServiceImpl<${ClassName}Mapper, ${C
         return successMsg.toString();
     }
 #end
-
 }
