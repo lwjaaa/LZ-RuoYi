@@ -1,7 +1,7 @@
 package com.ruoyi.web.controller.system;
 
 import java.util.List;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
@@ -61,7 +61,7 @@ public class SysConfigController extends BaseController
      */
     @PreAuthorize("@ss.hasPermi('system:config:query')")
     @GetMapping(value = "/{configId}")
-    public AjaxResult getInfo(@PathVariable Long configId)
+    public AjaxResult getInfo(@PathVariable("configId") Long configId)
     {
         return success(configService.selectConfigById(configId));
     }
@@ -70,7 +70,7 @@ public class SysConfigController extends BaseController
      * 根据参数键名查询参数值
      */
     @GetMapping(value = "/configKey/{configKey}")
-    public AjaxResult getConfigKey(@PathVariable String configKey)
+    public AjaxResult getConfigKey(@PathVariable("configKey") String configKey)
     {
         return success(configService.selectConfigByKey(configKey));
     }
@@ -113,7 +113,7 @@ public class SysConfigController extends BaseController
     @PreAuthorize("@ss.hasPermi('system:config:remove')")
     @Log(title = "参数管理", businessType = BusinessType.DELETE)
     @DeleteMapping("/{configIds}")
-    public AjaxResult remove(@PathVariable Long[] configIds)
+    public AjaxResult remove(@PathVariable("configIds") Long[] configIds)
     {
         configService.deleteConfigByIds(configIds);
         return success();

@@ -1,7 +1,7 @@
 package com.ruoyi.web.controller.system;
 
 import java.util.List;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
@@ -58,7 +58,7 @@ public class SysDictTypeController extends BaseController
      */
     @PreAuthorize("@ss.hasPermi('system:dict:query')")
     @GetMapping(value = "/{dictId}")
-    public AjaxResult getInfo(@PathVariable Long dictId)
+    public AjaxResult getInfo(@PathVariable("dictId") Long dictId)
     {
         return success(dictTypeService.selectDictTypeById(dictId));
     }
@@ -101,7 +101,7 @@ public class SysDictTypeController extends BaseController
     @PreAuthorize("@ss.hasPermi('system:dict:remove')")
     @Log(title = "字典类型", businessType = BusinessType.DELETE)
     @DeleteMapping("/{dictIds}")
-    public AjaxResult remove(@PathVariable Long[] dictIds)
+    public AjaxResult remove(@PathVariable("dictIds") Long[] dictIds)
     {
         dictTypeService.deleteDictTypeByIds(dictIds);
         return success();

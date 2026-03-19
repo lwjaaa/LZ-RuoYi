@@ -49,7 +49,7 @@ B站 https://www.bilibili.com/video/BV15V9AYgEvL/?share_source=copy_web&vd_sourc
 
             <dependency>
                 <groupId>com.baomidou</groupId>
-                <artifactId>mybatis-plus-boot-starter</artifactId>
+                <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
                 <version>${mybatis-plus.version}</version>
             </dependency>
 ```

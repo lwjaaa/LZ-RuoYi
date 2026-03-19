@@ -1,13 +1,14 @@
 package com.ruoyi.common.utils.ip;
 
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-import javax.servlet.http.HttpServletRequest;
-
 import com.ruoyi.common.core.domain.DeviceInfo;
 import com.ruoyi.common.utils.ServletUtils;
 import com.ruoyi.common.utils.StringUtils;
-import eu.bitwalker.useragentutils.UserAgent;
+import jakarta.servlet.http.HttpServletRequest;
+import nl.basjes.parse.useragent.UserAgent;
+import nl.basjes.parse.useragent.UserAgentAnalyzer;
+
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 
 /**
  * 获取IP方法
@@ -16,6 +17,16 @@ import eu.bitwalker.useragentutils.UserAgent;
  */
 public class IpUtils
 {
+    private static final UserAgentAnalyzer USER_AGENT_ANALYZER = UserAgentAnalyzer.newBuilder()
+            .hideMatcherLoadStats()
+            .withCache(10000)
+            .withField(UserAgent.AGENT_NAME)
+            .withField(UserAgent.AGENT_NAME_VERSION)
+            .withField(UserAgent.OPERATING_SYSTEM_NAME)
+            .withField(UserAgent.OPERATING_SYSTEM_NAME_VERSION)
+            .withField(UserAgent.DEVICE_CLASS)
+            .withField(UserAgent.DEVICE_NAME)
+            .build();
     public final static String REGX_0_255 = "(25[0-5]|2[0-4]\\d|1\\d{2}|[1-9]\\d|\\d)";
     // 匹配 ip
     public final static String REGX_IP = "((" + REGX_0_255 + "\\.){3}" + REGX_0_255 + ")";
@@ -383,27 +394,51 @@ public class IpUtils
         return false;
     }
 
-    public static DeviceInfo getDeviceInfo() {
+    public static DeviceInfo getDeviceInfo()
+    {
         HttpServletRequest request = ServletUtils.getRequest();
-        final UserAgent userAgent = UserAgent.parseUserAgentString(request.getHeader("User-Agent"));
-        final String ip = IpUtils.getIpAddr();
+        String ip = getIpAddr(request);
         String address = AddressUtils.getRealAddressByIP(ip);
-        // 获取客户端操作系统
-        String os = userAgent.getOperatingSystem().getName();
-        // 获取客户端浏览器
-        String browser = userAgent.getBrowser().getName();
         String ua = request.getHeader("User-Agent");
-        String platform;
-        if (ua.toLowerCase().contains("android")) {
-            platform = "Android";
-        } else if (ua.toLowerCase().contains("iphone") || ua.toLowerCase().contains("ipad")) {
-            platform = "iOS";
-        } else if (ua.toLowerCase().contains("windows")) {
-            platform = "Windows";
-        } else if (ua.toLowerCase().contains("mac")) {
-            platform = "Mac";
-        } else {
-            platform = "Unknown";
+        String os = "Unknown";
+        String browser = "Unknown";
+        String platform = "Unknown";
+        if (StringUtils.isNotEmpty(ua))
+        {
+            UserAgent parsedAgent = USER_AGENT_ANALYZER.parse(ua);
+            os = parsedAgent.getValue(UserAgent.OPERATING_SYSTEM_NAME);
+            String osVersion = parsedAgent.getValue(UserAgent.OPERATING_SYSTEM_NAME_VERSION);
+            if (StringUtils.isNotEmpty(osVersion) && !os.contains(osVersion))
+            {
+                os = os + " " + osVersion;
+            }
+            browser = parsedAgent.getValue(UserAgent.AGENT_NAME);
+            String browserVersion = parsedAgent.getValue(UserAgent.AGENT_NAME_VERSION);
+            if (StringUtils.isNotEmpty(browserVersion) && !browser.contains(browserVersion))
+            {
+                browser = browser + " " + browserVersion;
+            }
+            String lowerUa = ua.toLowerCase();
+            if (lowerUa.contains("android"))
+            {
+                platform = "Android";
+            }
+            else if (lowerUa.contains("iphone") || lowerUa.contains("ipad"))
+            {
+                platform = "iOS";
+            }
+            else if (lowerUa.contains("windows"))
+            {
+                platform = "Windows";
+            }
+            else if (lowerUa.contains("mac") && !lowerUa.contains("iphone") && !lowerUa.contains("ipad"))
+            {
+                platform = "Mac";
+            }
+            else if (lowerUa.contains("linux"))
+            {
+                platform = "Linux";
+            }
         }
         DeviceInfo deviceInfo = new DeviceInfo();
         deviceInfo.setIpAddr(ip);

@@ -1,7 +1,7 @@
 package com.ruoyi.web.controller.system;
 
 import java.util.List;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
@@ -61,7 +61,7 @@ public class SysPostController extends BaseController
      */
     @PreAuthorize("@ss.hasPermi('system:post:query')")
     @GetMapping(value = "/{postId}")
-    public AjaxResult getInfo(@PathVariable Long postId)
+    public AjaxResult getInfo(@PathVariable("postId") Long postId)
     {
         return success(postService.selectPostById(postId));
     }
@@ -112,7 +112,7 @@ public class SysPostController extends BaseController
     @PreAuthorize("@ss.hasPermi('system:post:remove')")
     @Log(title = "岗位管理", businessType = BusinessType.DELETE)
     @DeleteMapping("/{postIds}")
-    public AjaxResult remove(@PathVariable Long[] postIds)
+    public AjaxResult remove(@PathVariable("postIds") Long[] postIds)
     {
         return toAjax(postService.deletePostByIds(postIds));
     }

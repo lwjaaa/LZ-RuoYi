@@ -6,8 +6,10 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+
+import com.ruoyi.common.constant.Constants;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.IOUtils;
@@ -101,6 +103,17 @@ public class FileUtils
             IOUtils.close(fos);
         }
         return FileUploadUtils.getPathFileName(uploadDir, pathName);
+    }
+
+    /**
+     * 移除路径中的请求前缀片段
+     *
+     * @param filePath 文件路径
+     * @return 移除后的文件路径
+     */
+    public static String stripPrefix(String filePath)
+    {
+        return StringUtils.substringAfter(filePath, Constants.RESOURCE_PREFIX);
     }
 
     /**
