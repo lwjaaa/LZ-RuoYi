@@ -12,10 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
@@ -73,7 +70,7 @@ public class CommonController
      * 通用上传请求（单个）
      */
     @PostMapping("/upload")
-    public AjaxResult uploadFile(MultipartFile file) throws Exception
+    public AjaxResult uploadFile(@RequestParam("file") MultipartFile file) throws Exception
     {
         try
         {
