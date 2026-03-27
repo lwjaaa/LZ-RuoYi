@@ -1,0 +1,224 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.erp.mapper.ProductMapper">
+    
+    <resultMap type="Product" id="ProductResult">
+        <result property="productId"    column="product_id"    />
+        <result property="shopifyProductId"    column="shopify_product_id"    />
+        <result property="productTitle"    column="product_title"    />
+        <result property="spu"    column="spu"    />
+        <result property="category"    column="category"    />
+        <result property="productType"    column="product_type"    />
+        <result property="sourceUrl"    column="source_url"    />
+        <result property="purchaseUrl"    column="purchase_url"    />
+        <result property="optionJson"    column="option_json"    />
+        <result property="purchaseOptionJson"    column="purchase_option_json"    />
+        <result property="status"    column="status"    />
+        <result property="bodyHtml"    column="body_html"    />
+        <result property="mainMediaId"    column="main_media_id"    />
+        <result property="syncStatus"    column="sync_status"    />
+        <result property="syncMessage"    column="sync_message"    />
+        <result property="lastSyncTime"    column="last_sync_time"    />
+        <result property="version"    column="version"    />
+        <result property="description"    column="description"    />
+        <result property="size"    column="size"    />
+        <result property="material"    column="material"    />
+        <result property="note"    column="note"    />
+        <result property="packageInclude"    column="package_include"    />
+        <result property="createBy"    column="create_by"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateBy"    column="update_by"    />
+        <result property="updateTime"    column="update_time"    />
+        <result property="remark"    column="remark"    />
+        <result property="delFlag"    column="del_flag"    />
+    </resultMap>
+
+    <resultMap id="ProductProductVariantResult" type="Product" extends="ProductResult">
+        <collection property="productVariantList" ofType="ProductVariant" column="product_id" select="selectProductVariantList" />
+    </resultMap>
+
+    <resultMap type="ProductVariant" id="ProductVariantResult">
+        <result property="variantId"    column="variant_id"    />
+        <result property="productId"    column="product_id"    />
+        <result property="shopifyVariantId"    column="shopify_variant_id"    />
+        <result property="sku"    column="sku"    />
+        <result property="price"    column="price"    />
+        <result property="compareAtPrice"    column="compare_at_price"    />
+        <result property="purchasePrice"    column="purchase_price"    />
+        <result property="purchaseUrl"    column="purchase_url"    />
+        <result property="purchaseProductName"    column="purchase_product_name"    />
+        <result property="optionValues"    column="option_values"    />
+        <result property="mediaId"    column="media_id"    />
+        <result property="position"    column="position"    />
+        <result property="pkWidth"    column="pk_width"    />
+        <result property="pkHeight"    column="pk_height"    />
+        <result property="pkLength"    column="pk_length"    />
+        <result property="materialWeight"    column="material_weight"    />
+        <result property="pkWeight"    column="pk_weight"    />
+        <result property="freight"    column="freight"    />
+        <result property="isActualShipment"    column="is_actual_shipment"    />
+        <result property="unitCostPrice"    column="unit_cost_price"    />
+        <result property="createBy"    column="create_by"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateBy"    column="update_by"    />
+        <result property="updateTime"    column="update_time"    />
+        <result property="remark"    column="remark"    />
+        <result property="delFlag"    column="del_flag"    />
+    </resultMap>
+
+    <sql id="selectProductVo">
+        select product_id, shopify_product_id, product_title, spu, category, product_type, source_url, purchase_url, option_json, purchase_option_json, status, body_html, main_media_id, sync_status, sync_message, last_sync_time, version, description, size, material, note, package_include, create_by, create_time, update_by, update_time, remark, del_flag from erp_product
+    </sql>
+
+    <select id="selectProductList" parameterType="Product" resultMap="ProductResult">
+        <include refid="selectProductVo"/>
+        <where>  
+            <if test="shopifyProductId != null  and shopifyProductId != ''"> and shopify_product_id = #{shopifyProductId}</if>
+            <if test="productTitle != null  and productTitle != ''"> and product_title like concat('%', #{productTitle}, '%')</if>
+            <if test="spu != null  and spu != ''"> and spu like concat('%', #{spu}, '%')</if>
+            <if test="status != null  and status != ''"> and status = #{status}</if>
+            <if test="syncStatus != null  and syncStatus != ''"> and sync_status = #{syncStatus}</if>
+            <if test="params.beginLastSyncTime != null and params.beginLastSyncTime != '' and params.endLastSyncTime != null and params.endLastSyncTime != ''"> and DATE_FORMAT(last_sync_time, '%Y-%m-%d') between #{params.beginLastSyncTime} and #{params.endLastSyncTime}</if>
+            <if test="params.beginCreateBy != null and params.beginCreateBy != '' and params.endCreateBy != null and params.endCreateBy != ''"> and DATE_FORMAT(create_by, '%Y-%m-%d') between #{params.beginCreateBy} and #{params.endCreateBy}</if>
+        </where>
+    </select>
+    
+    <select id="selectProductByProductId" parameterType="Long" resultMap="ProductProductVariantResult">
+        select product_id, shopify_product_id, product_title, spu, category, product_type, source_url, purchase_url, option_json, purchase_option_json, status, body_html, main_media_id, sync_status, sync_message, last_sync_time, version, description, size, material, note, package_include, create_by, create_time, update_by, update_time, remark, del_flag
+        from erp_product
+        where product_id = #{productId}
+    </select>
+
+    <select id="selectProductVariantList" resultMap="ProductVariantResult">
+        select variant_id, product_id, shopify_variant_id, sku, price, compare_at_price, purchase_price, purchase_url, purchase_product_name, option_values, media_id, position, pk_width, pk_height, pk_length, material_weight, pk_weight, freight, is_actual_shipment, unit_cost_price, create_by, create_time, update_by, update_time, remark, del_flag
+        from erp_product_variant
+        where product_id = #{product_id}
+    </select>
+
+    <insert id="insertProduct" parameterType="Product" useGeneratedKeys="true" keyProperty="productId">
+        insert into erp_product
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="shopifyProductId != null">shopify_product_id,</if>
+            <if test="productTitle != null and productTitle != ''">product_title,</if>
+            <if test="spu != null and spu != ''">spu,</if>
+            <if test="category != null">category,</if>
+            <if test="productType != null">product_type,</if>
+            <if test="sourceUrl != null">source_url,</if>
+            <if test="purchaseUrl != null">purchase_url,</if>
+            <if test="optionJson != null">option_json,</if>
+            <if test="purchaseOptionJson != null">purchase_option_json,</if>
+            <if test="status != null">status,</if>
+            <if test="bodyHtml != null">body_html,</if>
+            <if test="mainMediaId != null">main_media_id,</if>
+            <if test="syncStatus != null">sync_status,</if>
+            <if test="syncMessage != null">sync_message,</if>
+            <if test="lastSyncTime != null">last_sync_time,</if>
+            <if test="version != null">version,</if>
+            <if test="description != null">description,</if>
+            <if test="size != null">size,</if>
+            <if test="material != null">material,</if>
+            <if test="note != null">note,</if>
+            <if test="packageInclude != null">package_include,</if>
+            <if test="createBy != null">create_by,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateBy != null">update_by,</if>
+            <if test="updateTime != null">update_time,</if>
+            <if test="remark != null">remark,</if>
+            <if test="delFlag != null">del_flag,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="shopifyProductId != null">#{shopifyProductId},</if>
+            <if test="productTitle != null and productTitle != ''">#{productTitle},</if>
+            <if test="spu != null and spu != ''">#{spu},</if>
+            <if test="category != null">#{category},</if>
+            <if test="productType != null">#{productType},</if>
+            <if test="sourceUrl != null">#{sourceUrl},</if>
+            <if test="purchaseUrl != null">#{purchaseUrl},</if>
+            <if test="optionJson != null">#{optionJson},</if>
+            <if test="purchaseOptionJson != null">#{purchaseOptionJson},</if>
+            <if test="status != null">#{status},</if>
+            <if test="bodyHtml != null">#{bodyHtml},</if>
+            <if test="mainMediaId != null">#{mainMediaId},</if>
+            <if test="syncStatus != null">#{syncStatus},</if>
+            <if test="syncMessage != null">#{syncMessage},</if>
+            <if test="lastSyncTime != null">#{lastSyncTime},</if>
+            <if test="version != null">#{version},</if>
+            <if test="description != null">#{description},</if>
+            <if test="size != null">#{size},</if>
+            <if test="material != null">#{material},</if>
+            <if test="note != null">#{note},</if>
+            <if test="packageInclude != null">#{packageInclude},</if>
+            <if test="createBy != null">#{createBy},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateBy != null">#{updateBy},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+            <if test="remark != null">#{remark},</if>
+            <if test="delFlag != null">#{delFlag},</if>
+         </trim>
+    </insert>
+
+    <update id="updateProduct" parameterType="Product">
+        update erp_product
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="shopifyProductId != null">shopify_product_id = #{shopifyProductId},</if>
+            <if test="productTitle != null and productTitle != ''">product_title = #{productTitle},</if>
+            <if test="spu != null and spu != ''">spu = #{spu},</if>
+            <if test="category != null">category = #{category},</if>
+            <if test="productType != null">product_type = #{productType},</if>
+            <if test="sourceUrl != null">source_url = #{sourceUrl},</if>
+            <if test="purchaseUrl != null">purchase_url = #{purchaseUrl},</if>
+            <if test="optionJson != null">option_json = #{optionJson},</if>
+            <if test="purchaseOptionJson != null">purchase_option_json = #{purchaseOptionJson},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="bodyHtml != null">body_html = #{bodyHtml},</if>
+            <if test="mainMediaId != null">main_media_id = #{mainMediaId},</if>
+            <if test="syncStatus != null">sync_status = #{syncStatus},</if>
+            <if test="syncMessage != null">sync_message = #{syncMessage},</if>
+            <if test="lastSyncTime != null">last_sync_time = #{lastSyncTime},</if>
+            <if test="version != null">version = #{version},</if>
+            <if test="description != null">description = #{description},</if>
+            <if test="size != null">size = #{size},</if>
+            <if test="material != null">material = #{material},</if>
+            <if test="note != null">note = #{note},</if>
+            <if test="packageInclude != null">package_include = #{packageInclude},</if>
+            <if test="createBy != null">create_by = #{createBy},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            <if test="delFlag != null">del_flag = #{delFlag},</if>
+        </trim>
+        where product_id = #{productId}
+    </update>
+
+    <delete id="deleteProductByProductId" parameterType="Long">
+        delete from erp_product where product_id = #{productId}
+    </delete>
+
+    <delete id="deleteProductByProductIds" parameterType="String">
+        delete from erp_product where product_id in 
+        <foreach item="productId" collection="array" open="(" separator="," close=")">
+            #{productId}
+        </foreach>
+    </delete>
+    
+    <delete id="deleteProductVariantByProductIds" parameterType="String">
+        delete from erp_product_variant where product_id in 
+        <foreach item="productId" collection="array" open="(" separator="," close=")">
+            #{productId}
+        </foreach>
+    </delete>
+
+    <delete id="deleteProductVariantByProductId" parameterType="Long">
+        delete from erp_product_variant where product_id = #{productId}
+    </delete>
+
+    <insert id="batchProductVariant">
+        insert into erp_product_variant( variant_id, product_id, shopify_variant_id, sku, price, compare_at_price, purchase_price, purchase_url, purchase_product_name, option_values, media_id, position, pk_width, pk_height, pk_length, material_weight, pk_weight, freight, is_actual_shipment, unit_cost_price, create_by, create_time, update_by, update_time, remark, del_flag) values
+        <foreach item="item" index="index" collection="list" separator=",">
+            ( #{item.variantId}, #{item.productId}, #{item.shopifyVariantId}, #{item.sku}, #{item.price}, #{item.compareAtPrice}, #{item.purchasePrice}, #{item.purchaseUrl}, #{item.purchaseProductName}, #{item.optionValues}, #{item.mediaId}, #{item.position}, #{item.pkWidth}, #{item.pkHeight}, #{item.pkLength}, #{item.materialWeight}, #{item.pkWeight}, #{item.freight}, #{item.isActualShipment}, #{item.unitCostPrice}, #{item.createBy}, #{item.createTime}, #{item.updateBy}, #{item.updateTime}, #{item.remark}, #{item.delFlag})
+        </foreach>
+    </insert>
+</mapper>

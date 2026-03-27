@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.erp.mapper.ImageMapper">
+    
+    <resultMap type="Image" id="ImageResult">
+        <result property="imageId"    column="image_id"    />
+        <result property="productId"    column="product_id"    />
+        <result property="shopifyImageId"    column="shopify_image_id"    />
+        <result property="shopifyUrl"    column="shopify_url"    />
+        <result property="stagedUploadUrl"    column="staged_upload_url"    />
+        <result property="nasUrl"    column="nas_url"    />
+        <result property="filename"    column="filename"    />
+        <result property="alt"    column="alt"    />
+        <result property="position"    column="position"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateTime"    column="update_time"    />
+        <result property="delFlag"    column="del_flag"    />
+    </resultMap>
+
+    <sql id="selectImageVo">
+        select image_id, product_id, shopify_image_id, shopify_url, staged_upload_url, nas_url, filename, alt, position, create_time, update_time, del_flag from erp_image
+    </sql>
+
+    <select id="selectImageList" parameterType="Image" resultMap="ImageResult">
+        <include refid="selectImageVo"/>
+        <where>  
+            <if test="productId != null "> and product_id = #{productId}</if>
+            <if test="filename != null  and filename != ''"> and filename like concat('%', #{filename}, '%')</if>
+            <if test="alt != null  and alt != ''"> and alt like concat('%', #{alt}, '%')</if>
+            <if test="position != null "> and position = #{position}</if>
+        </where>
+    </select>
+    
+    <select id="selectImageByImageId" parameterType="Long" resultMap="ImageResult">
+        <include refid="selectImageVo"/>
+        where image_id = #{imageId}
+    </select>
+
+    <insert id="insertImage" parameterType="Image" useGeneratedKeys="true" keyProperty="imageId">
+        insert into erp_image
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="productId != null">product_id,</if>
+            <if test="shopifyImageId != null">shopify_image_id,</if>
+            <if test="shopifyUrl != null">shopify_url,</if>
+            <if test="stagedUploadUrl != null">staged_upload_url,</if>
+            <if test="nasUrl != null">nas_url,</if>
+            <if test="filename != null">filename,</if>
+            <if test="alt != null">alt,</if>
+            <if test="position != null">position,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateTime != null">update_time,</if>
+            <if test="delFlag != null">del_flag,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="productId != null">#{productId},</if>
+            <if test="shopifyImageId != null">#{shopifyImageId},</if>
+            <if test="shopifyUrl != null">#{shopifyUrl},</if>
+            <if test="stagedUploadUrl != null">#{stagedUploadUrl},</if>
+            <if test="nasUrl != null">#{nasUrl},</if>
+            <if test="filename != null">#{filename},</if>
+            <if test="alt != null">#{alt},</if>
+            <if test="position != null">#{position},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+            <if test="delFlag != null">#{delFlag},</if>
+         </trim>
+    </insert>
+
+    <update id="updateImage" parameterType="Image">
+        update erp_image
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="productId != null">product_id = #{productId},</if>
+            <if test="shopifyImageId != null">shopify_image_id = #{shopifyImageId},</if>
+            <if test="shopifyUrl != null">shopify_url = #{shopifyUrl},</if>
+            <if test="stagedUploadUrl != null">staged_upload_url = #{stagedUploadUrl},</if>
+            <if test="nasUrl != null">nas_url = #{nasUrl},</if>
+            <if test="filename != null">filename = #{filename},</if>
+            <if test="alt != null">alt = #{alt},</if>
+            <if test="position != null">position = #{position},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            <if test="delFlag != null">del_flag = #{delFlag},</if>
+        </trim>
+        where image_id = #{imageId}
+    </update>
+
+    <delete id="deleteImageByImageId" parameterType="Long">
+        delete from erp_image where image_id = #{imageId}
+    </delete>
+
+    <delete id="deleteImageByImageIds" parameterType="String">
+        delete from erp_image where image_id in 
+        <foreach item="imageId" collection="array" open="(" separator="," close=")">
+            #{imageId}
+        </foreach>
+    </delete>
+</mapper>

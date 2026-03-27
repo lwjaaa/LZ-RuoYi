@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.erp.mapper.ShopifyTaskMapper">
+    
+    <resultMap type="ShopifyTask" id="ShopifyTaskResult">
+        <result property="taskId"    column="task_id"    />
+        <result property="taskName"    column="task_name"    />
+        <result property="taskGroup"    column="task_group"    />
+        <result property="taskType"    column="task_type"    />
+        <result property="businessType"    column="business_type"    />
+        <result property="businessIds"    column="business_ids"    />
+        <result property="requestPath"    column="request_path"    />
+        <result property="requestParams"    column="request_params"    />
+        <result property="taskStatus"    column="task_status"    />
+        <result property="progress"    column="progress"    />
+        <result property="errorMessage"    column="error_message"    />
+        <result property="resultData"    column="result_data"    />
+        <result property="executionTime"    column="execution_time"    />
+        <result property="startTime"    column="start_time"    />
+        <result property="endTime"    column="end_time"    />
+        <result property="parentTaskId"    column="parent_task_id"    />
+        <result property="rootTaskId"    column="root_task_id"    />
+        <result property="remark"    column="remark"    />
+        <result property="createBy"    column="create_by"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateBy"    column="update_by"    />
+        <result property="updateTime"    column="update_time"    />
+        <result property="delFlag"    column="del_flag"    />
+    </resultMap>
+
+    <sql id="selectShopifyTaskVo">
+        select task_id, task_name, task_group, task_type, business_type, business_ids, request_path, request_params, task_status, progress, error_message, result_data, execution_time, start_time, end_time, parent_task_id, root_task_id, remark, create_by, create_time, update_by, update_time, del_flag from erp_shopify_task
+    </sql>
+
+    <select id="selectShopifyTaskList" parameterType="ShopifyTask" resultMap="ShopifyTaskResult">
+        <include refid="selectShopifyTaskVo"/>
+        <where>  
+            <if test="taskName != null  and taskName != ''"> and task_name like concat('%', #{taskName}, '%')</if>
+            <if test="taskGroup != null  and taskGroup != ''"> and task_group = #{taskGroup}</if>
+            <if test="taskType != null  and taskType != ''"> and task_type = #{taskType}</if>
+            <if test="businessType != null  and businessType != ''"> and business_type = #{businessType}</if>
+            <if test="businessIds != null  and businessIds != ''"> and business_ids = #{businessIds}</if>
+            <if test="taskStatus != null  and taskStatus != ''"> and task_status = #{taskStatus}</if>
+            <if test="params.beginStartTime != null and params.beginStartTime != '' and params.endStartTime != null and params.endStartTime != ''"> and DATE_FORMAT(start_time, '%Y-%m-%d') between #{params.beginStartTime} and #{params.endStartTime}</if>
+            <if test="parentTaskId != null "> and parent_task_id = #{parentTaskId}</if>
+            <if test="rootTaskId != null "> and root_task_id = #{rootTaskId}</if>
+        </where>
+    </select>
+    
+    <select id="selectShopifyTaskByTaskId" parameterType="Long" resultMap="ShopifyTaskResult">
+        <include refid="selectShopifyTaskVo"/>
+        where task_id = #{taskId}
+    </select>
+
+    <insert id="insertShopifyTask" parameterType="ShopifyTask">
+        insert into erp_shopify_task
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="taskId != null">task_id,</if>
+            <if test="taskName != null and taskName != ''">task_name,</if>
+            <if test="taskGroup != null">task_group,</if>
+            <if test="taskType != null and taskType != ''">task_type,</if>
+            <if test="businessType != null">business_type,</if>
+            <if test="businessIds != null">business_ids,</if>
+            <if test="requestPath != null">request_path,</if>
+            <if test="requestParams != null">request_params,</if>
+            <if test="taskStatus != null">task_status,</if>
+            <if test="progress != null">progress,</if>
+            <if test="errorMessage != null">error_message,</if>
+            <if test="resultData != null">result_data,</if>
+            <if test="executionTime != null">execution_time,</if>
+            <if test="startTime != null">start_time,</if>
+            <if test="endTime != null">end_time,</if>
+            <if test="parentTaskId != null">parent_task_id,</if>
+            <if test="rootTaskId != null">root_task_id,</if>
+            <if test="remark != null">remark,</if>
+            <if test="createBy != null">create_by,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateBy != null">update_by,</if>
+            <if test="updateTime != null">update_time,</if>
+            <if test="delFlag != null">del_flag,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="taskId != null">#{taskId},</if>
+            <if test="taskName != null and taskName != ''">#{taskName},</if>
+            <if test="taskGroup != null">#{taskGroup},</if>
+            <if test="taskType != null and taskType != ''">#{taskType},</if>
+            <if test="businessType != null">#{businessType},</if>
+            <if test="businessIds != null">#{businessIds},</if>
+            <if test="requestPath != null">#{requestPath},</if>
+            <if test="requestParams != null">#{requestParams},</if>
+            <if test="taskStatus != null">#{taskStatus},</if>
+            <if test="progress != null">#{progress},</if>
+            <if test="errorMessage != null">#{errorMessage},</if>
+            <if test="resultData != null">#{resultData},</if>
+            <if test="executionTime != null">#{executionTime},</if>
+            <if test="startTime != null">#{startTime},</if>
+            <if test="endTime != null">#{endTime},</if>
+            <if test="parentTaskId != null">#{parentTaskId},</if>
+            <if test="rootTaskId != null">#{rootTaskId},</if>
+            <if test="remark != null">#{remark},</if>
+            <if test="createBy != null">#{createBy},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateBy != null">#{updateBy},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+            <if test="delFlag != null">#{delFlag},</if>
+         </trim>
+    </insert>
+
+    <update id="updateShopifyTask" parameterType="ShopifyTask">
+        update erp_shopify_task
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="taskName != null and taskName != ''">task_name = #{taskName},</if>
+            <if test="taskGroup != null">task_group = #{taskGroup},</if>
+            <if test="taskType != null and taskType != ''">task_type = #{taskType},</if>
+            <if test="businessType != null">business_type = #{businessType},</if>
+            <if test="businessIds != null">business_ids = #{businessIds},</if>
+            <if test="requestPath != null">request_path = #{requestPath},</if>
+            <if test="requestParams != null">request_params = #{requestParams},</if>
+            <if test="taskStatus != null">task_status = #{taskStatus},</if>
+            <if test="progress != null">progress = #{progress},</if>
+            <if test="errorMessage != null">error_message = #{errorMessage},</if>
+            <if test="resultData != null">result_data = #{resultData},</if>
+            <if test="executionTime != null">execution_time = #{executionTime},</if>
+            <if test="startTime != null">start_time = #{startTime},</if>
+            <if test="endTime != null">end_time = #{endTime},</if>
+            <if test="parentTaskId != null">parent_task_id = #{parentTaskId},</if>
+            <if test="rootTaskId != null">root_task_id = #{rootTaskId},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            <if test="createBy != null">create_by = #{createBy},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            <if test="delFlag != null">del_flag = #{delFlag},</if>
+        </trim>
+        where task_id = #{taskId}
+    </update>
+
+    <delete id="deleteShopifyTaskByTaskId" parameterType="Long">
+        delete from erp_shopify_task where task_id = #{taskId}
+    </delete>
+
+    <delete id="deleteShopifyTaskByTaskIds" parameterType="String">
+        delete from erp_shopify_task where task_id in 
+        <foreach item="taskId" collection="array" open="(" separator="," close=")">
+            #{taskId}
+        </foreach>
+    </delete>
+</mapper>

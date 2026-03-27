@@ -16,7 +16,7 @@
         <ruoyi.version>3.9.1</ruoyi.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-        <java.version>21</java.version>
+        <java.version>17</java.version>
         <spring-boot.version>3.5.11</spring-boot.version>
         <mybatis-spring-boot.version>3.0.5</mybatis-spring-boot.version>
         <druid.version>1.2.28</druid.version>
@@ -192,7 +192,7 @@
             </dependency>
             <dependency>
                 <groupId>com.ruoyi</groupId>
-                <artifactId>ruoyi-test</artifactId>
+                <artifactId>vh-erp</artifactId>
                 <version>${ruoyi.version}</version>
             </dependency>
 
@@ -206,7 +206,8 @@
         <module>ruoyi-quartz</module>
         <module>ruoyi-generator</module>
         <module>ruoyi-common</module>
-        <module>ruoyi-test</module>
+        <module>vh-erp</module>
+        <module>vh-erp</module>
     </modules>
     <packaging>pom</packaging>
 

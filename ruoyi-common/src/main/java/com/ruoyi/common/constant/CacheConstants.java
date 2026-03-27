@@ -41,4 +41,10 @@ public class CacheConstants
      * 登录账户密码错误次数 redis key
      */
     public static final String PWD_ERR_CNT_KEY = "pwd_err_cnt:";
+
+    /**
+     * ERP 菜单缓存 key
+     */
+    public static final String ERP_MENU_KEY = "erp_menu:";
+
 }

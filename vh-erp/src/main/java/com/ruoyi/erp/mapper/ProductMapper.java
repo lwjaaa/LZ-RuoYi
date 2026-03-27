@@ -1,0 +1,88 @@
+package com.ruoyi.erp.mapper;
+
+import java.util.List;
+import com.ruoyi.erp.model.domain.Product;
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.ruoyi.erp.model.domain.ProductVariant;
+
+/**
+ * erp商品Mapper接口
+ * 
+ * @author lwj
+ * @date 2026-03-26
+ */
+public interface ProductMapper extends BaseMapper<Product>
+{
+    /**
+     * 查询erp商品
+     * 
+     * @param productId erp商品主键
+     * @return erp商品
+     */
+    public Product selectProductByProductId(Long productId);
+
+    /**
+     * 查询erp商品列表
+     * 
+     * @param product erp商品
+     * @return erp商品集合
+     */
+    public List<Product> selectProductList(Product product);
+
+    /**
+     * 新增erp商品
+     * 
+     * @param product erp商品
+     * @return 结果
+     */
+    public int insertProduct(Product product);
+
+    /**
+     * 修改erp商品
+     * 
+     * @param product erp商品
+     * @return 结果
+     */
+    public int updateProduct(Product product);
+
+    /**
+     * 删除erp商品
+     * 
+     * @param productId erp商品主键
+     * @return 结果
+     */
+    public int deleteProductByProductId(Long productId);
+
+    /**
+     * 批量删除erp商品
+     * 
+     * @param productIds 需要删除的数据主键集合
+     * @return 结果
+     */
+    public int deleteProductByProductIds(Long[] productIds);
+
+    /**
+     * 批量删除erp商品变体
+     * 
+     * @param productIds 需要删除的数据主键集合
+     * @return 结果
+     */
+    public int deleteProductVariantByProductIds(Long[] productIds);
+    
+    /**
+     * 批量新增erp商品变体
+     * 
+     * @param productVariantList erp商品变体列表
+     * @return 结果
+     */
+    public int batchProductVariant(List<ProductVariant> productVariantList);
+    
+
+    /**
+     * 通过erp商品主键删除erp商品变体信息
+     * 
+     * @param productId erp商品ID
+     * @return 结果
+     */
+    public int deleteProductVariantByProductId(Long productId);
+}

@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.erp.mapper.ProductTagRelMapper">
+    
+    <resultMap type="ProductTagRel" id="ProductTagRelResult">
+        <result property="relId"    column="rel_id"    />
+        <result property="productId"    column="product_id"    />
+        <result property="tagId"    column="tag_id"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="createBy"    column="create_by"    />
+    </resultMap>
+
+    <sql id="selectProductTagRelVo">
+        select rel_id, product_id, tag_id, create_time, create_by from erp_product_tag_rel
+    </sql>
+
+    <select id="selectProductTagRelList" parameterType="ProductTagRel" resultMap="ProductTagRelResult">
+        <include refid="selectProductTagRelVo"/>
+        <where>  
+            <if test="productId != null "> and product_id = #{productId}</if>
+            <if test="tagId != null "> and tag_id = #{tagId}</if>
+        </where>
+    </select>
+    
+    <select id="selectProductTagRelByRelId" parameterType="Long" resultMap="ProductTagRelResult">
+        <include refid="selectProductTagRelVo"/>
+        where rel_id = #{relId}
+    </select>
+
+    <insert id="insertProductTagRel" parameterType="ProductTagRel" useGeneratedKeys="true" keyProperty="relId">
+        insert into erp_product_tag_rel
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="productId != null">product_id,</if>
+            <if test="tagId != null">tag_id,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="createBy != null">create_by,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="productId != null">#{productId},</if>
+            <if test="tagId != null">#{tagId},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="createBy != null">#{createBy},</if>
+         </trim>
+    </insert>
+
+    <update id="updateProductTagRel" parameterType="ProductTagRel">
+        update erp_product_tag_rel
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="productId != null">product_id = #{productId},</if>
+            <if test="tagId != null">tag_id = #{tagId},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="createBy != null">create_by = #{createBy},</if>
+        </trim>
+        where rel_id = #{relId}
+    </update>
+
+    <delete id="deleteProductTagRelByRelId" parameterType="Long">
+        delete from erp_product_tag_rel where rel_id = #{relId}
+    </delete>
+
+    <delete id="deleteProductTagRelByRelIds" parameterType="String">
+        delete from erp_product_tag_rel where rel_id in 
+        <foreach item="relId" collection="array" open="(" separator="," close=")">
+            #{relId}
+        </foreach>
+    </delete>
+</mapper>

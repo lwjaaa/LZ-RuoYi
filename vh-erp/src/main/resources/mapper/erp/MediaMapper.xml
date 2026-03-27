@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.erp.mapper.MediaMapper">
+    
+    <resultMap type="Media" id="MediaResult">
+        <result property="mediaId"    column="media_id"    />
+        <result property="productId"    column="product_id"    />
+        <result property="shopifyMediaId"    column="shopify_media_id"    />
+        <result property="shopifyMediaUrl"    column="shopify_media_url"    />
+        <result property="stagedUploadUrl"    column="staged_upload_url"    />
+        <result property="nasMediaUrl"    column="nas_media_url"    />
+        <result property="filename"    column="filename"    />
+        <result property="alt"    column="alt"    />
+        <result property="position"    column="position"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateTime"    column="update_time"    />
+        <result property="delFlag"    column="del_flag"    />
+    </resultMap>
+
+    <sql id="selectMediaVo">
+        select media_id, product_id, shopify_media_id, shopify_media_url, staged_upload_url, nas_media_url, filename, alt, position, create_time, update_time, del_flag from erp_media
+    </sql>
+
+    <select id="selectMediaList" parameterType="Media" resultMap="MediaResult">
+        <include refid="selectMediaVo"/>
+        <where>  
+            <if test="productId != null "> and product_id = #{productId}</if>
+            <if test="shopifyMediaId != null  and shopifyMediaId != ''"> and shopify_media_id = #{shopifyMediaId}</if>
+            <if test="filename != null  and filename != ''"> and filename like concat('%', #{filename}, '%')</if>
+            <if test="alt != null  and alt != ''"> and alt like concat('%', #{alt}, '%')</if>
+        </where>
+    </select>
+    
+    <select id="selectMediaByMediaId" parameterType="Long" resultMap="MediaResult">
+        <include refid="selectMediaVo"/>
+        where media_id = #{mediaId}
+    </select>
+
+    <insert id="insertMedia" parameterType="Media" useGeneratedKeys="true" keyProperty="mediaId">
+        insert into erp_media
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="productId != null">product_id,</if>
+            <if test="shopifyMediaId != null">shopify_media_id,</if>
+            <if test="shopifyMediaUrl != null">shopify_media_url,</if>
+            <if test="stagedUploadUrl != null">staged_upload_url,</if>
+            <if test="nasMediaUrl != null">nas_media_url,</if>
+            <if test="filename != null">filename,</if>
+            <if test="alt != null">alt,</if>
+            <if test="position != null">position,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateTime != null">update_time,</if>
+            <if test="delFlag != null">del_flag,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="productId != null">#{productId},</if>
+            <if test="shopifyMediaId != null">#{shopifyMediaId},</if>
+            <if test="shopifyMediaUrl != null">#{shopifyMediaUrl},</if>
+            <if test="stagedUploadUrl != null">#{stagedUploadUrl},</if>
+            <if test="nasMediaUrl != null">#{nasMediaUrl},</if>
+            <if test="filename != null">#{filename},</if>
+            <if test="alt != null">#{alt},</if>
+            <if test="position != null">#{position},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+            <if test="delFlag != null">#{delFlag},</if>
+         </trim>
+    </insert>
+
+    <update id="updateMedia" parameterType="Media">
+        update erp_media
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="productId != null">product_id = #{productId},</if>
+            <if test="shopifyMediaId != null">shopify_media_id = #{shopifyMediaId},</if>
+            <if test="shopifyMediaUrl != null">shopify_media_url = #{shopifyMediaUrl},</if>
+            <if test="stagedUploadUrl != null">staged_upload_url = #{stagedUploadUrl},</if>
+            <if test="nasMediaUrl != null">nas_media_url = #{nasMediaUrl},</if>
+            <if test="filename != null">filename = #{filename},</if>
+            <if test="alt != null">alt = #{alt},</if>
+            <if test="position != null">position = #{position},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            <if test="delFlag != null">del_flag = #{delFlag},</if>
+        </trim>
+        where media_id = #{mediaId}
+    </update>
+
+    <delete id="deleteMediaByMediaId" parameterType="Long">
+        delete from erp_media where media_id = #{mediaId}
+    </delete>
+
+    <delete id="deleteMediaByMediaIds" parameterType="String">
+        delete from erp_media where media_id in 
+        <foreach item="mediaId" collection="array" open="(" separator="," close=")">
+            #{mediaId}
+        </foreach>
+    </delete>
+</mapper>

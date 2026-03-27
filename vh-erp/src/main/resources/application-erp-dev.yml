@@ -1,0 +1,31 @@
+# ==================== VH-ERP 测试环境配置 ====================
+
+# ERP 业务配置
+erp:
+  shop-url: https://test-shop.myshopify.com
+  api-key: test_api_key_123
+  api-secret: test_api_secret_456
+
+# Shopify 测试环境
+shopify:
+  base-url: https://test-shop.myshopify.com
+  admin-api-endpoint: https://test-shop.myshopify.com/admin/api/2024-01
+
+# 业务参数（测试环境）
+business:
+  # 订单同步间隔（秒）
+  order-sync-interval: 30
+  # 库存同步间隔（秒）
+  inventory-sync-interval: 60
+  # 是否启用自动同步
+  auto-sync-enabled: true
+  # 测试模式
+  test-mode: true
+  # 模拟数据生成
+  mock-data-enabled: true
+
+# 日志配置（测试环境开启详细日志）
+logging:
+  level:
+    com.ruoyi.erp: debug
+    graphql: debug

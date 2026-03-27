@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.erp.mapper.ProductVariantMapper">
+    
+    <resultMap type="ProductVariant" id="ProductVariantResult">
+        <result property="variantId"    column="variant_id"    />
+        <result property="productId"    column="product_id"    />
+        <result property="shopifyVariantId"    column="shopify_variant_id"    />
+        <result property="sku"    column="sku"    />
+        <result property="price"    column="price"    />
+        <result property="compareAtPrice"    column="compare_at_price"    />
+        <result property="purchasePrice"    column="purchase_price"    />
+        <result property="purchaseUrl"    column="purchase_url"    />
+        <result property="purchaseProductName"    column="purchase_product_name"    />
+        <result property="optionValues"    column="option_values"    />
+        <result property="mediaId"    column="media_id"    />
+        <result property="position"    column="position"    />
+        <result property="pkWidth"    column="pk_width"    />
+        <result property="pkHeight"    column="pk_height"    />
+        <result property="pkLength"    column="pk_length"    />
+        <result property="materialWeight"    column="material_weight"    />
+        <result property="pkWeight"    column="pk_weight"    />
+        <result property="freight"    column="freight"    />
+        <result property="isActualShipment"    column="is_actual_shipment"    />
+        <result property="unitCostPrice"    column="unit_cost_price"    />
+        <result property="createBy"    column="create_by"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateBy"    column="update_by"    />
+        <result property="updateTime"    column="update_time"    />
+        <result property="remark"    column="remark"    />
+        <result property="delFlag"    column="del_flag"    />
+    </resultMap>
+
+    <sql id="selectProductVariantVo">
+        select variant_id, product_id, shopify_variant_id, sku, price, compare_at_price, purchase_price, purchase_url, purchase_product_name, option_values, media_id, position, pk_width, pk_height, pk_length, material_weight, pk_weight, freight, is_actual_shipment, unit_cost_price, create_by, create_time, update_by, update_time, remark, del_flag from erp_product_variant
+    </sql>
+
+    <select id="selectProductVariantList" parameterType="ProductVariant" resultMap="ProductVariantResult">
+        <include refid="selectProductVariantVo"/>
+        <where>  
+            <if test="productId != null "> and product_id = #{productId}</if>
+            <if test="shopifyVariantId != null  and shopifyVariantId != ''"> and shopify_variant_id = #{shopifyVariantId}</if>
+            <if test="sku != null  and sku != ''"> and sku = #{sku}</if>
+            <if test="price != null "> and price = #{price}</if>
+            <if test="purchasePrice != null "> and purchase_price = #{purchasePrice}</if>
+            <if test="isActualShipment != null  and isActualShipment != ''"> and is_actual_shipment = #{isActualShipment}</if>
+            <if test="params.beginCreateTime != null and params.beginCreateTime != '' and params.endCreateTime != null and params.endCreateTime != ''"> and DATE_FORMAT(create_time, '%Y-%m-%d') between #{params.beginCreateTime} and #{params.endCreateTime}</if>
+        </where>
+    </select>
+    
+    <select id="selectProductVariantByVariantId" parameterType="Long" resultMap="ProductVariantResult">
+        <include refid="selectProductVariantVo"/>
+        where variant_id = #{variantId}
+    </select>
+
+    <insert id="insertProductVariant" parameterType="ProductVariant" useGeneratedKeys="true" keyProperty="variantId">
+        insert into erp_product_variant
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="productId != null">product_id,</if>
+            <if test="shopifyVariantId != null">shopify_variant_id,</if>
+            <if test="sku != null">sku,</if>
+            <if test="price != null">price,</if>
+            <if test="compareAtPrice != null">compare_at_price,</if>
+            <if test="purchasePrice != null">purchase_price,</if>
+            <if test="purchaseUrl != null">purchase_url,</if>
+            <if test="purchaseProductName != null">purchase_product_name,</if>
+            <if test="optionValues != null">option_values,</if>
+            <if test="mediaId != null">media_id,</if>
+            <if test="position != null">position,</if>
+            <if test="pkWidth != null">pk_width,</if>
+            <if test="pkHeight != null">pk_height,</if>
+            <if test="pkLength != null">pk_length,</if>
+            <if test="materialWeight != null">material_weight,</if>
+            <if test="pkWeight != null">pk_weight,</if>
+            <if test="freight != null">freight,</if>
+            <if test="isActualShipment != null">is_actual_shipment,</if>
+            <if test="unitCostPrice != null">unit_cost_price,</if>
+            <if test="createBy != null">create_by,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateBy != null">update_by,</if>
+            <if test="updateTime != null">update_time,</if>
+            <if test="remark != null">remark,</if>
+            <if test="delFlag != null">del_flag,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="productId != null">#{productId},</if>
+            <if test="shopifyVariantId != null">#{shopifyVariantId},</if>
+            <if test="sku != null">#{sku},</if>
+            <if test="price != null">#{price},</if>
+            <if test="compareAtPrice != null">#{compareAtPrice},</if>
+            <if test="purchasePrice != null">#{purchasePrice},</if>
+            <if test="purchaseUrl != null">#{purchaseUrl},</if>
+            <if test="purchaseProductName != null">#{purchaseProductName},</if>
+            <if test="optionValues != null">#{optionValues},</if>
+            <if test="mediaId != null">#{mediaId},</if>
+            <if test="position != null">#{position},</if>
+            <if test="pkWidth != null">#{pkWidth},</if>
+            <if test="pkHeight != null">#{pkHeight},</if>
+            <if test="pkLength != null">#{pkLength},</if>
+            <if test="materialWeight != null">#{materialWeight},</if>
+            <if test="pkWeight != null">#{pkWeight},</if>
+            <if test="freight != null">#{freight},</if>
+            <if test="isActualShipment != null">#{isActualShipment},</if>
+            <if test="unitCostPrice != null">#{unitCostPrice},</if>
+            <if test="createBy != null">#{createBy},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateBy != null">#{updateBy},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+            <if test="remark != null">#{remark},</if>
+            <if test="delFlag != null">#{delFlag},</if>
+         </trim>
+    </insert>
+
+    <update id="updateProductVariant" parameterType="ProductVariant">
+        update erp_product_variant
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="productId != null">product_id = #{productId},</if>
+            <if test="shopifyVariantId != null">shopify_variant_id = #{shopifyVariantId},</if>
+            <if test="sku != null">sku = #{sku},</if>
+            <if test="price != null">price = #{price},</if>
+            <if test="compareAtPrice != null">compare_at_price = #{compareAtPrice},</if>
+            <if test="purchasePrice != null">purchase_price = #{purchasePrice},</if>
+            <if test="purchaseUrl != null">purchase_url = #{purchaseUrl},</if>
+            <if test="purchaseProductName != null">purchase_product_name = #{purchaseProductName},</if>
+            <if test="optionValues != null">option_values = #{optionValues},</if>
+            <if test="mediaId != null">media_id = #{mediaId},</if>
+            <if test="position != null">position = #{position},</if>
+            <if test="pkWidth != null">pk_width = #{pkWidth},</if>
+            <if test="pkHeight != null">pk_height = #{pkHeight},</if>
+            <if test="pkLength != null">pk_length = #{pkLength},</if>
+            <if test="materialWeight != null">material_weight = #{materialWeight},</if>
+            <if test="pkWeight != null">pk_weight = #{pkWeight},</if>
+            <if test="freight != null">freight = #{freight},</if>
+            <if test="isActualShipment != null">is_actual_shipment = #{isActualShipment},</if>
+            <if test="unitCostPrice != null">unit_cost_price = #{unitCostPrice},</if>
+            <if test="createBy != null">create_by = #{createBy},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            <if test="delFlag != null">del_flag = #{delFlag},</if>
+        </trim>
+        where variant_id = #{variantId}
+    </update>
+
+    <delete id="deleteProductVariantByVariantId" parameterType="Long">
+        delete from erp_product_variant where variant_id = #{variantId}
+    </delete>
+
+    <delete id="deleteProductVariantByVariantIds" parameterType="String">
+        delete from erp_product_variant where variant_id in 
+        <foreach item="variantId" collection="array" open="(" separator="," close=")">
+            #{variantId}
+        </foreach>
+    </delete>
+</mapper>

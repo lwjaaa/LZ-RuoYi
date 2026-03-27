@@ -56,7 +56,7 @@
 
         <dependency>
             <groupId>com.ruoyi</groupId>
-            <artifactId>ruoyi-test</artifactId>
+            <artifactId>vh-erp</artifactId>
         </dependency>
 
     </dependencies>

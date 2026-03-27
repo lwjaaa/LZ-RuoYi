@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.erp.mapper.TagDictMapper">
+    
+    <resultMap type="TagDict" id="TagDictResult">
+        <result property="tagId"    column="tag_id"    />
+        <result property="tagName"    column="tag_name"    />
+        <result property="tagCode"    column="tag_code"    />
+        <result property="tagType"    column="tag_type"    />
+        <result property="sortOrder"    column="sort_order"    />
+        <result property="parentId"    column="parent_id"    />
+        <result property="ancestors"    column="ancestors"    />
+        <result property="menuLevel"    column="menu_level"    />
+        <result property="spuPrefix"    column="spu_prefix"    />
+        <result property="currentMaxSeq"    column="current_max_seq"    />
+        <result property="createBy"    column="create_by"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateBy"    column="update_by"    />
+        <result property="updateTime"    column="update_time"    />
+        <result property="remark"    column="remark"    />
+        <result property="delFlag"    column="del_flag"    />
+    </resultMap>
+
+    <sql id="selectTagDictVo">
+        select tag_id, tag_name, tag_code, tag_type, sort_order, parent_id, ancestors, menu_level, spu_prefix, current_max_seq, create_by, create_time, update_by, update_time, remark, del_flag from erp_tag_dict
+    </sql>
+
+    <select id="selectTagDictList" parameterType="TagDict" resultMap="TagDictResult">
+        <include refid="selectTagDictVo"/>
+        <where>  
+            <if test="tagName != null  and tagName != ''"> and tag_name like concat('%', #{tagName}, '%')</if>
+            <if test="tagCode != null  and tagCode != ''"> and tag_code = #{tagCode}</if>
+            <if test="tagType != null  and tagType != ''"> and tag_type = #{tagType}</if>
+            <if test="spuPrefix != null  and spuPrefix != ''"> and spu_prefix like concat('%', #{spuPrefix}, '%')</if>
+            <if test="createTime != null "> and create_time = #{createTime}</if>
+        </where>
+    </select>
+    
+    <select id="selectTagDictByTagId" parameterType="Long" resultMap="TagDictResult">
+        <include refid="selectTagDictVo"/>
+        where tag_id = #{tagId}
+    </select>
+
+    <insert id="insertTagDict" parameterType="TagDict" useGeneratedKeys="true" keyProperty="tagId">
+        insert into erp_tag_dict
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="tagName != null and tagName != ''">tag_name,</if>
+            <if test="tagCode != null and tagCode != ''">tag_code,</if>
+            <if test="tagType != null and tagType != ''">tag_type,</if>
+            <if test="sortOrder != null">sort_order,</if>
+            <if test="parentId != null">parent_id,</if>
+            <if test="ancestors != null">ancestors,</if>
+            <if test="menuLevel != null">menu_level,</if>
+            <if test="spuPrefix != null and spuPrefix != ''">spu_prefix,</if>
+            <if test="currentMaxSeq != null">current_max_seq,</if>
+            <if test="createBy != null">create_by,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateBy != null">update_by,</if>
+            <if test="updateTime != null">update_time,</if>
+            <if test="remark != null">remark,</if>
+            <if test="delFlag != null">del_flag,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="tagName != null and tagName != ''">#{tagName},</if>
+            <if test="tagCode != null and tagCode != ''">#{tagCode},</if>
+            <if test="tagType != null and tagType != ''">#{tagType},</if>
+            <if test="sortOrder != null">#{sortOrder},</if>
+            <if test="parentId != null">#{parentId},</if>
+            <if test="ancestors != null">#{ancestors},</if>
+            <if test="menuLevel != null">#{menuLevel},</if>
+            <if test="spuPrefix != null and spuPrefix != ''">#{spuPrefix},</if>
+            <if test="currentMaxSeq != null">#{currentMaxSeq},</if>
+            <if test="createBy != null">#{createBy},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateBy != null">#{updateBy},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+            <if test="remark != null">#{remark},</if>
+            <if test="delFlag != null">#{delFlag},</if>
+         </trim>
+    </insert>
+
+    <update id="updateTagDict" parameterType="TagDict">
+        update erp_tag_dict
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="tagName != null and tagName != ''">tag_name = #{tagName},</if>
+            <if test="tagCode != null and tagCode != ''">tag_code = #{tagCode},</if>
+            <if test="tagType != null and tagType != ''">tag_type = #{tagType},</if>
+            <if test="sortOrder != null">sort_order = #{sortOrder},</if>
+            <if test="parentId != null">parent_id = #{parentId},</if>
+            <if test="ancestors != null">ancestors = #{ancestors},</if>
+            <if test="menuLevel != null">menu_level = #{menuLevel},</if>
+            <if test="spuPrefix != null and spuPrefix != ''">spu_prefix = #{spuPrefix},</if>
+            <if test="currentMaxSeq != null">current_max_seq = #{currentMaxSeq},</if>
+            <if test="createBy != null">create_by = #{createBy},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            <if test="delFlag != null">del_flag = #{delFlag},</if>
+        </trim>
+        where tag_id = #{tagId}
+    </update>
+
+    <delete id="deleteTagDictByTagId" parameterType="Long">
+        delete from erp_tag_dict where tag_id = #{tagId}
+    </delete>
+
+    <delete id="deleteTagDictByTagIds" parameterType="String">
+        delete from erp_tag_dict where tag_id in 
+        <foreach item="tagId" collection="array" open="(" separator="," close=")">
+            #{tagId}
+        </foreach>
+    </delete>
+</mapper>
