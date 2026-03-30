@@ -9,18 +9,12 @@
       <div class="panel-header">
         <span class="panel-title">标签选择</span>
         <div class="panel-actions">
-          <el-button
-            size="small"
-            icon="el-icon-refresh"
-            @click="refreshTags"
-            title="刷新"
-          ></el-button>
-          <el-button
-            size="small"
-            icon="el-icon-plus"
-            @click="openAddDialog"
-            title="新增标签"
-          ></el-button>
+          <el-button size="small" @click="refreshTags" title="刷新">
+            <el-icon><Refresh /></el-icon>
+          </el-button>
+          <el-button size="small" @click="openAddDialog" title="新增标签">
+            <el-icon><Plus /></el-icon>
+          </el-button>
         </div>
       </div>
       <div class="panel-content" v-show="!isCollapsed">
@@ -53,7 +47,7 @@
         </div>
       </div>
       <div class="content-body">
-        <ProductListPanel :selected-tags="selectedTags" />
+        <ProductListPanel ref="productList" :selected-tags="selectedTags" />
       </div>
     </div>
   </div>
@@ -61,10 +55,13 @@
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from "vue";
+import { ElIcon } from "element-plus";
+import { Refresh, Plus } from "@element-plus/icons-vue";
 import TagTreeSelector from "@/components/erp/TagTreeSelector";
 import ProductListPanel from "@/components/erp/ProductListPanel";
 
 const tagTree = ref(null);
+const productList = ref(null);
 const selectedTags = ref([]);
 const isCollapsed = ref(false);
 const panelWidth = ref(320);
@@ -87,7 +84,13 @@ const toggleCollapse = () => {
 };
 
 const refreshTags = () => {
+  // 清除标签选中状态
+  tagTree.value?.clearSelection();
+  selectedTags.value = [];
+  // 重新加载标签
   tagTree.value?.loadTags();
+  // 刷新商品列表
+  productList.value?.refresh();
 };
 
 const openAddDialog = () => {

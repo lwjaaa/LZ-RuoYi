@@ -7,52 +7,59 @@
       :props="treeProps"
       show-checkbox
       node-key="tagId"
-      :check-strictly="false"
+      :check-strictly="true"
+      :check-on-click-node="true"
       :expand-on-click-node="false"
+      default-expand-all
       draggable
       :allow-drop="allowDrop"
       @check="handleCheck"
-      @node-click="handleNodeClick"
       @node-drop="handleNodeDrop"
-      highlight-current
     >
       <template v-slot="{ data }">
         <span
           class="custom-tree-node"
+          :class="{ 'selected-node': selectedTagIds.includes(data.tagId) }"
           @mouseenter="hoveredNode = data.tagId"
           @mouseleave="hoveredNode = null"
         >
-          <i
-            class="el-icon-folder-opened node-icon folder-icon"
-            v-if="data.children && data.children.length > 0"
-          ></i>
-          <i class="el-icon-price-tag node-icon tag-icon" v-else></i>
+          <el-icon class="node-icon" v-if="data.tagType === 'MENU'">
+            <FolderOpened />
+          </el-icon>
+          <el-icon class="node-icon" v-else>
+            <Ticket />
+          </el-icon>
           <span class="node-label"
             >{{ data.tagName }} ({{ data.tagCode }})</span
           >
-          <span class="hover-buttons" v-if="hoveredNode === data.tagId">
-            <el-button
-              size="small"
-              icon="Plus"
-              @click.stop="openAddDialogFor(data)"
-              >新增</el-button
+          <span
+            class="hover-buttons"
+            :class="{ visible: hoveredNode === data.tagId }"
+          >
+            <el-dropdown
+              trigger="click"
+              @command="(command) => handleMoreCommand(data, command)"
             >
-            <el-button
-              size="small"
-              icon="Edit"
-              @click.stop="openEditDialog(data)"
-              >编辑</el-button
-            >
-            <el-button
-              size="small"
-              type="danger"
-              icon="Delete"
-              @click.stop="deleteTag(data)"
-              >删除</el-button
-            >
-            <el-button size="small" icon="Top" @click.stop="pinToTop(data)"
-              >置顶</el-button
-            >
+              <span class="el-dropdown-link" @click.stop>
+                <el-button size="small">
+                  <el-icon><More /></el-icon>
+                </el-button>
+              </span>
+              <template #dropdown>
+                <el-dropdown-item command="edit">
+                  <el-icon><Edit /></el-icon> 编辑
+                </el-dropdown-item>
+                <el-dropdown-item command="delete">
+                  <el-icon><Delete /></el-icon> 删除
+                </el-dropdown-item>
+                <el-dropdown-item v-if="data.tagType === 'MENU'" command="add">
+                  <el-icon><Plus /></el-icon> 新增
+                </el-dropdown-item>
+              </template>
+            </el-dropdown>
+            <el-button size="small" @click.stop="pinToTop(data)">
+              <el-icon><ArrowUp /></el-icon>
+            </el-button>
           </span>
         </span>
       </template>
@@ -64,8 +71,17 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
-import { ElMessage, ElMessageBox } from "element-plus";
+import { ref, onMounted, nextTick, watch } from "vue";
+import { ElIcon, ElMessage, ElMessageBox } from "element-plus";
+import {
+  FolderOpened,
+  Ticket,
+  Plus,
+  Edit,
+  Delete,
+  ArrowUp,
+  More,
+} from "@element-plus/icons-vue";
 import { treeList, addTag, updateTag, dragNode, delTag } from "@/api/erp/tag";
 import TagDialog from "@/components/erp/TagDialog.vue";
 
@@ -87,6 +103,8 @@ const tagModal = ref(null);
 // Reactive data
 const tagList = ref([]);
 const hoveredNode = ref(null);
+const expandedButtons = ref(null);
+const selectedTagIds = ref([]);
 
 const treeProps = {
   children: "children",
@@ -94,10 +112,9 @@ const treeProps = {
 };
 
 // Methods
-const loadTags = () => {
-  treeList("ALL").then((response) => {
-    tagList.value = response.data;
-  });
+const loadTags = async () => {
+  const response = await treeList("ALL");
+  tagList.value = response.data;
 };
 
 const normalizeTag = (node) => {
@@ -115,27 +132,33 @@ const normalizeTag = (node) => {
 const updateSelection = () => {
   const checkedNodes = tree.value.getCheckedNodes();
   const normalized = checkedNodes.map((node) => normalizeTag(node));
+  selectedTagIds.value = normalized.map((node) => node.tagId);
   emit("selection-change", normalized);
 };
 
-const handleCheck = () => {
+const handleCheck = (checkedNodes, options) => {
   updateSelection();
-};
-
-const handleNodeClick = (data) => {
-  tree.value.setChecked(
-    data.tagId,
-    !tree.value.getCheckedNodes().some((node) => node.tagId === data.tagId),
-  );
-  // Use nextTick equivalent
-  setTimeout(() => {
-    updateSelection();
-  }, 0);
+  console.log("handleCheck-选中的节点：", tree.value.getCheckedNodes());
 };
 
 const clearSelection = () => {
   tree.value.setCheckedKeys([]);
+  selectedTagIds.value = [];
   emit("selection-change", []);
+};
+
+const toggleMore = (tagId) => {
+  expandedButtons.value = expandedButtons.value === tagId ? null : tagId;
+};
+
+const handleMoreCommand = (data, command) => {
+  if (command === "edit") {
+    openEditDialog(data);
+  } else if (command === "delete") {
+    deleteTag(data);
+  } else if (command === "add") {
+    openAddDialogFor(data);
+  }
 };
 
 const openAddDialog = () => {
@@ -245,7 +268,6 @@ const handleNodeDrop = (draggingNode, dropNode, dropType) => {
     sortOrder: calculateSortOrder(draggingData, dropData, dropType),
   };
 
-  console.log("更新节点:", updatedNode);
   updateTag(updatedNode)
     .then(() => {
       ElMessage.success("移动成功");
@@ -264,9 +286,30 @@ defineExpose({
 });
 
 // Lifecycle
-onMounted(() => {
-  loadTags();
+onMounted(async () => {
+  await loadTags();
+  if (props.selectedTags && props.selectedTags.length > 0) {
+    const ids = props.selectedTags.map((tag) => tag.tagId);
+    tree.value.setCheckedKeys(ids);
+    selectedTagIds.value = ids;
+  }
 });
+
+// Watch for changes in selectedTags prop
+watch(
+  () => props.selectedTags,
+  (newSelectedTags) => {
+    if (newSelectedTags && newSelectedTags.length > 0) {
+      const ids = newSelectedTags.map((tag) => tag.tagId);
+      tree.value.setCheckedKeys(ids);
+      selectedTagIds.value = ids;
+    } else {
+      tree.value.setCheckedKeys([]);
+      selectedTagIds.value = [];
+    }
+  },
+  { deep: true },
+);
 </script>
 
 <style scoped>
@@ -283,21 +326,25 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  padding: 12px 16px; /* 增加内边距 */
-  border-radius: 6px;
+  padding: 6px 8px;
+  border-radius: 4px;
   transition: background-color 0.2s ease;
   cursor: pointer;
-  min-height: 48px; /* 增加高度 */
+  min-height: 32px;
 }
 
-.custom-tree-node:hover {
-  background-color: #f0f2f5; /* 更柔和的高亮 */
+.custom-tree-node:hover,
+.custom-tree-node.selected-node,
+.el-tree-node.is-checked > .el-tree-node__content .custom-tree-node {
+  background-color: #e6f7ff; /* 一致的高亮背景 */
+  color: #1890ff; /* 一致的高亮文字 */
+  border-left: 3px solid #1890ff;
 }
 
 .node-icon {
-  margin-right: 12px; /* 增加间距 */
+  margin-right: 8px;
   color: #666;
-  font-size: 16px;
+  font-size: 14px;
 }
 
 .folder-icon {
@@ -316,19 +363,39 @@ onMounted(() => {
 }
 
 .hover-buttons {
-  display: none;
-  gap: 6px; /* 增加按钮间距 */
-  opacity: 0;
-  transition: opacity 0.2s ease;
-}
-
-.custom-tree-node:hover .hover-buttons {
   display: flex;
-  opacity: 1;
+  align-items: center;
+  gap: 4px;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 0.2s ease,
+    visibility 0.2s ease;
 }
 
-/* Element UI tree styles override */
-.el-tree-node__content :deep(.el-tree-node__content) {
+.hover-buttons.visible {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.custom-tree-node.selected-node,
+.el-tree-node.is-checked > .el-tree-node__content .custom-tree-node {
+  background-color: #e6f7ff;
+  color: #1890ff;
+  border-left: 3px solid #1890ff;
+}
+
+.expanded-buttons {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 4px;
+}
+
+/* Element Plus tree styles override */
+:deep(.el-tree-node__content) {
   height: auto;
   padding: 0;
 }
@@ -343,13 +410,16 @@ onMounted(() => {
 }
 
 .el-tree-node {
-  margin-bottom: 4px; /* 增加节点间距 */
+  margin-bottom: 2px;
 }
 
 /* 隐藏复选框 */
-/* :deep(.el-checkbox) {
-  display: none !important; 
-} */
+:deep(.el-tree-node__content .el-checkbox),
+:deep(.el-tree-node__content .el-checkbox__inner),
+:deep(.el-checkbox),
+:deep(.el-checkbox__inner) {
+  display: none !important;
+}
 
 .el-tree-node.is-checked > .el-tree-node__content {
   background-color: #e6f7ff; /* 自定义选中背景色 */

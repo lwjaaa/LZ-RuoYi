@@ -158,35 +158,11 @@ const fetchTags = async () => {
   try {
     menuLoading.value = true;
     const response = await treeList("MENU");
-    const rows = response.rows || [];
+    const rows = response.data || [];
     tagOptions.value = rows;
-    // tagOptions.value = buildTreeData(rows)
   } finally {
     menuLoading.value = false;
   }
-};
-
-const buildTreeData = (list) => {
-  const map = {};
-  const result = [];
-  list.forEach((item) => {
-    map[item.tagId] = { ...item, children: [] };
-  });
-  list.forEach((item) => {
-    if (
-      item.parentId === 0 ||
-      item.parentId === "0" ||
-      item.parentId === null
-    ) {
-      result.push(map[item.tagId]);
-    } else {
-      const parent = map[item.parentId];
-      if (parent) {
-        parent.children.push(map[item.tagId]);
-      }
-    }
-  });
-  return result;
 };
 
 const resetForm = () => {

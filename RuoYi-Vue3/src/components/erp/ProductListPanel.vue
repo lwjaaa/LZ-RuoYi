@@ -299,6 +299,11 @@ watch(
 onMounted(() => {
   getList();
 });
+
+// Expose methods for parent component
+defineExpose({
+  refresh: getList,
+});
 </script>
 
 <style scoped>
