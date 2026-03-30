@@ -4,8 +4,10 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.ruoyi.erp.model.domain.TagDict;
 import com.ruoyi.erp.model.dto.tagDict.TagDictQuery;
+import com.ruoyi.erp.model.dto.tagDict.TreeDragDTO;
 import com.ruoyi.erp.model.vo.tagDict.TagDictMenuVo;
 import com.ruoyi.erp.model.vo.tagDict.TagDictVo;
+import jakarta.validation.Valid;
 
 import java.util.List;
 /**
@@ -103,4 +105,12 @@ public interface ITagDictService extends IService<TagDict>
      * 手动刷新菜单缓存
      */
     void refreshMenuCache();
+    /**
+     * 拖拽修改节点位置
+     *
+     * @param dto
+     * @return void
+     * @author lwj
+     **/
+    void dragNode(@Valid TreeDragDTO dto);
 }

@@ -1,8 +1,9 @@
 package com.ruoyi.system.service;
 
-import java.util.List;
 import com.ruoyi.common.core.domain.TreeSelect;
 import com.ruoyi.common.core.domain.entity.SysDept;
+
+import java.util.List;
 
 /**
  * 部门管理 服务层
@@ -113,6 +114,14 @@ public interface ISysDeptService
      * @return 结果
      */
     public int updateDept(SysDept dept);
+
+    /**
+     * 保存部门排序
+     *
+     * @param deptIds 部门ID数组
+     * @param orderNums 排序数组
+     */
+    public void updateDeptSort(String[] deptIds, String[] orderNums);
 
     /**
      * 删除部门管理信息

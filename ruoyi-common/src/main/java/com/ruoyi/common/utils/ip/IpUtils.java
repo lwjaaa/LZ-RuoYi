@@ -1,32 +1,19 @@
 package com.ruoyi.common.utils.ip;
 
-import com.ruoyi.common.core.domain.DeviceInfo;
 import com.ruoyi.common.utils.ServletUtils;
 import com.ruoyi.common.utils.StringUtils;
 import jakarta.servlet.http.HttpServletRequest;
-import nl.basjes.parse.useragent.UserAgent;
-import nl.basjes.parse.useragent.UserAgentAnalyzer;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
 /**
  * 获取IP方法
- *
+ * 
  * @author ruoyi
  */
 public class IpUtils
 {
-    private static final UserAgentAnalyzer USER_AGENT_ANALYZER = UserAgentAnalyzer.newBuilder()
-            .hideMatcherLoadStats()
-            .withCache(10000)
-            .withField(UserAgent.AGENT_NAME)
-            .withField(UserAgent.AGENT_NAME_VERSION)
-            .withField(UserAgent.OPERATING_SYSTEM_NAME)
-            .withField(UserAgent.OPERATING_SYSTEM_NAME_VERSION)
-            .withField(UserAgent.DEVICE_CLASS)
-            .withField(UserAgent.DEVICE_NAME)
-            .build();
     public final static String REGX_0_255 = "(25[0-5]|2[0-4]\\d|1\\d{2}|[1-9]\\d|\\d)";
     // 匹配 ip
     public final static String REGX_IP = "((" + REGX_0_255 + "\\.){3}" + REGX_0_255 + ")";
@@ -36,7 +23,7 @@ public class IpUtils
 
     /**
      * 获取客户端IP
-     *
+     * 
      * @return IP地址
      */
     public static String getIpAddr()
@@ -46,7 +33,7 @@ public class IpUtils
 
     /**
      * 获取客户端IP
-     *
+     * 
      * @param request 请求对象
      * @return IP地址
      */
@@ -84,7 +71,7 @@ public class IpUtils
 
     /**
      * 检查是否为内部IP地址
-     *
+     * 
      * @param ip IP地址
      * @return 结果
      */
@@ -96,7 +83,7 @@ public class IpUtils
 
     /**
      * 检查是否为内部IP地址
-     *
+     * 
      * @param addr byte地址
      * @return 结果
      */
@@ -139,7 +126,7 @@ public class IpUtils
 
     /**
      * 将IPv4地址转换成字节
-     *
+     * 
      * @param text IPv4地址
      * @return byte 字节
      */
@@ -227,7 +214,7 @@ public class IpUtils
 
     /**
      * 获取IP地址
-     *
+     * 
      * @return 本地IP地址
      */
     public static String getHostIp()
@@ -244,7 +231,7 @@ public class IpUtils
 
     /**
      * 获取主机名
-     *
+     * 
      * @return 本地主机名
      */
     public static String getHostName()
@@ -364,7 +351,7 @@ public class IpUtils
 
     /**
      * 校验ip是否符合过滤串规则
-     *
+     * 
      * @param filter 过滤IP列表,支持后缀'*'通配,支持网段如:`10.10.10.1-10.10.10.99`
      * @param ip 校验IP地址
      * @return boolean 结果
@@ -392,60 +379,5 @@ public class IpUtils
             }
         }
         return false;
-    }
-
-    public static DeviceInfo getDeviceInfo()
-    {
-        HttpServletRequest request = ServletUtils.getRequest();
-        String ip = getIpAddr(request);
-        String address = AddressUtils.getRealAddressByIP(ip);
-        String ua = request.getHeader("User-Agent");
-        String os = "Unknown";
-        String browser = "Unknown";
-        String platform = "Unknown";
-        if (StringUtils.isNotEmpty(ua))
-        {
-            UserAgent parsedAgent = USER_AGENT_ANALYZER.parse(ua);
-            os = parsedAgent.getValue(UserAgent.OPERATING_SYSTEM_NAME);
-            String osVersion = parsedAgent.getValue(UserAgent.OPERATING_SYSTEM_NAME_VERSION);
-            if (StringUtils.isNotEmpty(osVersion) && !os.contains(osVersion))
-            {
-                os = os + " " + osVersion;
-            }
-            browser = parsedAgent.getValue(UserAgent.AGENT_NAME);
-            String browserVersion = parsedAgent.getValue(UserAgent.AGENT_NAME_VERSION);
-            if (StringUtils.isNotEmpty(browserVersion) && !browser.contains(browserVersion))
-            {
-                browser = browser + " " + browserVersion;
-            }
-            String lowerUa = ua.toLowerCase();
-            if (lowerUa.contains("android"))
-            {
-                platform = "Android";
-            }
-            else if (lowerUa.contains("iphone") || lowerUa.contains("ipad"))
-            {
-                platform = "iOS";
-            }
-            else if (lowerUa.contains("windows"))
-            {
-                platform = "Windows";
-            }
-            else if (lowerUa.contains("mac") && !lowerUa.contains("iphone") && !lowerUa.contains("ipad"))
-            {
-                platform = "Mac";
-            }
-            else if (lowerUa.contains("linux"))
-            {
-                platform = "Linux";
-            }
-        }
-        DeviceInfo deviceInfo = new DeviceInfo();
-        deviceInfo.setIpAddr(ip);
-        deviceInfo.setIpAddress(address);
-        deviceInfo.setBrowser(browser);
-        deviceInfo.setOs(os);
-        deviceInfo.setPlatform(platform);
-        return deviceInfo;
     }
 }

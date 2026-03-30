@@ -1,8 +1,9 @@
 package com.ruoyi.system.mapper;
 
-import java.util.List;
-import org.apache.ibatis.annotations.Param;
 import com.ruoyi.common.core.domain.entity.SysMenu;
+import org.apache.ibatis.annotations.Param;
+
+import java.util.List;
 
 /**
  * 菜单表 数据层
@@ -107,6 +108,13 @@ public interface SysMenuMapper
     public int updateMenu(SysMenu menu);
 
     /**
+     * 保存菜单排序
+     * 
+     * @param menu 菜单信息
+     */
+    public void updateMenuSort(SysMenu menu);
+
+    /**
      * 删除菜单管理信息
      *
      * @param menuId 菜单ID
@@ -122,4 +130,13 @@ public interface SysMenuMapper
      * @return 结果
      */
     public SysMenu checkMenuNameUnique(@Param("menuName") String menuName, @Param("parentId") Long parentId);
+
+    /**
+     * 根据路由路径或名称查询菜单信息（用于唯一性校验）
+     *
+     * @param path 路由地址
+     * @param routeName 路由名称
+     * @return 匹配的菜单列表
+     */
+    public List<SysMenu> selectMenusByPathOrRouteName(@Param("path") String path, @Param("routeName") String routeName);
 }

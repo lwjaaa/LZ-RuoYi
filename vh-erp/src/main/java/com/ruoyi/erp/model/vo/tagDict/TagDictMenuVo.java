@@ -31,7 +31,7 @@ public class TagDictMenuVo implements Serializable
     private String tagType;
 
     /** 排序 */
-    private Long sortOrder;
+    private Integer sortOrder;
 
     /** 父级ID (0表示顶级菜单) */
     private Long parentId;
@@ -40,10 +40,13 @@ public class TagDictMenuVo implements Serializable
     private String ancestors;
 
     /** 菜单层级 */
-    private Long menuLevel;
+    private Integer menuLevel;
 
     /** SPU 前缀 */
     private String spuPrefix;
+
+    /** 当前最大流水号 */
+    private Integer currentMaxSeq;
 
     /** 子节点列表 */
     private List<TagDictMenuVo> children;

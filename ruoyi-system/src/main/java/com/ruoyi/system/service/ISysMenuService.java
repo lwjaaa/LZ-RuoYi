@@ -1,10 +1,11 @@
 package com.ruoyi.system.service;
 
-import java.util.List;
-import java.util.Set;
 import com.ruoyi.common.core.domain.TreeSelect;
 import com.ruoyi.common.core.domain.entity.SysMenu;
 import com.ruoyi.system.domain.vo.RouterVo;
+
+import java.util.List;
+import java.util.Set;
 
 /**
  * 菜单 业务层
@@ -127,6 +128,14 @@ public interface ISysMenuService
     public int updateMenu(SysMenu menu);
 
     /**
+     * 保存菜单排序
+     * 
+     * @param menuIds 菜单ID
+     * @param orderNums 排序ID
+     */
+    public void updateMenuSort(String[] menuIds, String[] orderNums);
+
+    /**
      * 删除菜单管理信息
      * 
      * @param menuId 菜单ID
@@ -141,4 +150,12 @@ public interface ISysMenuService
      * @return 结果
      */
     public boolean checkMenuNameUnique(SysMenu menu);
+
+    /**
+     * 校验路由组合是否唯一
+     *
+     * @param menu 菜单信息
+     * @return 结果
+     */
+    public boolean checkRouteConfigUnique(SysMenu menu);
 }

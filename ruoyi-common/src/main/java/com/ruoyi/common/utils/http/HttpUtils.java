@@ -1,26 +1,19 @@
 package com.ruoyi.common.utils.http;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
+import com.ruoyi.common.constant.Constants;
+import com.ruoyi.common.utils.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.MediaType;
+
+import javax.net.ssl.*;
+import java.io.*;
 import java.net.ConnectException;
 import java.net.SocketTimeoutException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
 import java.security.cert.X509Certificate;
-import javax.net.ssl.HostnameVerifier;
-import javax.net.ssl.HttpsURLConnection;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSession;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509TrustManager;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import com.ruoyi.common.constant.Constants;
-import com.ruoyi.common.utils.StringUtils;
 
 /**
  * 通用http发送方法
@@ -126,6 +119,19 @@ public class HttpUtils
      */
     public static String sendPost(String url, String param)
     {
+        return sendPost(url, param, MediaType.APPLICATION_FORM_URLENCODED_VALUE);
+    }
+
+    /**
+     * 向指定 URL 发送POST方法的请求
+     * 
+     * @param url 发送请求的 URL
+     * @param param 请求参数
+     * @param contentType 内容类型
+     * @return 所代表远程资源的响应结果
+     */
+    public static String sendPost(String url, String param, String contentType)
+    {
         PrintWriter out = null;
         BufferedReader in = null;
         StringBuilder result = new StringBuilder();
@@ -138,7 +144,7 @@ public class HttpUtils
             conn.setRequestProperty("connection", "Keep-Alive");
             conn.setRequestProperty("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
             conn.setRequestProperty("Accept-Charset", "utf-8");
-            conn.setRequestProperty("contentType", "utf-8");
+            conn.setRequestProperty("Content-Type", contentType);
             conn.setDoOutput(true);
             conn.setDoInput(true);
             out = new PrintWriter(conn.getOutputStream());
@@ -191,6 +197,11 @@ public class HttpUtils
 
     public static String sendSSLPost(String url, String param)
     {
+        return sendSSLPost(url, param, MediaType.APPLICATION_FORM_URLENCODED_VALUE);
+    }
+
+    public static String sendSSLPost(String url, String param, String contentType)
+    {
         StringBuilder result = new StringBuilder();
         String urlNameString = url + "?" + param;
         try
@@ -204,7 +215,7 @@ public class HttpUtils
             conn.setRequestProperty("connection", "Keep-Alive");
             conn.setRequestProperty("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
             conn.setRequestProperty("Accept-Charset", "utf-8");
-            conn.setRequestProperty("contentType", "utf-8");
+            conn.setRequestProperty("Content-Type", contentType);
             conn.setDoOutput(true);
             conn.setDoInput(true);
 

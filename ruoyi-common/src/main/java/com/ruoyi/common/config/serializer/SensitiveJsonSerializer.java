@@ -1,7 +1,5 @@
 package com.ruoyi.common.config.serializer;
 
-import java.io.IOException;
-import java.util.Objects;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.BeanProperty;
 import com.fasterxml.jackson.databind.JsonMappingException;
@@ -12,6 +10,9 @@ import com.ruoyi.common.annotation.Sensitive;
 import com.ruoyi.common.core.domain.model.LoginUser;
 import com.ruoyi.common.enums.DesensitizedType;
 import com.ruoyi.common.utils.SecurityUtils;
+
+import java.io.IOException;
+import java.util.Objects;
 
 /**
  * 数据脱敏序列化过滤

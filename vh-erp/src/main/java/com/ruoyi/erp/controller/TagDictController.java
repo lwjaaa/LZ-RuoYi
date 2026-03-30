@@ -9,11 +9,13 @@ import com.ruoyi.erp.model.domain.TagDict;
 import com.ruoyi.erp.model.dto.tagDict.TagDictEdit;
 import com.ruoyi.erp.model.dto.tagDict.TagDictInsert;
 import com.ruoyi.erp.model.dto.tagDict.TagDictQuery;
+import com.ruoyi.erp.model.dto.tagDict.TreeDragDTO;
 import com.ruoyi.erp.model.vo.tagDict.TagDictMenuVo;
 import com.ruoyi.erp.model.vo.tagDict.TagDictVo;
 import com.ruoyi.erp.service.ITagDictService;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -94,6 +96,18 @@ public class TagDictController extends BaseController
     {
         TagDict tagDict = TagDictEdit.editToObj(tagDictEdit);
         return toAjax(tagDictService.updateTagDict(tagDict));
+    }
+
+
+    /**
+     * 拖拽修改节点位置
+     */
+    @PreAuthorize("@ss.hasPermi('vh-erp:tag:edit')")
+    @Log(title = "标签拖拽", businessType = BusinessType.UPDATE)
+    @PostMapping("/dragNode")
+    public AjaxResult dragNode(@RequestBody @Valid TreeDragDTO dto) {
+        tagDictService.dragNode(dto);
+        return AjaxResult.success("拖拽保存成功");
     }
 
     /**

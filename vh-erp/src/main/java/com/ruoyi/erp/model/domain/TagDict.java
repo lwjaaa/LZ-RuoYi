@@ -42,7 +42,7 @@ public class TagDict implements Serializable
 
     /** 排序 */
     @Excel(name = "排序")
-    private Long sortOrder;
+    private Integer sortOrder;
 
     /** 父级ID (0表示顶级菜单) */
     @Excel(name = "父级ID (0表示顶级菜单)")
@@ -54,7 +54,7 @@ public class TagDict implements Serializable
 
     /** 菜单层级 */
     @Excel(name = "菜单层级")
-    private Long menuLevel;
+    private Integer menuLevel;
 
     /** SPU 前缀 */
     @Excel(name = "SPU 前缀")
@@ -62,7 +62,7 @@ public class TagDict implements Serializable
 
     /** 当前最大流水号 */
     @Excel(name = "当前最大流水号")
-    private Long currentMaxSeq;
+    private Integer currentMaxSeq;
 
     /** 创建者 */
     private String createBy;

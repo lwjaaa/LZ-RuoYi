@@ -1,14 +1,12 @@
 package com.ruoyi.erp.model.vo.tagDict;
 
-import java.io.Serializable;
-import java.util.Date;
-import java.util.Date;
-import com.fasterxml.jackson.annotation.JsonFormat;
-import lombok.Data;
-import com.ruoyi.common.annotation.Excel;
-import org.springframework.beans.BeanUtils;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.ruoyi.erp.model.domain.TagDict;
+import lombok.Data;
+import org.springframework.beans.BeanUtils;
+
+import java.io.Serializable;
+import java.util.Date;
 /**
  * erp标签Vo对象 erp_tag_dict
  *
@@ -30,7 +28,7 @@ public class TagDictVo implements Serializable
     private String tagType;
 
     /** 排序 */
-    private Long sortOrder;
+    private Integer sortOrder;
 
     /** 父级ID (0表示顶级菜单) */
     private Long parentId;
@@ -39,13 +37,13 @@ public class TagDictVo implements Serializable
     private String ancestors;
 
     /** 菜单层级 */
-    private Long menuLevel;
+    private Integer menuLevel;
 
     /** SPU 前缀 */
     private String spuPrefix;
 
     /** 当前最大流水号 */
-    private Long currentMaxSeq;
+    private Integer currentMaxSeq;
 
     /** 创建时间 */
     @JsonFormat(pattern = "yyyy-MM-dd")

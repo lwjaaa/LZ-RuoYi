@@ -1,8 +1,8 @@
 package com.ruoyi.framework.config;
 
+import com.ruoyi.common.utils.ServletUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.stereotype.Component;
-import com.ruoyi.common.utils.ServletUtils;
 
 /**
  * 服务相关配置

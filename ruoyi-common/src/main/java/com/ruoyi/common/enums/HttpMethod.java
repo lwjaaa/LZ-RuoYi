@@ -1,8 +1,9 @@
 package com.ruoyi.common.enums;
 
+import org.jspecify.annotations.Nullable;
+
 import java.util.HashMap;
 import java.util.Map;
-import org.springframework.lang.Nullable;
 
 /**
  * 请求方式

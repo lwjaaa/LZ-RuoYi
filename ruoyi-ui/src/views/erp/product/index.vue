@@ -17,11 +17,9 @@
           ></el-button>
           <el-button
             size="mini"
-            :icon="
-              isCollapsed ? 'el-icon-d-arrow-right' : 'el-icon-d-arrow-left'
-            "
-            @click="toggleCollapse"
-            title="折叠/展开"
+            icon="el-icon-plus"
+            @click="openAddDialog"
+            title="新增标签"
           ></el-button>
         </div>
       </div>
@@ -96,6 +94,10 @@ export default {
     refreshTags() {
       // 触发TagTreeSelector的刷新
       this.$refs.tagTree?.loadTags();
+    },
+    openAddDialog() {
+      // 触发TagTreeSelector的新增标签
+      this.$refs.tagTree?.openAddDialog();
     },
     startResize(e) {
       this.isResizing = true;

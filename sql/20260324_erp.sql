@@ -6,7 +6,7 @@ CREATE TABLE `erp_product`
     `product_title`        varchar(255) NOT NULL COMMENT '商品标题',
     `spu`                  varchar(50)  NOT NULL COMMENT 'SPU',
     `category`             int(20)      DEFAULT NULL COMMENT '商品类别ID (Category)',
-    `product_type`         varchar(100) DEFAULT NULL COMMENT '商品类型 (Product Type)',
+    `product_type`         varchar(100) DEFAULT NULL COMMENT '商品类型 (Product Type)',1
     `source_url`           varchar(500) DEFAULT NULL COMMENT '来源URL',
     `purchase_url`         varchar(500) DEFAULT NULL COMMENT '采购链接',
     `option_json`          json         DEFAULT NULL COMMENT '商品选项',

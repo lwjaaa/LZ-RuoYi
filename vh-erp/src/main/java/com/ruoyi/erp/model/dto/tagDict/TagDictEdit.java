@@ -1,11 +1,11 @@
 package com.ruoyi.erp.model.dto.tagDict;
 
-import java.io.Serializable;
-import java.util.Date;
-import com.fasterxml.jackson.annotation.JsonFormat;
+import com.ruoyi.erp.model.domain.TagDict;
 import lombok.Data;
 import org.springframework.beans.BeanUtils;
-import com.ruoyi.erp.model.domain.TagDict;
+
+import java.io.Serializable;
+import java.util.Date;
 /**
  * erp标签Vo对象 erp_tag_dict
  *
@@ -16,6 +16,7 @@ import com.ruoyi.erp.model.domain.TagDict;
 public class TagDictEdit implements Serializable
 {
     private static final long serialVersionUID = 1L;
+    private Long tagId;
 
     /** 标签名称 */
     private String tagName;
@@ -27,7 +28,7 @@ public class TagDictEdit implements Serializable
     private String tagType;
 
     /** 排序 */
-    private Long sortOrder;
+    private Integer sortOrder;
 
     /** 父级ID (0表示顶级菜单) */
     private Long parentId;
@@ -36,13 +37,13 @@ public class TagDictEdit implements Serializable
     private String ancestors;
 
     /** 菜单层级 */
-    private Long menuLevel;
+    private Integer menuLevel;
 
     /** SPU 前缀 */
     private String spuPrefix;
 
     /** 当前最大流水号 */
-    private Long currentMaxSeq;
+    private Integer currentMaxSeq;
 
     /** 更新者 */
     private String updateBy;

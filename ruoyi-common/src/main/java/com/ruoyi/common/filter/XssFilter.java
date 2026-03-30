@@ -1,18 +1,14 @@
 package com.ruoyi.common.filter;
 
+import com.ruoyi.common.enums.HttpMethod;
+import com.ruoyi.common.utils.StringUtils;
+import jakarta.servlet.*;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import jakarta.servlet.Filter;
-import jakarta.servlet.FilterChain;
-import jakarta.servlet.FilterConfig;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.ServletRequest;
-import jakarta.servlet.ServletResponse;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import com.ruoyi.common.utils.StringUtils;
-import com.ruoyi.common.enums.HttpMethod;
 
 /**
  * 防止XSS攻击的过滤器
