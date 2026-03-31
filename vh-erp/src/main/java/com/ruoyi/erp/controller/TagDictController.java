@@ -168,4 +168,13 @@ public class TagDictController extends BaseController
         tagDictService.refreshMenuCache();
         return success("缓存已刷新");
     }
+    /**
+     * 置顶
+     */
+    @PreAuthorize("@ss.hasPermi('vh-erp:tag:edit')")
+    @Log(title = "置顶", businessType = BusinessType.UPDATE)
+    @PostMapping("/top/{tagId}")
+    public AjaxResult top(@PathVariable("tagId") Long tagId) {
+        return toAjax(tagDictService.top(tagId));
+    }
 }

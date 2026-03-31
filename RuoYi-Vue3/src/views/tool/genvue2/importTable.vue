@@ -2,18 +2,22 @@
   <!-- 导入表 -->
   <el-dialog
     title="导入表"
-    v-model="visible"
+    v-model:visible="visible"
     width="800px"
     top="5vh"
     append-to-body
   >
-    <el-form :model="queryParams" ref="queryRef" :inline="true">
+    <el-form
+      :model="queryParams"
+      ref="queryFormRef"
+      size="small"
+      :inline="true"
+    >
       <el-form-item label="表名称" prop="tableName">
         <el-input
           v-model="queryParams.tableName"
           placeholder="请输入表名称"
           clearable
-          style="width: 180px"
           @keyup.enter="handleQuery"
         />
       </el-form-item>
@@ -22,21 +26,26 @@
           v-model="queryParams.tableComment"
           placeholder="请输入表描述"
           clearable
-          style="width: 180px"
           @keyup.enter="handleQuery"
         />
       </el-form-item>
       <el-form-item>
-        <el-button type="primary" icon="Search" @click="handleQuery"
+        <el-button
+          type="primary"
+          icon="Search"
+          size="small"
+          @click="handleQuery"
           >搜索</el-button
         >
-        <el-button icon="Refresh" @click="resetQuery">重置</el-button>
+        <el-button icon="Refresh" size="small" @click="resetQuery"
+          >重置</el-button
+        >
       </el-form-item>
     </el-form>
     <el-row>
       <el-table
         @row-click="clickRow"
-        ref="table"
+        ref="tableRef"
         :data="dbTableList"
         @selection-change="handleSelectionChange"
         height="260px"
@@ -73,14 +82,22 @@
 </template>
 
 <script setup>
-import { listDbTable, importTable } from "@/api/tool/genvue3";
+import { ref, reactive, getCurrentInstance } from "vue";
+import { listDbTable, importTable } from "@/api/tool/genvue2";
+import { Search, Refresh } from "@element-plus/icons-vue";
 
-const total = ref(0);
-const visible = ref(false);
-const tables = ref([]);
-const dbTableList = ref([]);
 const { proxy } = getCurrentInstance();
+const emit = defineEmits(["ok"]);
 
+// 遮罩层
+const visible = ref(false);
+// 选中数组值
+const tables = ref([]);
+// 总条数
+const total = ref(0);
+// 表数据
+const dbTableList = ref([]);
+// 查询参数
 const queryParams = reactive({
   pageNum: 1,
   pageSize: 10,
@@ -88,62 +105,65 @@ const queryParams = reactive({
   tableComment: undefined,
 });
 
-const emit = defineEmits(["ok"]);
+// ref 引用
+const queryFormRef = ref(null);
+const tableRef = ref(null);
 
-/** 查询参数列表 */
-function show() {
+// 显示弹框
+const show = () => {
   getList();
   visible.value = true;
-}
+};
 
-/** 单击选择行 */
-function clickRow(row) {
-  proxy.$refs.table.toggleRowSelection(row);
-}
+// 点击行
+const clickRow = (row) => {
+  tableRef.value.toggleRowSelection(row);
+};
 
-/** 多选框选中数据 */
-function handleSelectionChange(selection) {
+// 多选框选中数据
+const handleSelectionChange = (selection) => {
   tables.value = selection.map((item) => item.tableName);
-}
+};
 
-/** 查询表数据 */
-function getList() {
+// 查询表数据
+const getList = () => {
   listDbTable(queryParams).then((res) => {
-    dbTableList.value = res.rows;
-    total.value = res.total;
+    if (res.code === 200) {
+      dbTableList.value = res.rows;
+      total.value = res.total;
+    }
   });
-}
+};
 
-/** 搜索按钮操作 */
-function handleQuery() {
+// 搜索按钮操作
+const handleQuery = () => {
   queryParams.pageNum = 1;
   getList();
-}
+};
 
-/** 重置按钮操作 */
-function resetQuery() {
-  proxy.resetForm("queryRef");
+// 重置按钮操作
+const resetQuery = () => {
+  queryFormRef.value.resetFields();
   handleQuery();
-}
+};
 
-/** 导入按钮操作 */
-function handleImportTable() {
+// 导入按钮操作
+const handleImportTable = () => {
   const tableNames = tables.value.join(",");
-  if (tableNames == "") {
+  if (tableNames === "") {
     proxy.$modal.msgError("请选择要导入的表");
     return;
   }
-  importTable({ tables: tableNames, tplWebType: "element-plus" }).then(
-    (res) => {
-      proxy.$modal.msgSuccess(res.msg);
-      if (res.code === 200) {
-        visible.value = false;
-        emit("ok");
-      }
-    },
-  );
-}
+  importTable({ tables: tableNames }).then((res) => {
+    proxy.$modal.msgSuccess(res.msg);
+    if (res.code === 200) {
+      visible.value = false;
+      emit("ok");
+    }
+  });
+};
 
+// 暴露给父组件
 defineExpose({
   show,
 });

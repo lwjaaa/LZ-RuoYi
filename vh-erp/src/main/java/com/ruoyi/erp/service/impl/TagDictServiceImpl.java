@@ -94,41 +94,33 @@ public class TagDictServiceImpl extends ServiceImpl<TagDictMapper, TagDict> impl
         }
 
         // 4. 自动设置排序号（如果未提供）
-        if (tagDict.getSortOrder() == null || tagDict.getSortOrder() <= 0) {
-            tagDict.setSortOrder(this.getMaxOrderNum(tagDict.getParentId()) + 1);
-        }
+        tagDict.setSortOrder(this.getMaxOrderNum(tagDict.getParentId(), tagDict.getTagType()) + 1);
 
         // 5. 自动设置层级
-        if (tagDict.getMenuLevel() == null) {
-            if (tagDict.getParentId() <= 0) {
-                tagDict.setMenuLevel(1); // 顶级节点层级为 1
-            } else {
-                // 子节点层级 = 父节点层级 + 1
-                TagDict parent = getById(tagDict.getParentId());
-                if (parent != null) {
-                    tagDict.setMenuLevel(parent.getMenuLevel() + 1);
-                } else {
-                    tagDict.setMenuLevel(1);
-                }
-            }
-        }
-
-        // 6. 自动设置祖先路径
-        if (StringUtils.isEmpty(tagDict.getAncestors())) {
-            if (tagDict.getParentId() <= 0) {
-                tagDict.setAncestors("0");
-            } else {
-                TagDict parent = getById(tagDict.getParentId());
-                if (parent != null) {
-                    tagDict.setAncestors(parent.getAncestors() + "," + tagDict.getParentId());
-                } else {
-                    tagDict.setAncestors("0," + tagDict.getParentId());
-                }
-            }
-        }
+        this.setLevelInfo(tagDict);
 
         tagDict.setCreateTime(DateUtils.getNowDate());
         return tagDictMapper.insertTagDict(tagDict);
+    }
+
+    /**
+     * 设置标签层级信息:ancestors+menuLevel
+     *
+     * @param tagDict 标签信息
+     */
+    private void setLevelInfo(TagDict tagDict) {
+        Long parentId = tagDict.getParentId();
+        TagDict parentNode = null;
+        if (parentId != null && parentId > 0) {
+            parentNode = this.getById(parentId);
+        }
+        if (parentNode != null) {
+            tagDict.setMenuLevel(parentNode.getMenuLevel() + 1);
+            tagDict.setAncestors(parentNode.getAncestors() + "," + parentId);
+        } else {
+            tagDict.setMenuLevel(1);
+            tagDict.setAncestors("0");
+        }
     }
 
     /**
@@ -155,7 +147,7 @@ public class TagDictServiceImpl extends ServiceImpl<TagDictMapper, TagDict> impl
         if (StringUtils.isNotEmpty(tagDict.getTagCode()) &&
                 !Objects.equals(oldNode.getTagCode(), tagDict.getTagCode())) {
             LambdaQueryWrapper<TagDict> queryWrapper = new LambdaQueryWrapper<>();
-            queryWrapper.eq(TagDict::getTagCode, tagDict.getTagCode())
+            queryWrapper.select(TagDict::getTagId).eq(TagDict::getTagCode, tagDict.getTagCode())
                     .ne(TagDict::getTagId, tagDict.getTagId())
                     .last("LIMIT 1");
             TagDict existTag = this.getOne(queryWrapper);
@@ -183,35 +175,7 @@ public class TagDictServiceImpl extends ServiceImpl<TagDictMapper, TagDict> impl
 
         // 7. 如果父级改变，需要更新层级和祖先路径
         if (parentChanged) {
-            // 7.1 更新当前节点的层级
-            if (newParentId <= 0) {
-                tagDict.setMenuLevel(1);
-                tagDict.setAncestors("0");
-            } else {
-                TagDict newParent = getById(newParentId);
-                if (newParent != null) {
-                    tagDict.setMenuLevel(newParent.getMenuLevel() + 1);
-                    tagDict.setAncestors(newParent.getAncestors() + "," + newParentId);
-                }
-            }
-
-            // 7.2 更新旧父级下后续节点的排序（前移）
-            if (oldParentId > 0) {
-                List<TagDict> oldParentList = lambdaQuery()
-                        .eq(TagDict::getParentId, oldParentId)
-                        .gt(TagDict::getSortOrder, oldNode.getSortOrder())
-                        .list();
-
-                for (TagDict node : oldParentList) {
-                    node.setSortOrder(node.getSortOrder() - 1);
-                }
-                if (!oldParentList.isEmpty()) {
-                    this.updateBatchById(oldParentList);
-                }
-            }
-
-            // 7.3 将当前节点排序设为新父级下的最大值（放到最后）
-            tagDict.setSortOrder(this.getMaxOrderNum(newParentId) + 1);
+            this.setLevelInfo(tagDict);
         }
 
         // 8. 递归更新所有子节点的层级和祖先路径
@@ -245,22 +209,24 @@ public class TagDictServiceImpl extends ServiceImpl<TagDictMapper, TagDict> impl
             updateList.add(child);
         }
 
-        if (!updateList.isEmpty()) {
-            this.updateBatchById(updateList);
+        this.updateBatchById(updateList);
 
-            // 递归更新下一层子节点
-            for (TagDict child : children) {
-                updateChildrenInfo(child);
-            }
+        // 递归更新下一层子节点
+        for (TagDict child : children) {
+            updateChildrenInfo(child);
         }
     }
 
+    /**
+     * 校验标签名称唯一性
+     */
     private boolean checkTagNameUnique(TagDict tagDict) {
         Long tagId = StringUtils.isNull(tagDict.getTagId()) ? -1L : tagDict.getTagId();
 
         LambdaQueryWrapper<TagDict> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(TagDict::getTagName, tagDict.getTagName())
-                .ne(StringUtils.isNotNull(tagId), TagDict::getTagId, tagId)
+        queryWrapper.select(TagDict::getTagId)
+                .eq(TagDict::getTagName, tagDict.getTagName())
+                .ne(TagDict::getTagId, tagId)
                 .last("LIMIT 1");
 
         TagDict existTag = this.getOne(queryWrapper);
@@ -380,36 +346,11 @@ public class TagDictServiceImpl extends ServiceImpl<TagDictMapper, TagDict> impl
 
                 // 2. 自动设置排序号（如果未提供）
                 if (tagDict.getSortOrder() == null || tagDict.getSortOrder() <= 0) {
-                    tagDict.setSortOrder(this.getMaxOrderNum(tagDict.getParentId()) + 1);
+                    tagDict.setSortOrder(this.getMaxOrderNum(tagDict.getParentId(), tagDict.getTagType()) + 1);
                 }
 
                 // 3. 自动设置层级（如果未提供）
-                if (tagDict.getMenuLevel() == null) {
-                    if (tagDict.getParentId() <= 0) {
-                        tagDict.setMenuLevel(1);
-                    } else {
-                        TagDict parent = getById(tagDict.getParentId());
-                        if (parent != null) {
-                            tagDict.setMenuLevel(parent.getMenuLevel() + 1);
-                        } else {
-                            tagDict.setMenuLevel(1);
-                        }
-                    }
-                }
-
-                // 4. 自动设置祖先路径（如果未提供）
-                if (StringUtils.isEmpty(tagDict.getAncestors())) {
-                    if (tagDict.getParentId() <= 0) {
-                        tagDict.setAncestors("0");
-                    } else {
-                        TagDict parent = getById(tagDict.getParentId());
-                        if (parent != null) {
-                            tagDict.setAncestors(parent.getAncestors() + "," + tagDict.getParentId());
-                        } else {
-                            tagDict.setAncestors("0," + tagDict.getParentId());
-                        }
-                    }
-                }
+                this.setLevelInfo(tagDict);
 
                 // 5. 验证是否存在这个 erp 标签
                 Long tagId = tagDict.getTagId();
@@ -494,7 +435,6 @@ public class TagDictServiceImpl extends ServiceImpl<TagDictMapper, TagDict> impl
         Long dragId = dto.getDragId();
         Long targetId = dto.getTargetId();
         String dropType = dto.getDropType();
-        Long newParentId = dto.getNewParentId();
 
         // 1. 获取被拖拽节点
         TagDict dragNode = getById(dragId);
@@ -508,79 +448,95 @@ public class TagDictServiceImpl extends ServiceImpl<TagDictMapper, TagDict> impl
         }
 
         // 3. 获取目标节点（inner/before/after 都需要）
-        TagDict targetNode = null;
-        if (targetId != null && !"inner".equals(dropType)) {
-            targetNode = getById(targetId);
-            if (targetNode == null) {
-                throw new ServiceException("目标节点不存在");
-            }
+        TagDict targetNode = getById(targetId);
+        if (targetNode == null) {
+            throw new ServiceException("目标节点不存在");
         }
 
-        // 4. 防止循环依赖：不能将父节点拖拽到其子节点中
-        if (newParentId != null && newParentId > 0 && isDescendant(newParentId, dragId)) {
-            throw new ServiceException("不能将节点拖拽到其子节点下");
-        }
-
-        // 5. 类型隔离检查：非 MENU 类型不能拖拽到 MENU 类型的前面
-        if (targetNode != null && !TagConstants.TYPE_MENU.equals(dragNode.getTagType())
+        // 4. 类型隔离检查：非 MENU 类型不能拖拽到 MENU 类型的前面
+        if (!TagConstants.TYPE_MENU.equals(dragNode.getTagType())
                 && TagConstants.TYPE_MENU.equals(targetNode.getTagType())) {
             throw new ServiceException("其他类型的标签不能排序到菜单类型的前面");
         }
+        int originSortOrder = dragNode.getSortOrder();
+        String tagType = dragNode.getTagType();
 
+        // 新父节点 ID
+        Long newParentId = null;
+        // 新排序值
         int newOrderNum;
-        List<TagDict> needUpdateNodes = new ArrayList<>();
-
         if ("inner".equals(dropType)) {
             // ======================
             // 拖入作为子节点（放到最后）
             // ======================
-            newOrderNum = this.getMaxOrderNum(newParentId) + 1;
+            newParentId = targetId;
+            newOrderNum = this.getMaxOrderNum(newParentId, tagType) + 1;
+
+            // 将原节点之后的排序值减1
+            lambdaUpdate().eq(TagDict::getParentId, dragNode.getParentId())
+                    .eq(TagConstants.TYPE_MENU.equals(tagType), TagDict::getTagType, tagType)
+                    .ne(!TagConstants.TYPE_MENU.equals(tagType), TagDict::getTagType, TagConstants.TYPE_MENU)
+                    .ge(TagDict::getSortOrder, originSortOrder)
+                    .setSql("sort_order = sort_order - 1")
+                    .update();
         } else {
             // ======================
             // 同级或跨层级拖拽（before / after）
             // ======================
-            if (targetNode == null) {
-                throw new ServiceException("目标节点不能为空");
-            }
-
             int targetOrder = targetNode.getSortOrder();
             newOrderNum = "before".equals(dropType) ? targetOrder : targetOrder + 1;
-
-            // 如果新旧父级不同，需要更新两个父级下的节点排序
-            Long oldParentId = dragNode.getParentId();
-            if (!Objects.equals(oldParentId, newParentId)) {
-                // 旧父级下的节点：排序前移（填补拖拽节点的空缺）
-                List<TagDict> oldParentList = lambdaQuery()
-                        .eq(TagDict::getParentId, oldParentId)
-                        .gt(TagDict::getSortOrder, dragNode.getSortOrder())
-                        .list();
-
-                for (TagDict node : oldParentList) {
-                    node.setSortOrder(node.getSortOrder() - 1);
+            // 跨层级的话，
+            if (!Objects.equals(dragNode.getParentId(), targetNode.getParentId())) {
+                newParentId = targetNode.getParentId();
+                // 防止循环依赖：不能将父节点拖拽到其子节点中
+                if (newParentId > 0 && isDescendant(newParentId, dragId)) {
+                    throw new ServiceException("不能将节点拖拽到其子节点下");
                 }
-                needUpdateNodes.addAll(oldParentList);
-            }
+                // 原节点之后的排序值减1，新节点之后的排序值加1
+                lambdaUpdate().eq(TagDict::getParentId, dragNode.getParentId())
+                        .eq(TagConstants.TYPE_MENU.equals(tagType), TagDict::getTagType, tagType)
+                        .ne(!TagConstants.TYPE_MENU.equals(tagType), TagDict::getTagType, TagConstants.TYPE_MENU)
+                        .gt(TagDict::getSortOrder, originSortOrder)
+                        .setSql("sort_order = sort_order - 1")
+                        .update();
+                lambdaUpdate().eq(TagDict::getParentId, targetNode.getParentId())
+                        .eq(TagConstants.TYPE_MENU.equals(tagType), TagDict::getTagType, tagType)
+                        .ne(!TagConstants.TYPE_MENU.equals(tagType), TagDict::getTagType, TagConstants.TYPE_MENU)
+                        .ge(TagDict::getSortOrder, targetOrder)
+                        .setSql("sort_order = sort_order + 1")
+                        .update();
+            } else {
+                // 同级拖拽的话，
+                // 如果是往前拖拽，则新节点到原节点之间的节点排序加1
+                if ("before".equals(dropType)) {
+                    lambdaUpdate().eq(TagDict::getParentId, dragNode.getParentId())
+                            .eq(TagConstants.TYPE_MENU.equals(tagType), TagDict::getTagType, tagType)
+                            .ne(!TagConstants.TYPE_MENU.equals(tagType), TagDict::getTagType, TagConstants.TYPE_MENU)
+                            .lt(TagDict::getSortOrder, originSortOrder)
+                            .ge(TagDict::getSortOrder, targetOrder)
+                            .setSql("sort_order = sort_order + 1")
+                            .update();
+                } else {
+                    // 如果是往后拖拽，则原节点到新节点之间的节点排序减1
+                    lambdaUpdate().eq(TagDict::getParentId, dragNode.getParentId())
+                            .eq(TagConstants.TYPE_MENU.equals(tagType), TagDict::getTagType, tagType)
+                            .ne(!TagConstants.TYPE_MENU.equals(tagType), TagDict::getTagType, TagConstants.TYPE_MENU)
+                            .gt(TagDict::getSortOrder, originSortOrder)
+                            .le(TagDict::getSortOrder, targetOrder)
+                            .setSql("sort_order = sort_order - 1")
+                            .update();
+                }
 
-            // 新父级下的节点：排序后移（为拖拽节点腾出位置，排除被拖拽节点本身）
-            List<TagDict> newParentList = lambdaQuery()
-                    .eq(TagDict::getParentId, newParentId)
-                    .ge(TagDict::getSortOrder, newOrderNum)
-                    .ne(TagDict::getTagId, dragId)
-                    .list();
-
-            for (TagDict node : newParentList) {
-                node.setSortOrder(node.getSortOrder() + 1);
             }
-            needUpdateNodes.addAll(newParentList);
         }
 
-        // 5. 设置被拖拽节点新排序和父级
+        // 5. 设置被拖拽节点新排序和层级信息
         dragNode.setParentId(newParentId);
         dragNode.setSortOrder(newOrderNum);
-        needUpdateNodes.add(dragNode);
+        this.setLevelInfo(dragNode);
 
         // 6. 批量更新（1 次 SQL！）
-        boolean success = this.updateBatchById(needUpdateNodes);
+        boolean success = this.updateById(dragNode);
 
         if (!success) {
             throw new ServiceException("节点排序更新失败");
@@ -591,39 +547,100 @@ public class TagDictServiceImpl extends ServiceImpl<TagDictMapper, TagDict> impl
     }
 
     /**
+     * 获取某节点下的当前最大排序值
+     *
+     * @param parentId 父级ID
+     * @param tagType  标签类型
+     * @return
+     */
+    private int getMaxOrderNum(Long parentId, String tagType) {
+        return lambdaQuery().select(TagDict::getSortOrder).eq(TagDict::getParentId, parentId)
+                // MENU
+                .eq(TagConstants.TYPE_MENU.equals(tagType), TagDict::getTagType, tagType)
+                // 非MENU
+                .ne(!TagConstants.TYPE_MENU.equals(tagType), TagDict::getTagType, TagConstants.TYPE_MENU)
+                .orderByDesc(TagDict::getSortOrder)
+                .last("limit 1")
+                .oneOpt()
+                .map(TagDict::getSortOrder)
+                .orElse(0);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public int top(Long tagId) {
+        // 于展示的时候，默认MENU类型的tag优先级最高、所以调整排序的时候需要区分是MENU还是其他类型的tag。
+
+        // 1. 获取要置顶的节点
+        TagDict tagDict = getById(tagId);
+        if (tagDict == null) {
+            throw new ServiceException("要置顶的节点不存在");
+        }
+
+        Long parentId = tagDict.getParentId();
+        String tagType = tagDict.getTagType();
+        int currentOrder = tagDict.getSortOrder();
+
+        // 查询第一的位置
+        int newOrderNum = lambdaQuery().select(TagDict::getSortOrder).eq(TagDict::getParentId, parentId)
+                .eq(TagConstants.TYPE_MENU.equals(tagType), TagDict::getTagType, tagType)
+                .ne(!TagConstants.TYPE_MENU.equals(tagType), TagDict::getTagType, TagConstants.TYPE_MENU)
+                .orderByAsc(TagDict::getSortOrder)
+                .last("limit 1")
+                .oneOpt()
+                .map(TagDict::getSortOrder)
+                .orElse(0);
+
+        // 2. 如果当前已经在第一位，无需更新
+        if (currentOrder == 1) {
+            return 0;
+        }
+
+        // 3. 将 [1, currentOrder-1] 范围内的节点排序 +1（仅影响前面的节点）
+        lambdaUpdate()
+                .eq(TagDict::getParentId, parentId)
+                .eq(TagConstants.TYPE_MENU.equals(tagType), TagDict::getTagType, tagType)
+                .ne(!TagConstants.TYPE_MENU.equals(tagType), TagDict::getTagType, TagConstants.TYPE_MENU)
+                .between(TagDict::getSortOrder, newOrderNum, currentOrder)
+                .setSql("sort_order = sort_order + 1")
+                .update();
+
+        // 7. 更新被置顶节点的排序（仅更新这一条记录）
+        lambdaUpdate()
+                .eq(TagDict::getTagId, tagId)
+                .set(TagDict::getSortOrder, newOrderNum)
+                .update();
+
+        // 8. 清理缓存
+        clearMenuCache();
+
+        return 1;
+    }
+
+    /**
      * 判断某个节点是否是另一个节点的后代
      */
     private boolean isDescendant(Long potentialDescendantId, Long ancestorId) {
         if (potentialDescendantId == null || ancestorId == null) {
             return false;
         }
-
         TagDict node = getById(potentialDescendantId);
-        while (node != null && node.getParentId() != null && node.getParentId() > 0) {
-            if (node.getParentId().equals(ancestorId)) {
-                return true;
+        if(node == null){
+            return false;
+        }
+        String ancestors = node.getAncestors();
+        if (StringUtils.isNotEmpty(ancestors)) {
+            // 快速检查：如果祖先路径中不包含新父节点 ID，直接跳过
+            if (ancestors.contains(String.valueOf(ancestorId))) {
+                // 详细检查：遍历祖先 ID，确认是否直接匹配
+                for (String id : ancestors.split(",")) {
+                    if (String.valueOf(ancestorId).equals(id)) {
+                        return true;
+                    }
+                }
             }
-            node = getById(node.getParentId());
         }
         return false;
-    }
-// ... existing code ...
-
-    /**
-     * 获取某个父节点下最大排序号
-     */
-    private int getMaxOrderNum(Long parentId) {
-        // 统一处理 parentId 为 null 的情况
-        if (parentId == null) {
-            parentId = 0L;
-        }
-
-        TagDict maxNode = lambdaQuery()
-                .eq(TagDict::getParentId, parentId)
-                .orderByDesc(TagDict::getSortOrder)
-                .last("LIMIT 1")
-                .one();
-        return maxNode == null ? 0 : maxNode.getSortOrder();
     }
 
     /**

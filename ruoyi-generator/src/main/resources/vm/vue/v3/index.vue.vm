@@ -674,7 +674,7 @@
   /** 下载模板操作 */
   function importTemplate() {
     proxy.download(upload.value.templateUrl, {
-    }, `${businessName}_template_${new Date().getTime()}.xlsx`)
+    }, `${businessName}_template_${#[[new Date().getTime()]]}.xlsx`)
   }
   // 文件上传中处理
   function handleFileUploadProgress(event, file, fileList) {

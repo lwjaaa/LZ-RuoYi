@@ -2,11 +2,11 @@
   <el-card>
     <el-tabs v-model="activeName">
       <el-tab-pane label="基本信息" name="basic">
-        <basic-info-form ref="basicInfo" :info="info" />
+        <basic-info-form ref="basicInfoRef" :info="info" />
       </el-tab-pane>
       <el-tab-pane label="字段信息" name="columnInfo">
         <el-table
-          ref="dragTable"
+          ref="dragTableRef"
           :data="columns"
           row-key="columnId"
           :max-height="tableHeight"
@@ -22,7 +22,6 @@
             prop="columnName"
             min-width="10%"
             :show-overflow-tooltip="true"
-            class-name="allowDrag"
           />
           <el-table-column label="字段描述" min-width="10%">
             <template #default="scope">
@@ -35,7 +34,7 @@
             min-width="10%"
             :show-overflow-tooltip="true"
           />
-          <el-table-column label="Java类型" min-width="11%">
+          <el-table-column label="Java 类型" min-width="11%">
             <template #default="scope">
               <el-select v-model="scope.row.javaType">
                 <el-option label="Long" value="Long" />
@@ -48,7 +47,7 @@
               </el-select>
             </template>
           </el-table-column>
-          <el-table-column label="java属性" min-width="10%">
+          <el-table-column label="java 属性" min-width="10%">
             <template #default="scope">
               <el-input v-model="scope.row.javaField"></el-input>
             </template>
@@ -57,8 +56,8 @@
           <el-table-column label="插入" min-width="5%">
             <template #default="scope">
               <el-checkbox
-                true-value="1"
-                false-value="0"
+                true-label="1"
+                false-label="0"
                 v-model="scope.row.isInsert"
               ></el-checkbox>
             </template>
@@ -66,8 +65,8 @@
           <el-table-column label="编辑" min-width="5%">
             <template #default="scope">
               <el-checkbox
-                true-value="1"
-                false-value="0"
+                true-label="1"
+                false-label="0"
                 v-model="scope.row.isEdit"
               ></el-checkbox>
             </template>
@@ -75,8 +74,8 @@
           <el-table-column label="列表" min-width="5%">
             <template #default="scope">
               <el-checkbox
-                true-value="1"
-                false-value="0"
+                true-label="1"
+                false-label="0"
                 v-model="scope.row.isList"
               ></el-checkbox>
             </template>
@@ -84,8 +83,8 @@
           <el-table-column label="查询" min-width="5%">
             <template #default="scope">
               <el-checkbox
-                true-value="1"
-                false-value="0"
+                true-label="1"
+                false-label="0"
                 v-model="scope.row.isQuery"
               ></el-checkbox>
             </template>
@@ -107,8 +106,8 @@
           <el-table-column label="必填" min-width="5%">
             <template #default="scope">
               <el-checkbox
-                true-value="1"
-                false-value="0"
+                true-label="1"
+                false-label="0"
                 v-model="scope.row.isRequired"
               ></el-checkbox>
             </template>
@@ -153,79 +152,62 @@
         </el-table>
       </el-tab-pane>
       <el-tab-pane label="生成信息" name="genInfo">
-        <gen-info-form ref="genInfo" :info="info" :tables="tables" />
+        <gen-info-form
+          ref="genInfoRef"
+          :info="info"
+          :tables="tables"
+          :menus="menus"
+        />
       </el-tab-pane>
     </el-tabs>
     <el-form label-width="100px">
-      <div style="text-align: center; margin-left: -100px; margin-top: 10px">
+      <el-form-item
+        style="text-align: center; margin-left: -100px; margin-top: 10px"
+      >
         <el-button type="primary" @click="submitForm()">提交</el-button>
         <el-button @click="close()">返回</el-button>
-      </div>
+      </el-form-item>
     </el-form>
   </el-card>
 </template>
 
-<script setup name="GenEdit">
-import { getGenTable, updateGenTable } from "@/api/tool/genvue3";
+<script setup>
+import { ref, reactive, onMounted, getCurrentInstance } from "vue";
+import { useRoute, useRouter } from "vue-router";
+import { getGenTable, updateGenTable } from "@/api/tool/genvue2";
 import { optionselect as getDictOptionselect } from "@/api/system/dict/type";
-import basicInfoForm from "./basicInfoForm";
-import genInfoForm from "./genInfoForm";
+import { listMenu as getMenuTreeselect } from "@/api/system/menu";
+import { handleTree } from "@/utils/ruoyi";
+import BasicInfoForm from "./basicInfoForm";
+import GenInfoForm from "./genInfoForm";
 import Sortable from "sortablejs";
 
-const route = useRoute();
 const { proxy } = getCurrentInstance();
+const route = useRoute();
+const router = useRouter();
 
+// 选中选项卡的 name
 const activeName = ref("columnInfo");
+// 表格的高度
 const tableHeight = ref(document.documentElement.scrollHeight - 245 + "px");
+// 表信息
 const tables = ref([]);
+// 表列信息
 const columns = ref([]);
+// 字典信息
 const dictOptions = ref([]);
+// 菜单信息
+const menus = ref([]);
+// 表详细信息
 const info = ref({});
 
-/** 提交按钮 */
-function submitForm() {
-  const basicForm = proxy.$refs.basicInfo.$refs.basicInfoForm;
-  const genForm = proxy.$refs.genInfo.$refs.genInfoForm;
-  Promise.all([basicForm, genForm].map(getFormPromise)).then((res) => {
-    const validateResult = res.every((item) => !!item);
-    if (validateResult) {
-      const genTable = Object.assign({}, info.value);
-      genTable.columns = columns.value;
-      genTable.params = {
-        treeCode: info.value.treeCode,
-        treeName: info.value.treeName,
-        treeParentCode: info.value.treeParentCode,
-        parentMenuId: info.value.parentMenuId,
-      };
-      updateGenTable(genTable).then((res) => {
-        proxy.$modal.msgSuccess(res.msg);
-        if (res.code === 200) {
-          close();
-        }
-      });
-    } else {
-      proxy.$modal.msgError("表单校验未通过，请重新检查提交内容");
-    }
-  });
-}
+// ref 引用
+const basicInfoRef = ref(null);
+const genInfoRef = ref(null);
+const dragTableRef = ref(null);
 
-function getFormPromise(form) {
-  return new Promise((resolve) => {
-    form.validate((res) => {
-      resolve(res);
-    });
-  });
-}
-
-function close() {
-  const obj = {
-    path: "/tool/gen",
-    query: { t: Date.now(), pageNum: route.query.pageNum },
-  };
-  proxy.$tab.closeOpenPage(obj);
-}
-
-(() => {
+// 初始化数据
+const initData = () => {
   const tableId = route.params && route.params.tableId;
   if (tableId) {
     // 获取表详细信息
@@ -238,18 +220,71 @@ function close() {
     getDictOptionselect().then((response) => {
       dictOptions.value = response.data;
     });
+    /** 查询菜单下拉列表 */
+    getMenuTreeselect().then((response) => {
+      menus.value = handleTree(response.data, "menuId");
+    });
   }
-})();
+};
 
-// 拖动排序
+// 获取表单验证 Promise
+const getFormPromise = (form) => {
+  return new Promise((resolve) => {
+    form.validate((res) => {
+      resolve(res);
+    });
+  });
+};
+
+// 提交按钮
+const submitForm = () => {
+  const basicForm = basicInfoRef.value.$refs.basicInfoForm;
+  const genForm = genInfoRef.value.$refs.genInfoForm;
+  Promise.all([basicForm, genForm].map(getFormPromise)).then((res) => {
+    const validateResult = res.every((item) => !!item);
+    if (validateResult) {
+      const genTable = Object.assign({}, basicForm.model, genForm.model);
+      genTable.columns = columns.value;
+      genTable.params = {
+        treeCode: genTable.treeCode,
+        treeName: genTable.treeName,
+        treeParentCode: genTable.treeParentCode,
+        parentMenuId: genTable.parentMenuId,
+      };
+      updateGenTable(genTable).then((res) => {
+        proxy.$modal.msgSuccess(res.msg);
+        if (res.code === 200) {
+          close();
+        }
+      });
+    } else {
+      proxy.$modal.msgError("表单校验未通过，请重新检查提交内容");
+    }
+  });
+};
+
+// 关闭按钮
+const close = () => {
+  const obj = {
+    path: "/tool/gen",
+    query: { t: Date.now(), pageNum: route.query.pageNum },
+  };
+  proxy.$tab.closeOpenPage(obj);
+};
+
 onMounted(() => {
-  const element = document.querySelector(".el-table__body > tbody");
-  Sortable.create(element, {
+  initData();
+
+  // 初始化拖拽排序
+  const el = dragTableRef.value.$el.querySelectorAll(
+    ".el-table__body-wrapper > table > tbody",
+  )[0];
+  Sortable.create(el, {
     handle: ".allowDrag",
     onEnd: (evt) => {
       const targetRow = columns.value.splice(evt.oldIndex, 1)[0];
       columns.value.splice(evt.newIndex, 0, targetRow);
-      for (const index in columns.value) {
+      for (let index in columns.value) {
         columns.value[index].sort = parseInt(index) + 1;
       }
     },

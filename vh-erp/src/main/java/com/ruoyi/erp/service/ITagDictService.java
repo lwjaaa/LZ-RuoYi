@@ -113,4 +113,12 @@ public interface ITagDictService extends IService<TagDict>
      * @author lwj
      **/
     void dragNode(@Valid TreeDragDTO dto);
+    /**
+     * 置顶
+     *
+     * @param tagId
+     * @return int
+     * @author lwj
+     **/
+    int top(Long tagId);
 }

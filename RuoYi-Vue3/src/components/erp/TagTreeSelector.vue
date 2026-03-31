@@ -57,6 +57,7 @@
                 </el-dropdown-item>
               </template>
             </el-dropdown>
+            <!-- 置顶 -->
             <el-button size="small" @click.stop="pinToTop(data)">
               <el-icon><ArrowUp /></el-icon>
             </el-button>
@@ -82,8 +83,17 @@ import {
   ArrowUp,
   More,
 } from "@element-plus/icons-vue";
-import { treeList, addTag, updateTag, dragNode, delTag } from "@/api/erp/tag";
+import {
+  treeList,
+  addTag,
+  updateTag,
+  dragNode,
+  delTag,
+  top,
+} from "@/api/erp/tag";
 import TagDialog from "@/components/erp/TagDialog.vue";
+
+const { proxy } = getCurrentInstance();
 
 // Props
 const props = defineProps({
@@ -103,7 +113,6 @@ const tagModal = ref(null);
 // Reactive data
 const tagList = ref([]);
 const hoveredNode = ref(null);
-const expandedButtons = ref(null);
 const selectedTagIds = ref([]);
 
 const treeProps = {
@@ -138,17 +147,12 @@ const updateSelection = () => {
 
 const handleCheck = (checkedNodes, options) => {
   updateSelection();
-  console.log("handleCheck-选中的节点：", tree.value.getCheckedNodes());
 };
 
 const clearSelection = () => {
   tree.value.setCheckedKeys([]);
   selectedTagIds.value = [];
   emit("selection-change", []);
-};
-
-const toggleMore = (tagId) => {
-  expandedButtons.value = expandedButtons.value === tagId ? null : tagId;
 };
 
 const handleMoreCommand = (data, command) => {
@@ -161,12 +165,12 @@ const handleMoreCommand = (data, command) => {
   }
 };
 
-const openAddDialog = () => {
-  tagModal.value.open(null);
+const openAddDialog = (options = null) => {
+  tagModal.value.open(options);
 };
 
 const openAddDialogFor = (data) => {
-  tagModal.value.open(null, { parentId: data.tagId });
+  tagModal.value.open({ parentId: data.tagId });
 };
 
 const openEditDialog = (data) => {
@@ -191,46 +195,14 @@ const deleteTag = (data) => {
 };
 
 const pinToTop = (data) => {
-  const siblings = getSiblings(data.parentId);
-  const menuTags = siblings.filter((tag) => tag.tagType === "MENU");
-  const otherTags = siblings.filter((tag) => tag.tagType !== "MENU");
-
-  let newSortOrder;
-  if (data.tagType === "MENU") {
-    newSortOrder = Math.min(...siblings.map((s) => s.sortOrder)) - 1;
-  } else {
-    if (menuTags.length > 0) {
-      const maxMenuSort = Math.max(...menuTags.map((s) => s.sortOrder));
-      newSortOrder = maxMenuSort + 1;
-    } else {
-      newSortOrder = Math.min(...siblings.map((s) => s.sortOrder)) - 1;
-    }
-  }
-
-  updateTag({ ...data, sortOrder: newSortOrder }).then(() => {
-    loadTags();
-  });
-};
-
-const getSiblings = (parentId) => {
-  return tagList.value.filter((tag) => tag.parentId === parentId);
-};
-
-const calculateSortOrder = (draggingData, dropData, dropType) => {
-  const siblings = getSiblings(dropData.parentId || 0);
-
-  if (dropType === "inner") {
-    const children = siblings.filter((tag) => tag.parentId === dropData.tagId);
-    return children.length > 0
-      ? Math.max(...children.map((tag) => tag.sortOrder)) + 1
-      : 1;
-  } else {
-    if (dropType === "before") {
-      return dropData.sortOrder - 0.5;
-    } else {
-      return dropData.sortOrder + 0.5;
-    }
-  }
+  top(data.tagId)
+    .then(() => {
+      proxy.$modal.msgSuccess("置顶成功");
+      loadTags();
+    })
+    .catch(() => {
+      proxy.$modal.msgError("置顶失败");
+    });
 };
 
 const allowDrop = (draggingNode, dropNode, type) => {
@@ -243,7 +215,7 @@ const allowDrop = (draggingNode, dropNode, type) => {
   if (draggingData.tagType === "MENU") {
     return dropData.tagType === "MENU";
   } else {
-    return dropData.tagType === "MENU" && type === "next";
+    return dropData.tagType !== "MENU" && type !== "inner";
   }
 };
 
@@ -254,27 +226,19 @@ const handleNodeDrop = (draggingNode, dropNode, dropType) => {
 
   const draggingData = draggingNode.data;
   const dropData = dropNode.data;
-
-  const dropParentId =
-    dropType === "inner"
-      ? dropData.tagId
-      : dropData.parentId === 0
-        ? 0
-        : dropData.parentId;
-
-  const updatedNode = {
-    tagId: draggingData.tagId,
-    parentId: dropParentId,
-    sortOrder: calculateSortOrder(draggingData, dropData, dropType),
+  const TreeDragDTO = {
+    dragId: draggingData.tagId,
+    targetId: dropData.tagId,
+    dropType: dropType,
   };
 
-  updateTag(updatedNode)
+  dragNode(TreeDragDTO)
     .then(() => {
-      ElMessage.success("移动成功");
+      proxy.$modal.msgSuccess("移动成功");
       loadTags();
     })
     .catch(() => {
-      ElMessage.error("移动失败");
+      proxy.$modal.msgError("移动失败");
     });
 };
 
@@ -331,17 +295,11 @@ watch(
   transition: background-color 0.2s ease;
   cursor: pointer;
   min-height: 32px;
-}
-
-.custom-tree-node:hover,
-.custom-tree-node.selected-node,
-.el-tree-node.is-checked > .el-tree-node__content .custom-tree-node {
-  background-color: #e6f7ff; /* 一致的高亮背景 */
-  color: #1890ff; /* 一致的高亮文字 */
-  border-left: 3px solid #1890ff;
+  gap: 8px; /* 添加间距 */
 }
 
 .node-icon {
+  flex-shrink: 0; /* 防止图标被压缩 */
   margin-right: 8px;
   color: #666;
   font-size: 14px;
@@ -357,12 +315,19 @@ watch(
 
 .node-label {
   flex: 1;
+
+  min-width: 0; /* 允许文本截断 */
   font-size: 14px;
   color: #333;
   line-height: 1.4;
+  overflow: hidden; /* 隐藏溢出 */
+  text-overflow: ellipsis; /* 显示省略号 */
+  white-space: nowrap; /* 单行显示 */
 }
 
 .hover-buttons {
+  flex-grow: 0; /* 不增长 */
+  flex-shrink: 0; /* 防止按钮被压缩 */
   display: flex;
   align-items: center;
   gap: 4px;
@@ -380,11 +345,21 @@ watch(
   pointer-events: auto;
 }
 
-.custom-tree-node.selected-node,
-.el-tree-node.is-checked > .el-tree-node__content .custom-tree-node {
-  background-color: #e6f7ff;
-  color: #1890ff;
-  border-left: 3px solid #1890ff;
+:deep(.el-tree-node__content:hover),
+:deep(.el-tree-node.is-checked > .el-tree-node__content) {
+  background-color: #e6f7ff; /* 一致的高亮背景 */
+  color: #1890ff; /* 一致的高亮文字 */
+  position: relative;
+}
+/* :deep(.el-tree-node__content:hover)::before, */
+:deep(.el-tree-node.is-checked > .el-tree-node__content)::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background-color: #1890ff;
 }
 
 .expanded-buttons {
@@ -419,16 +394,6 @@ watch(
 :deep(.el-checkbox),
 :deep(.el-checkbox__inner) {
   display: none !important;
-}
-
-.el-tree-node.is-checked > .el-tree-node__content {
-  background-color: #e6f7ff; /* 自定义选中背景色 */
-  border-left: 3px solid #1890ff; /* 添加左侧边框表示选中 */
-}
-
-.el-tree-node.is-checked > .el-tree-node__content .custom-tree-node {
-  background-color: #e6f7ff;
-  color: #1890ff; /* 选中时文字颜色 */
 }
 
 .sortable-item {

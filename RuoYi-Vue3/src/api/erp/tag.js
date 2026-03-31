@@ -77,3 +77,19 @@ export function importTemplateTag() {
     responseType: "blob",
   });
 }
+
+// 置顶
+export function top(id) {
+  return request({
+    url: "/vh-erp/tag/top/" + id,
+    method: "post",
+  });
+}
+
+//刷新缓存
+export function refreshCache() {
+  return request({
+    url: "/vh-erp/tag/refreshCache",
+    method: "delete",
+  });
+}

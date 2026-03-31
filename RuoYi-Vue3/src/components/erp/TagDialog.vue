@@ -151,6 +151,9 @@ const open = (data) => {
   } else {
     title.value = "新增标签";
     resetForm();
+    if (data && data.parentId != null) {
+      form.parentId = data.parentId;
+    }
   }
 };
 

@@ -22,6 +22,4 @@ public class TreeDragDTO {
     @NotNull(message = "放置类型不能为空")
     private String dropType;   // before/after/inner
 
-    @NotNull(message = "新父节点 ID 不能为空")
-    private Long newParentId;  // 新父节点 ID
 }
