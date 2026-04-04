@@ -32,7 +32,7 @@
       <!-- 悬浮时显示的控制按钮 -->
       <div class="control-buttons" v-show="isHandleHovering && !isResizing">
         <el-button
-          size="small"
+          size="large"
           circle
           @click.stop="toggleCollapse"
           @mousedown.stop
@@ -207,7 +207,6 @@ onBeforeUnmount(() => {
 <style scoped>
 .app-container {
   height: calc(100vh - 84px);
-  background: #f8f9fa;
   position: relative;
   overflow: hidden;
   min-width: 800px;
@@ -325,8 +324,8 @@ onBeforeUnmount(() => {
 }
 
 .control-buttons .el-button {
-  width: 28px;
-  height: 28px;
+  /* width: 28px; */
+  /* height: 28px; */
   padding: 0;
   background: #fff;
   border: 1px solid #e9ecef;

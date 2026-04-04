@@ -1,11 +1,10 @@
 package com.ruoyi.erp.model.dto.productTagRel;
 
-import java.io.Serializable;
-import java.util.Date;
-import com.fasterxml.jackson.annotation.JsonFormat;
+import com.ruoyi.erp.model.domain.ProductTagRel;
 import lombok.Data;
 import org.springframework.beans.BeanUtils;
-import com.ruoyi.erp.model.domain.ProductTagRel;
+
+import java.io.Serializable;
 /**
  * erp商品与标签关联Vo对象 erp_product_tag_rel
  *
@@ -16,6 +15,10 @@ import com.ruoyi.erp.model.domain.ProductTagRel;
 public class ProductTagRelEdit implements Serializable
 {
     private static final long serialVersionUID = 1L;
+
+
+    /** 关联主键 */
+    private Long relId;
 
     /** 商品主表ID */
     private Long productId;

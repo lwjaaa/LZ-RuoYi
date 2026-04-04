@@ -1,18 +1,16 @@
 package com.ruoyi.erp.model.domain;
 
-import java.io.Serializable;
-import java.util.Map;
-import java.util.Date;
-import java.util.Date;
-import com.fasterxml.jackson.annotation.JsonFormat;
 import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import lombok.Data;
-import com.ruoyi.common.annotation.Excel;
-import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.ruoyi.common.annotation.Excel;
+import lombok.Data;
+
+import java.io.Serializable;
+import java.util.Date;
+import java.util.Map;
 /**
  * erp媒体对象 erp_media
  *
@@ -59,7 +57,7 @@ public class Media implements Serializable
 
     /** 排序 */
     @Excel(name = "排序")
-    private Long position;
+    private Integer position;
 
     /** $column.columnComment */
     private Date createTime;

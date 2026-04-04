@@ -94,13 +94,6 @@ import { treeList, addTag, updateTag } from "@/api/erp/tag";
 import { ElMessage } from "element-plus";
 import { useDict } from "@/utils/dict";
 
-const props = defineProps({
-  rowData: {
-    type: Object,
-    default: null,
-  },
-});
-
 const emit = defineEmits(["success"]);
 
 // 使用字典
@@ -131,19 +124,9 @@ watch(
   },
 );
 
-// 生命周期
-onMounted(() => {
-  fetchTags();
-  if (props.rowData && props.rowData.tagId) {
-    title.value = "修改标签";
-    Object.assign(form, props.rowData);
-  } else {
-    title.value = "新增标签";
-    resetForm();
-  }
-});
 // 方法
 const open = (data) => {
+  fetchTags();
   visible.value = true;
   if (data && data.tagId) {
     title.value = "修改标签";
@@ -206,6 +189,5 @@ const handleCancel = () => {
 // 暴露方法给父组件
 defineExpose({
   open,
-  resetForm,
 });
 </script>

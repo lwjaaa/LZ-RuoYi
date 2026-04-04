@@ -2,6 +2,8 @@ package com.ruoyi.erp.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.ruoyi.common.config.RuoYiConfig;
+import com.ruoyi.common.constant.Constants;
 import com.ruoyi.common.exception.ServiceException;
 import com.ruoyi.common.utils.DateUtils;
 import com.ruoyi.common.utils.StringUtils;
@@ -9,15 +11,14 @@ import com.ruoyi.erp.mapper.MediaMapper;
 import com.ruoyi.erp.model.domain.Media;
 import com.ruoyi.erp.model.dto.media.MediaQuery;
 import com.ruoyi.erp.model.vo.media.MediaVo;
+import com.ruoyi.erp.model.vo.media.ServerMediaVo;
 import com.ruoyi.erp.service.IMediaService;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.io.File;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -215,8 +216,59 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, Media> implements
     }
 
     @Override
-    public List<MediaVo> scanMediaFromDirectory() {
+    public List<Media> scanMediaToProduct(String dirPath, String productId) {
         log.info("开始扫描媒体目录");
-        return List.of();
+        List<Media> mediaList = new ArrayList<>();
+
+        // 如果未指定路径，使用默认上传目录
+        String basePath = RuoYiConfig.getMediaPath() + dirPath;
+
+        File dir = new File(basePath);
+
+        // 检查目录是否存在
+        if (!dir.exists() || !dir.isDirectory()) {
+            throw new ServiceException("目录不存在：" + basePath);
+        }
+
+        // 获取目录下所有文件
+        File[] files = dir.listFiles((f, name) ->
+                name.toLowerCase().endsWith(".jpg") ||
+                        name.toLowerCase().endsWith(".jpeg") ||
+                        name.toLowerCase().endsWith(".png") ||
+                        name.toLowerCase().endsWith(".gif") ||
+                        name.toLowerCase().endsWith(".webp") ||
+                        name.toLowerCase().endsWith(".bmp")
+        );
+
+        if (files != null) {
+
+            for (int i = 0; i < files.length; i++) {
+                File file = files[i];
+                Media media = new Media();
+                media.setProductId(Long.parseLong(productId));
+                media.setFilename(file.getName());
+                media.setNasMediaUrl(getFileUrl(file));
+                media.setPosition(i);
+                this.save(media);
+                mediaList.add(media);
+            }
+        }
+        return mediaList;
     }
+
+
+    /**
+     * 将文件路径转换为可访问的 URL
+     */
+    private String getFileUrl(File file) {
+        String profile = RuoYiConfig.getProfile();
+        String absolutePath = file.getAbsolutePath();
+
+        // 将本地路径转换为资源访问路径
+        if (absolutePath.startsWith(profile)) {
+            return Constants.RESOURCE_PREFIX + absolutePath.substring(profile.length());
+        }
+        return Constants.RESOURCE_PREFIX + "/" + file.getName();
+    }
+
 }

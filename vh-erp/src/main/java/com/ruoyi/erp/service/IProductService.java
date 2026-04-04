@@ -32,21 +32,6 @@ public interface IProductService extends IService<Product>
      */
     public List<Product> selectProductList(Product product);
 
-    /**
-     * 新增erp商品
-     * 
-     * @param product erp商品
-     * @return 结果
-     */
-    public int insertProduct(Product product);
-
-    /**
-     * 修改erp商品
-     * 
-     * @param product erp商品
-     * @return 结果
-     */
-    public int updateProduct(Product product);
 
     /**
      * 批量删除erp商品
@@ -89,22 +74,6 @@ public interface IProductService extends IService<Product>
      * @return 结果
      */
     public String importProductData(List<Product> productList, Boolean isUpdateSupport, String operName);
-
-    /**
-     * 根据标签交集查询商品列表
-     *
-     * @param productQuery 查询条件
-     * @return 商品列表
-     */
-    public List<Product> selectProductListByTags(ProductQuery productQuery);
-
-    /**
-     * 保存商品及相关数据（事务）
-     *
-     * @param productInsert 商品插入对象
-     * @return 结果
-     */
-    public int saveProductWithTransaction(com.ruoyi.erp.model.dto.product.ProductInsert productInsert);
 
     /**
      * 异步批量推送商品到Shopify

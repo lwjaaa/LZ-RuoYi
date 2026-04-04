@@ -29,8 +29,7 @@ import java.util.stream.Collectors;
  */
 @RestController
 @RequestMapping("/erp/media")
-public class MediaController extends BaseController
-{
+public class MediaController extends BaseController {
     @Resource
     private IMediaService mediaService;
 
@@ -39,12 +38,11 @@ public class MediaController extends BaseController
      */
     @PreAuthorize("@ss.hasPermi('erp:media:list')")
     @GetMapping("/list")
-    public TableDataInfo list(MediaQuery mediaQuery)
-    {
+    public TableDataInfo list(MediaQuery mediaQuery) {
         Media media = MediaQuery.queryToObj(mediaQuery);
         startPage();
         List<Media> list = mediaService.selectMediaList(media);
-        List<MediaVo> listVo= list.stream().map(MediaVo::objToVo).collect(Collectors.toList());
+        List<MediaVo> listVo = list.stream().map(MediaVo::objToVo).collect(Collectors.toList());
         TableDataInfo table = getDataTable(list);
         table.setRows(listVo);
         return table;
@@ -56,8 +54,7 @@ public class MediaController extends BaseController
     @PreAuthorize("@ss.hasPermi('erp:media:export')")
     @Log(title = "erp媒体", businessType = BusinessType.EXPORT)
     @PostMapping("/export")
-    public void export(HttpServletResponse response, MediaQuery mediaQuery)
-    {
+    public void export(HttpServletResponse response, MediaQuery mediaQuery) {
         Media media = MediaQuery.queryToObj(mediaQuery);
         List<Media> list = mediaService.selectMediaList(media);
         ExcelUtil<Media> util = new ExcelUtil<Media>(Media.class);
@@ -69,8 +66,7 @@ public class MediaController extends BaseController
      */
     @PreAuthorize("@ss.hasPermi('erp:media:query')")
     @GetMapping(value = "/{mediaId}")
-    public AjaxResult getInfo(@PathVariable("mediaId") Long mediaId)
-    {
+    public AjaxResult getInfo(@PathVariable("mediaId") Long mediaId) {
         Media media = mediaService.selectMediaByMediaId(mediaId);
         return success(MediaVo.objToVo(media));
     }
@@ -81,8 +77,7 @@ public class MediaController extends BaseController
     @PreAuthorize("@ss.hasPermi('erp:media:add')")
     @Log(title = "erp媒体", businessType = BusinessType.INSERT)
     @PostMapping
-    public AjaxResult add(@RequestBody MediaInsert mediaInsert)
-    {
+    public AjaxResult add(@RequestBody MediaInsert mediaInsert) {
         Media media = MediaInsert.insertToObj(mediaInsert);
         return toAjax(mediaService.insertMedia(media));
     }
@@ -93,8 +88,7 @@ public class MediaController extends BaseController
     @PreAuthorize("@ss.hasPermi('erp:media:edit')")
     @Log(title = "erp媒体", businessType = BusinessType.UPDATE)
     @PutMapping
-    public AjaxResult edit(@RequestBody MediaEdit mediaEdit)
-    {
+    public AjaxResult edit(@RequestBody MediaEdit mediaEdit) {
         Media media = MediaEdit.editToObj(mediaEdit);
         return toAjax(mediaService.updateMedia(media));
     }
@@ -104,9 +98,8 @@ public class MediaController extends BaseController
      */
     @PreAuthorize("@ss.hasPermi('erp:media:remove')")
     @Log(title = "erp媒体", businessType = BusinessType.DELETE)
-	@DeleteMapping("/{mediaIds}")
-    public AjaxResult remove(@PathVariable Long[] mediaIds)
-    {
+    @DeleteMapping("/{mediaIds}")
+    public AjaxResult remove(@PathVariable Long[] mediaIds) {
         return toAjax(mediaService.deleteMediaByMediaIds(mediaIds));
     }
 
@@ -116,8 +109,7 @@ public class MediaController extends BaseController
     @PreAuthorize("@ss.hasPermi('erp:media:import')")
     @Log(title = "erp媒体", businessType = BusinessType.IMPORT)
     @PostMapping("/importData")
-    public AjaxResult importData(MultipartFile file, boolean updateSupport) throws Exception
-    {
+    public AjaxResult importData(MultipartFile file, boolean updateSupport) throws Exception {
         ExcelUtil<Media> util = new ExcelUtil<Media>(Media.class);
         List<Media> mediaList = util.importExcel(file.getInputStream());
         String operName = getUsername();
@@ -129,8 +121,7 @@ public class MediaController extends BaseController
      * 下载erp媒体导入模板
      */
     @PostMapping("/importTemplate")
-    public void importTemplate(HttpServletResponse response)
-    {
+    public void importTemplate(HttpServletResponse response) {
         ExcelUtil<Media> util = new ExcelUtil<Media>(Media.class);
         util.importTemplateExcel(response, "erp媒体数据");
     }
@@ -138,11 +129,12 @@ public class MediaController extends BaseController
     /**
      * 扫描服务器指定路径返回媒体列表
      */
-    @PreAuthorize("@ss.hasPermi('vh-erp:media:scan')")
-    @GetMapping("/vh-erp/media/scan")
-    public AjaxResult scanMedia()
-    {
-        List<MediaVo> mediaList = mediaService.scanMediaFromDirectory();
+    @PreAuthorize("@ss.hasPermi('vh-erp:media:list')")
+    @GetMapping("/scan")
+    public AjaxResult scanMedia(String dirPath, String productId) {
+        List<Media> mediaList = mediaService.scanMediaToProduct(dirPath, productId);
         return success(mediaList);
     }
+
+
 }

@@ -617,6 +617,33 @@ public class TagDictServiceImpl extends ServiceImpl<TagDictMapper, TagDict> impl
         return 1;
     }
 
+    @Override
+    public int updateMaxSeqBySpuPrefix(String spuPrefix, Integer seqNum) {
+        if (StringUtils.isEmpty(spuPrefix) || seqNum == null) {
+            return 0;
+        }
+
+        // 1. 根据 SPU 前缀查询标签字典
+        TagDict tagDict = lambdaQuery()
+                .eq(TagDict::getTagType, TagConstants.TYPE_MENU)
+                .eq(TagDict::getSpuPrefix, spuPrefix)
+                .one();
+
+        if (tagDict == null) {
+            throw new ServiceException("标签不存在");
+        }
+
+        // 2. 只有当新序列号大于当前最大流水号时才更新
+        Integer currentMaxSeq = tagDict.getCurrentMaxSeq();
+        if (seqNum > (currentMaxSeq == null ? 0 : currentMaxSeq)) {
+            tagDict.setCurrentMaxSeq(seqNum);
+            tagDict.setUpdateTime(DateUtils.getNowDate());
+            return updateById(tagDict) ? 1 : 0;
+        }
+
+        return 0;
+    }
+
     /**
      * 判断某个节点是否是另一个节点的后代
      */

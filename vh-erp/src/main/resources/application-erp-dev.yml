@@ -29,3 +29,9 @@ logging:
   level:
     com.ruoyi.erp: debug
     graphql: debug
+
+
+# 项目相关配置
+ruoyi:
+  # 文件路径 示例（ Windows配置D:/ruoyi/uploadPath，Linux配置 /home/ruoyi/uploadPath）
+  profile: C:/ruoyi/uploadPath

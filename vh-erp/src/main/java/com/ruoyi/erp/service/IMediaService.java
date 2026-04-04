@@ -95,5 +95,5 @@ public interface IMediaService extends IService<Media>
      *
      * @return 媒体VO列表
      */
-    public List<MediaVo> scanMediaFromDirectory();
+    List<Media> scanMediaToProduct(String dirPath, String productId);
 }

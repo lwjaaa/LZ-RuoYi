@@ -798,7 +798,7 @@ function handleExport() {
   proxy.download(exportUrl.value, {
     ...queryParams.value
   }, `product_${new Date().getTime()}.xlsx`)
-},
+}
 /** 导入按钮操作 */
 function handleImport() {
   upload.value.title = "erp商品导入";

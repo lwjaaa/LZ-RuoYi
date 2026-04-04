@@ -121,4 +121,6 @@ public interface ITagDictService extends IService<TagDict>
      * @author lwj
      **/
     int top(Long tagId);
+
+    int updateMaxSeqBySpuPrefix(String spuPrefix, Integer seqNum);
 }

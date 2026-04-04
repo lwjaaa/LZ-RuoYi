@@ -1,19 +1,18 @@
 package com.ruoyi.erp.model.domain;
 
-import java.io.Serializable;
-import java.util.Map;
-import java.util.Date;
-import java.util.List;
-import java.util.Date;
-import com.fasterxml.jackson.annotation.JsonFormat;
 import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import lombok.Data;
-import com.ruoyi.common.annotation.Excel;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.ruoyi.common.annotation.Excel;
+import lombok.Data;
+
+import java.io.Serializable;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
 /**
  * erp商品对象 erp_product
  *
@@ -96,23 +95,23 @@ public class Product implements Serializable
     private Long version;
 
     /** 描述 */
-    @Excel(name = "描述")
+    @Excel(name = "DESCRIPTION")
     private String description;
 
     /** 大小 */
-    @Excel(name = "大小")
+    @Excel(name = "SIZE")
     private String size;
 
     /** 材质 */
-    @Excel(name = "材质")
+    @Excel(name = "MATERIAL")
     private String material;
 
     /** 备注 */
-    @Excel(name = "备注")
+    @Excel(name = "NOTE")
     private String note;
 
     /** 包含的包材 */
-    @Excel(name = "包含的包材")
+    @Excel(name = "PACKAGEINCLUDE")
     private String packageInclude;
 
     /** 创建者 */
@@ -138,8 +137,10 @@ public class Product implements Serializable
     /** 删除标志 (0代表存在 2代表删除) */
     private String delFlag;
 
-    /** erp商品变体信息 */
+    /** erp商品变体信息,非数据库字段 */
     private List<ProductVariant> productVariantList;
+    /** 商品标签ID列表,非数据库字段 */
+    private List<Long> tagIds;
 
     /** 请求参数 */
     @JsonInclude(JsonInclude.Include.NON_EMPTY)

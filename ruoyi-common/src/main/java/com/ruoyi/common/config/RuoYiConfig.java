@@ -119,4 +119,13 @@ public class RuoYiConfig
     {
         return getProfile() + "/upload";
     }
+
+    /**
+     * 获取服务器产品图片路径
+     * @return
+     */
+    public static String getMediaPath()
+    {
+        return getProfile() + "/产品图片";
+    }
 }

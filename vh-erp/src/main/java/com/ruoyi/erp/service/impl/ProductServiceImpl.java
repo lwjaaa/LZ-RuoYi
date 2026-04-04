@@ -8,7 +8,6 @@ import com.ruoyi.common.utils.StringUtils;
 import com.ruoyi.erp.mapper.ProductMapper;
 import com.ruoyi.erp.model.domain.Product;
 import com.ruoyi.erp.model.domain.ProductVariant;
-import com.ruoyi.erp.model.dto.product.ProductInsert;
 import com.ruoyi.erp.model.dto.product.ProductQuery;
 import com.ruoyi.erp.model.vo.product.ProductVo;
 import com.ruoyi.erp.service.IProductService;
@@ -58,38 +57,6 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
     }
 
     /**
-     * 新增erp商品
-     *
-     * @param product erp商品
-     * @return 结果
-     */
-    @Transactional
-    @Override
-    public int insertProduct(Product product)
-    {
-        product.setCreateTime(DateUtils.getNowDate());
-        int rows = productMapper.insertProduct(product);
-        insertProductVariant(product);
-        return rows;
-    }
-
-    /**
-     * 修改erp商品
-     *
-     * @param product erp商品
-     * @return 结果
-     */
-    @Transactional
-    @Override
-    public int updateProduct(Product product)
-    {
-        product.setUpdateTime(DateUtils.getNowDate());
-        productMapper.deleteProductVariantByProductId(product.getProductId());
-        insertProductVariant(product);
-        return productMapper.updateProduct(product);
-    }
-
-    /**
      * 批量删除erp商品
      *
      * @param productIds 需要删除的erp商品主键
@@ -117,29 +84,6 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
         return productMapper.deleteProductByProductId(productId);
     }
 
-    /**
-     * 新增erp商品变体信息
-     *
-     * @param product erp商品对象
-     */
-    public void insertProductVariant(Product product)
-    {
-        List<ProductVariant> productVariantList = product.getProductVariantList();
-        Long productId = product.getProductId();
-        if (StringUtils.isNotNull(productVariantList))
-        {
-            List<ProductVariant> list = new ArrayList<ProductVariant>();
-            for (ProductVariant productVariant : productVariantList)
-            {
-                productVariant.setProductId(productId);
-                list.add(productVariant);
-            }
-            if (list.size() > 0)
-            {
-                productMapper.batchProductVariant(list);
-            }
-        }
-    }
     //endregion
     @Override
     public QueryWrapper<Product> getQueryWrapper(ProductQuery productQuery){
@@ -253,16 +197,6 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
             successMsg.insert(0, "恭喜您，数据已全部导入成功！共 " + successNum + " 条，数据如下：");
         }
         return successMsg.toString();
-    }
-
-    @Override
-    public List<Product> selectProductListByTags(ProductQuery productQuery) {
-        return List.of();
-    }
-
-    @Override
-    public int saveProductWithTransaction(ProductInsert productInsert) {
-        return 0;
     }
 
     @Override

@@ -1,18 +1,17 @@
 package com.ruoyi.erp.model.domain;
 
-import java.io.Serializable;
-import java.util.Map;
-import java.util.Date;
-import java.util.Date;
-import com.fasterxml.jackson.annotation.JsonFormat;
 import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import lombok.Data;
-import com.ruoyi.common.annotation.Excel;
-import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.ruoyi.common.annotation.Excel;
+import lombok.Data;
+
+import java.io.Serializable;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
 /**
  * erp商品变体对象 erp_product_variant
  *
@@ -64,6 +63,7 @@ public class ProductVariant implements Serializable
     /** 变体对应的选项 */
     @Excel(name = "变体对应的选项")
     private String optionValues;
+    private List<ProductVariantOption> optionValueList;
 
     /** 关联的图片ID (若有) */
     @Excel(name = "关联的图片ID (若有)")

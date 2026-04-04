@@ -22,9 +22,17 @@ public class ProductVariantOption implements Serializable{
     /**
      * 商品选项名称
      */
-    private String name;
+    private String optionName;
     /**
      * 商品选项值
      */
-    private String value;
+    private String name;
+    /**
+     * 采购商品选项名称
+     */
+    private String purchaseOptionName;
+    /**
+     * 采购商品选项值
+     */
+    private String purchaseName;
 }
