@@ -1,24 +1,21 @@
 package com.ruoyi.erp.service.impl;
 
-import java.util.*;
-import java.util.List;
-import java.util.Map;
-import java.util.HashMap;
-import java.util.stream.Collectors;
-import com.ruoyi.common.utils.StringUtils;
-import java.util.Date;
-import com.fasterxml.jackson.annotation.JsonFormat;
-import com.ruoyi.common.utils.DateUtils;
-import jakarta.annotation.Resource;
-import org.springframework.stereotype.Service;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.ruoyi.common.exception.ServiceException;
+import com.ruoyi.common.utils.DateUtils;
+import com.ruoyi.common.utils.StringUtils;
 import com.ruoyi.erp.mapper.ProductVariantMapper;
 import com.ruoyi.erp.model.domain.ProductVariant;
-import com.ruoyi.erp.service.IProductVariantService;
 import com.ruoyi.erp.model.dto.productVariant.ProductVariantQuery;
 import com.ruoyi.erp.model.vo.productVariant.ProductVariantVo;
+import com.ruoyi.erp.service.IProductVariantService;
+import jakarta.annotation.Resource;
+import org.springframework.stereotype.Service;
+
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * erp商品变体Service业务层处理
@@ -125,10 +122,10 @@ public class ProductVariantServiceImpl extends ServiceImpl<ProductVariantMapper,
         String sku = productVariantQuery.getSku();
         queryWrapper.eq(StringUtils.isNotEmpty(sku) ,"sku",sku);
 
-        Long price = productVariantQuery.getPrice();
+        Integer price = productVariantQuery.getPrice();
         queryWrapper.eq( StringUtils.isNotNull(price),"price",price);
 
-        Long purchasePrice = productVariantQuery.getPurchasePrice();
+        Integer purchasePrice = productVariantQuery.getPurchasePrice();
         queryWrapper.eq( StringUtils.isNotNull(purchasePrice),"purchase_price",purchasePrice);
 
         String isActualShipment = productVariantQuery.getIsActualShipment();
@@ -220,5 +217,10 @@ public class ProductVariantServiceImpl extends ServiceImpl<ProductVariantMapper,
             successMsg.insert(0, "恭喜您，数据已全部导入成功！共 " + successNum + " 条，数据如下：");
         }
         return successMsg.toString();
+    }
+
+    @Override
+    public List<ProductVariant> selectListByProductId(Long productId) {
+        return this.list(new LambdaQueryWrapper<>(ProductVariant.class).eq(ProductVariant::getProductId, productId));
     }
 }

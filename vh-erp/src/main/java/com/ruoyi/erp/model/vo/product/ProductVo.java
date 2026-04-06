@@ -20,6 +20,8 @@ public class ProductVo implements Serializable
 {
     private static final long serialVersionUID = 1L;
 
+    private Long productId;
+
     /** Shopify平台商品ID (唯一映射) */
     private String shopifyProductId;
 
@@ -97,6 +99,8 @@ public class ProductVo implements Serializable
 
     /** erp商品变体信息 */
     private List<ProductVariant> productVariantList;
+
+    private List<String> tagCodeList;
 
 
      /**

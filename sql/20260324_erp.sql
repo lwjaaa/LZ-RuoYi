@@ -3,10 +3,10 @@ CREATE TABLE `erp_product`
 (
     `product_id`           bigint(20)   NOT NULL AUTO_INCREMENT COMMENT '本地主键',
     `shopify_product_id`   varchar(100) DEFAULT NULL COMMENT 'Shopify平台商品ID (唯一映射)',
-    `product_title`        varchar(255) NOT NULL COMMENT '商品标题',
+    `product_title`        varchar(255) DEFAULT NULL COMMENT '商品标题',
     `spu`                  varchar(50)  NOT NULL COMMENT 'SPU',
     `category`             int(20)      DEFAULT NULL COMMENT '商品类别ID (Category)',
-    `product_type`         varchar(100) DEFAULT NULL COMMENT '商品类型 (Product Type)',1
+    `product_type`         varchar(100) DEFAULT NULL COMMENT '商品类型 (Product Type)',
     `source_url`           varchar(500) DEFAULT NULL COMMENT '来源URL',
     `purchase_url`         varchar(500) DEFAULT NULL COMMENT '采购链接',
     `option_json`          json         DEFAULT NULL COMMENT '商品选项',

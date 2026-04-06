@@ -560,8 +560,9 @@ function handleAdd() {
 
 /** 修改按钮操作 - 打开向导 */
 function handleUpdate(row) {
-  const selectedTagIds = props.selectedTags?.map((tag) => tag.tagId) || [];
-  creationWizardModal.value.open(selectedTagIds, row);
+  const _productId = row.productId || ids.value;
+  console.log("编辑 erp 商品，productId:", _productId, "row", row);
+  creationWizardModal.value.open(null, _productId);
 }
 
 /** 向导提交处理 */

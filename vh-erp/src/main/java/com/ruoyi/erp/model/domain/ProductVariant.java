@@ -42,15 +42,15 @@ public class ProductVariant implements Serializable
 
     /** 销售价格(美元*100) */
     @Excel(name = "销售价格(美元*100)")
-    private Long price;
+    private Integer price;
 
     /** 原价/对比价(美元*100) */
     @Excel(name = "原价/对比价(美元*100)")
-    private Long compareAtPrice;
+    private Integer compareAtPrice;
 
     /** 采购价（分） */
     @Excel(name = "采购价", readConverterExp = "分=")
-    private Long purchasePrice;
+    private Integer purchasePrice;
 
     /** 采购链接 */
     @Excel(name = "采购链接")
@@ -63,6 +63,8 @@ public class ProductVariant implements Serializable
     /** 变体对应的选项 */
     @Excel(name = "变体对应的选项")
     private String optionValues;
+
+    @TableField(exist = false)
     private List<ProductVariantOption> optionValueList;
 
     /** 关联的图片ID (若有) */
@@ -71,31 +73,31 @@ public class ProductVariant implements Serializable
 
     /** 排序位置 列表中的第一个位置是 1 */
     @Excel(name = "排序位置 列表中的第一个位置是 1")
-    private Long position;
+    private Integer position;
 
     /** 包装宽度 */
     @Excel(name = "包装宽度")
-    private Long pkWidth;
+    private Integer pkWidth;
 
     /** 包装高度 */
     @Excel(name = "包装高度")
-    private Long pkHeight;
+    private Integer pkHeight;
 
     /** 包装长度 */
     @Excel(name = "包装长度")
-    private Long pkLength;
+    private Integer pkLength;
 
     /** 材积重 */
     @Excel(name = "材积重")
-    private Long materialWeight;
+    private Integer materialWeight;
 
     /** 常规包装重量 */
     @Excel(name = "常规包装重量")
-    private Long pkWeight;
+    private Integer pkWeight;
 
     /** 运费 */
     @Excel(name = "运费")
-    private Long freight;
+    private Integer freight;
 
     /** 运费是否来自实际发货数据(0:否, 1:是) */
     @Excel(name = "运费是否来自实际发货数据(0:否, 1:是)", dictType = "erp_product_variant_is_actual_shipment")
@@ -103,7 +105,7 @@ public class ProductVariant implements Serializable
 
     /** 商品成本价（分） */
     @Excel(name = "商品成本价", readConverterExp = "分=")
-    private Long unitCostPrice;
+    private Integer unitCostPrice;
 
     /** 创建者 */
     private String createBy;

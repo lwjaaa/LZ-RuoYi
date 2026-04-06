@@ -89,4 +89,8 @@ public interface IProductTagRelService extends IService<ProductTagRel>
      * @return 结果
      */
     public String importProductTagRelData(List<ProductTagRel> productTagRelList, Boolean isUpdateSupport, String operName);
+
+    List<String> selectTagCodeListByProductId(Long productId);
+
+    List<Long> getTagIdListByProductId(Long productId);
 }

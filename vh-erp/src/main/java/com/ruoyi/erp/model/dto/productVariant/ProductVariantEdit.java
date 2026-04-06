@@ -1,11 +1,11 @@
 package com.ruoyi.erp.model.dto.productVariant;
 
-import java.io.Serializable;
-import java.util.Date;
-import com.fasterxml.jackson.annotation.JsonFormat;
+import com.ruoyi.erp.model.domain.ProductVariant;
 import lombok.Data;
 import org.springframework.beans.BeanUtils;
-import com.ruoyi.erp.model.domain.ProductVariant;
+
+import java.io.Serializable;
+import java.util.Date;
 /**
  * erp商品变体Vo对象 erp_product_variant
  *
@@ -27,13 +27,13 @@ public class ProductVariantEdit implements Serializable
     private String sku;
 
     /** 销售价格(美元*100) */
-    private Long price;
+    private Integer price;
 
     /** 原价/对比价(美元*100) */
-    private Long compareAtPrice;
+    private Integer compareAtPrice;
 
     /** 采购价（分） */
-    private Long purchasePrice;
+    private Integer purchasePrice;
 
     /** 采购链接 */
     private String purchaseUrl;
@@ -48,31 +48,31 @@ public class ProductVariantEdit implements Serializable
     private Long mediaId;
 
     /** 排序位置 列表中的第一个位置是 1 */
-    private Long position;
+    private Integer position;
 
     /** 包装宽度 */
-    private Long pkWidth;
+    private Integer pkWidth;
 
     /** 包装高度 */
-    private Long pkHeight;
+    private Integer pkHeight;
 
     /** 包装长度 */
-    private Long pkLength;
+    private Integer pkLength;
 
     /** 材积重 */
-    private Long materialWeight;
+    private Integer materialWeight;
 
     /** 常规包装重量 */
-    private Long pkWeight;
+    private Integer pkWeight;
 
     /** 运费 */
-    private Long freight;
+    private Integer freight;
 
     /** 运费是否来自实际发货数据(0:否, 1:是) */
     private String isActualShipment;
 
     /** 商品成本价（分） */
-    private Long unitCostPrice;
+    private Integer unitCostPrice;
 
     /** 更新者 */
     private String updateBy;

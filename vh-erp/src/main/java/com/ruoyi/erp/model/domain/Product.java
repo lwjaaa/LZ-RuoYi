@@ -138,9 +138,12 @@ public class Product implements Serializable
     private String delFlag;
 
     /** erp商品变体信息,非数据库字段 */
+    @TableField(exist = false)
     private List<ProductVariant> productVariantList;
     /** 商品标签ID列表,非数据库字段 */
+    @TableField(exist = false)
     private List<Long> tagIds;
+
 
     /** 请求参数 */
     @JsonInclude(JsonInclude.Include.NON_EMPTY)

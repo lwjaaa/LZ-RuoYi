@@ -1,8 +1,9 @@
 package com.ruoyi.erp.mapper;
 
-import java.util.List;
-import com.ruoyi.erp.model.domain.ProductTagRel;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.ruoyi.erp.model.domain.ProductTagRel;
+
+import java.util.List;
 
 /**
  * erp商品与标签关联Mapper接口
@@ -59,4 +60,11 @@ public interface ProductTagRelMapper extends BaseMapper<ProductTagRel>
      * @return 结果
      */
     public int deleteProductTagRelByRelIds(Long[] relIds);
+
+    /**
+     * 根据商品id查询标签code列表
+     * @param productId
+     * @return
+     */
+    List<String> selectTagCodeListByProductId(Long productId);
 }

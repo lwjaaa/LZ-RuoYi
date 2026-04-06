@@ -30,7 +30,7 @@ public interface IProductService extends IService<Product>
      * @param product erp商品
      * @return erp商品集合
      */
-    public List<Product> selectProductList(Product product);
+    public List<ProductVo> selectProductList(Product product);
 
 
     /**

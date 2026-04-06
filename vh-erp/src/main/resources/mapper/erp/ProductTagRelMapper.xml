@@ -66,4 +66,11 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             #{relId}
         </foreach>
     </delete>
+
+    <select id="selectTagCodeListByProductId" parameterType="java.lang.Long">
+        select tag_code
+        from erp_product_tag_rel r
+                 left join erp_tag_dict d on r.tag_id = d.tag_id
+        where r.product_id = #{productId}
+    </select>
 </mapper>

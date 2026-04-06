@@ -7,7 +7,9 @@ import com.ruoyi.common.core.page.TableDataInfo;
 import com.ruoyi.common.enums.BusinessType;
 import com.ruoyi.common.utils.poi.ExcelUtil;
 import com.ruoyi.erp.model.domain.Product;
-import com.ruoyi.erp.model.dto.product.*;
+import com.ruoyi.erp.model.dto.product.ProductBaseInfoEdit;
+import com.ruoyi.erp.model.dto.product.ProductQuery;
+import com.ruoyi.erp.model.dto.product.ProductSelectionEdit;
 import com.ruoyi.erp.model.vo.product.ProductVo;
 import com.ruoyi.erp.service.IProductService;
 import com.ruoyi.erp.service.IProductWizardService;
@@ -18,7 +20,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * erp商品Controller
@@ -42,10 +43,9 @@ public class ProductController extends BaseController {
     public TableDataInfo list(ProductQuery productQuery) {
         Product product = ProductQuery.queryToObj(productQuery);
         startPage();
-        List<Product> list = productService.selectProductList(product);
-        List<ProductVo> listVo = list.stream().map(ProductVo::objToVo).collect(Collectors.toList());
+        List<ProductVo> list = productService.selectProductList(product);
         TableDataInfo table = getDataTable(list);
-        table.setRows(listVo);
+        table.setRows(list);
         return table;
     }
 
@@ -57,8 +57,8 @@ public class ProductController extends BaseController {
     @PostMapping("/export")
     public void export(HttpServletResponse response, ProductQuery productQuery) {
         Product product = ProductQuery.queryToObj(productQuery);
-        List<Product> list = productService.selectProductList(product);
-        ExcelUtil<Product> util = new ExcelUtil<Product>(Product.class);
+        List<ProductVo> list = productService.selectProductList(product);
+        ExcelUtil<ProductVo> util = new ExcelUtil<ProductVo>(ProductVo.class);
         util.exportExcel(response, list, "erp商品数据");
     }
 

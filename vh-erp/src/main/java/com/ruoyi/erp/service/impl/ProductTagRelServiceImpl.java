@@ -1,5 +1,6 @@
 package com.ruoyi.erp.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.ruoyi.common.exception.ServiceException;
@@ -202,5 +203,17 @@ public class ProductTagRelServiceImpl extends ServiceImpl<ProductTagRelMapper, P
             successMsg.insert(0, "恭喜您，数据已全部导入成功！共 " + successNum + " 条，数据如下：");
         }
         return successMsg.toString();
+    }
+
+    @Override
+    public List<String> selectTagCodeListByProductId(Long productId) {
+        return productTagRelMapper.selectTagCodeListByProductId(productId);
+    }
+
+    @Override
+    public List<Long> getTagIdListByProductId(Long productId) {
+        return productTagRelMapper.selectList(new LambdaQueryWrapper<>(ProductTagRel.class)
+                .select(ProductTagRel::getTagId)
+                .eq(ProductTagRel::getProductId, productId)).stream().map(ProductTagRel::getTagId).toList();
     }
 }

@@ -6,11 +6,13 @@ import com.ruoyi.common.exception.ServiceException;
 import com.ruoyi.common.utils.DateUtils;
 import com.ruoyi.common.utils.StringUtils;
 import com.ruoyi.erp.mapper.ProductMapper;
+import com.ruoyi.erp.mapper.TagDictMapper;
 import com.ruoyi.erp.model.domain.Product;
-import com.ruoyi.erp.model.domain.ProductVariant;
 import com.ruoyi.erp.model.dto.product.ProductQuery;
 import com.ruoyi.erp.model.vo.product.ProductVo;
 import com.ruoyi.erp.service.IProductService;
+import com.ruoyi.erp.service.IProductTagRelService;
+import com.ruoyi.erp.service.IProductVariantService;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,13 +27,19 @@ import java.util.stream.Collectors;
  * @date 2026-03-26
  */
 @Service
-public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> implements IProductService
-{
+public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> implements IProductService {
 
     @Resource
     private ProductMapper productMapper;
+    @Resource
+    private IProductTagRelService productTagRelService;
+    @Resource
+    private TagDictMapper tagDictMapper;
+    @Resource
+    private IProductVariantService productVariantService;
 
     //region mybatis代码
+
     /**
      * 查询erp商品
      *
@@ -39,9 +47,14 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
      * @return erp商品
      */
     @Override
-    public Product selectProductByProductId(Long productId)
-    {
-        return productMapper.selectProductByProductId(productId);
+    public Product selectProductByProductId(Long productId) {
+        Product product = productMapper.selectProductByProductId(productId);
+        if (StringUtils.isNull(product)) {
+            return null;
+        }
+        product.setTagIds(productTagRelService.getTagIdListByProductId(productId));
+        product.setProductVariantList(productVariantService.selectListByProductId(productId));
+        return product;
     }
 
     /**
@@ -51,9 +64,13 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
      * @return erp商品
      */
     @Override
-    public List<Product> selectProductList(Product product)
-    {
-        return productMapper.selectProductList(product);
+    public List<ProductVo> selectProductList(Product product) {
+        List<Product> list = productMapper.selectProductList(product);
+        List<ProductVo> listVo = list.stream().map(ProductVo::objToVo).collect(Collectors.toList());
+        listVo.forEach(vo -> {
+            vo.setTagCodeList(productTagRelService.selectTagCodeListByProductId(vo.getProductId()));
+        });
+        return listVo;
     }
 
     /**
@@ -64,8 +81,7 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
      */
     @Transactional
     @Override
-    public int deleteProductByProductIds(Long[] productIds)
-    {
+    public int deleteProductByProductIds(Long[] productIds) {
         productMapper.deleteProductVariantByProductIds(productIds);
         return productMapper.deleteProductByProductIds(productIds);
     }
@@ -78,15 +94,14 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
      */
     @Transactional
     @Override
-    public int deleteProductByProductId(Long productId)
-    {
+    public int deleteProductByProductId(Long productId) {
         productMapper.deleteProductVariantByProductId(productId);
         return productMapper.deleteProductByProductId(productId);
     }
 
     //endregion
     @Override
-    public QueryWrapper<Product> getQueryWrapper(ProductQuery productQuery){
+    public QueryWrapper<Product> getQueryWrapper(ProductQuery productQuery) {
         QueryWrapper<Product> queryWrapper = new QueryWrapper<>();
         //如果不使用params可以删除
         Map<String, Object> params = productQuery.getParams();
@@ -94,25 +109,25 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
             params = new HashMap<>();
         }
         String shopifyProductId = productQuery.getShopifyProductId();
-        queryWrapper.eq(StringUtils.isNotEmpty(shopifyProductId) ,"shopify_product_id",shopifyProductId);
+        queryWrapper.eq(StringUtils.isNotEmpty(shopifyProductId), "shopify_product_id", shopifyProductId);
 
         String productTitle = productQuery.getProductTitle();
-        queryWrapper.like(StringUtils.isNotEmpty(productTitle) ,"product_title",productTitle);
+        queryWrapper.like(StringUtils.isNotEmpty(productTitle), "product_title", productTitle);
 
         String spu = productQuery.getSpu();
-        queryWrapper.like(StringUtils.isNotEmpty(spu) ,"spu",spu);
+        queryWrapper.like(StringUtils.isNotEmpty(spu), "spu", spu);
 
         String status = productQuery.getStatus();
-        queryWrapper.eq(StringUtils.isNotEmpty(status) ,"status",status);
+        queryWrapper.eq(StringUtils.isNotEmpty(status), "status", status);
 
         String syncStatus = productQuery.getSyncStatus();
-        queryWrapper.eq(StringUtils.isNotEmpty(syncStatus) ,"sync_status",syncStatus);
+        queryWrapper.eq(StringUtils.isNotEmpty(syncStatus), "sync_status", syncStatus);
 
         Date lastSyncTime = productQuery.getLastSyncTime();
-        queryWrapper.between(StringUtils.isNotNull(params.get("beginLastSyncTime"))&&StringUtils.isNotNull(params.get("endLastSyncTime")),"last_sync_time",params.get("beginLastSyncTime"),params.get("endLastSyncTime"));
+        queryWrapper.between(StringUtils.isNotNull(params.get("beginLastSyncTime")) && StringUtils.isNotNull(params.get("endLastSyncTime")), "last_sync_time", params.get("beginLastSyncTime"), params.get("endLastSyncTime"));
 
         String createBy = productQuery.getCreateBy();
-        queryWrapper.between(StringUtils.isNotNull(params.get("beginCreateBy"))&&StringUtils.isNotNull(params.get("endCreateBy")),"create_by",params.get("beginCreateBy"),params.get("endCreateBy"));
+        queryWrapper.between(StringUtils.isNotNull(params.get("beginCreateBy")) && StringUtils.isNotNull(params.get("endCreateBy")), "create_by", params.get("beginCreateBy"), params.get("endCreateBy"));
 
         return queryWrapper;
     }
@@ -128,57 +143,45 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
     /**
      * 导入erp商品数据
      *
-     * @param productList erp商品数据列表
+     * @param productList     erp商品数据列表
      * @param isUpdateSupport 是否更新支持，如果已存在，则进行更新数据
-     * @param operName 操作用户
+     * @param operName        操作用户
      * @return 结果
      */
     @Override
-    public String importProductData(List<Product> productList, Boolean isUpdateSupport, String operName)
-    {
-        if (StringUtils.isEmpty(productList))
-        {
+    public String importProductData(List<Product> productList, Boolean isUpdateSupport, String operName) {
+        if (StringUtils.isEmpty(productList)) {
             throw new ServiceException("导入erp商品数据不能为空！");
         }
         int successNum = 0;
         int failureNum = 0;
         StringBuilder successMsg = new StringBuilder();
         StringBuilder failureMsg = new StringBuilder();
-        for (Product product : productList)
-        {
-            try
-            {
+        for (Product product : productList) {
+            try {
                 // 验证是否存在这个erp商品
                 Long productId = product.getProductId();
                 Product productExist = null;
-                if (StringUtils.isNotNull(productId))
-                {
+                if (StringUtils.isNotNull(productId)) {
                     productExist = productMapper.selectProductByProductId(productId);
                 }
-                if (StringUtils.isNull(productExist))
-                {
+                if (StringUtils.isNull(productExist)) {
                     product.setCreateTime(DateUtils.getNowDate());
                     productMapper.insertProduct(product);
                     successNum++;
                     String productIdStr = StringUtils.isNotNull(productId) ? productId.toString() : "新记录";
                     successMsg.append("<br/>" + successNum + "、erp商品 " + productIdStr + " 导入成功");
-                }
-                else if (isUpdateSupport)
-                {
+                } else if (isUpdateSupport) {
                     product.setUpdateTime(DateUtils.getNowDate());
                     productMapper.updateProduct(product);
                     successNum++;
                     successMsg.append("<br/>" + successNum + "、erp商品 " + productId.toString() + " 更新成功");
-                }
-                else
-                {
+                } else {
                     failureNum++;
                     String productIdStr = StringUtils.isNotNull(productId) ? productId.toString() : "未知";
                     failureMsg.append("<br/>" + failureNum + "、erp商品 " + productIdStr + " 已存在");
                 }
-            }
-            catch (Exception e)
-            {
+            } catch (Exception e) {
                 failureNum++;
                 Long productId = product.getProductId();
                 String productIdStr = StringUtils.isNotNull(productId) ? productId.toString() : "未知";
@@ -187,13 +190,10 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
                 log.error(msg, e);
             }
         }
-        if (failureNum > 0)
-        {
+        if (failureNum > 0) {
             failureMsg.insert(0, "很抱歉，导入失败！共 " + failureNum + " 条数据格式不正确，错误如下：");
             throw new ServiceException(failureMsg.toString());
-        }
-        else
-        {
+        } else {
             successMsg.insert(0, "恭喜您，数据已全部导入成功！共 " + successNum + " 条，数据如下：");
         }
         return successMsg.toString();

@@ -1,12 +1,12 @@
 package com.ruoyi.erp.service;
 
-import java.util.List;
-import com.ruoyi.erp.model.domain.ProductVariant;
-import com.ruoyi.erp.model.vo.productVariant.ProductVariantVo;
-import com.ruoyi.erp.model.dto.productVariant.ProductVariantQuery;
-
-import com.baomidou.mybatisplus.extension.service.IService;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.service.IService;
+import com.ruoyi.erp.model.domain.ProductVariant;
+import com.ruoyi.erp.model.dto.productVariant.ProductVariantQuery;
+import com.ruoyi.erp.model.vo.productVariant.ProductVariantVo;
+
+import java.util.List;
 /**
  * erp商品变体Service接口
  * 
@@ -89,4 +89,7 @@ public interface IProductVariantService extends IService<ProductVariant>
      * @return 结果
      */
     public String importProductVariantData(List<ProductVariant> productVariantList, Boolean isUpdateSupport, String operName);
+
+
+    List<ProductVariant> selectListByProductId(Long productId);
 }

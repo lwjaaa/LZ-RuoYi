@@ -27,20 +27,6 @@
       >
         <el-row :gutter="20">
           <el-col :span="12">
-            <el-form-item label="SPU" prop="spu">
-              <el-input v-model="formData.spu" placeholder="自动生成或手动输入">
-                <template #append>
-                  <el-button
-                    @click="generateSpu(false)"
-                    :loading="spuGenerating"
-                    :disabled="spuGenerating"
-                    >生成</el-button
-                  >
-                </template>
-              </el-input>
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
             <el-form-item label="标签" prop="tagIds">
               <el-cascader
                 v-model="formData.tagIds"
@@ -59,12 +45,27 @@
               />
             </el-form-item>
           </el-col>
+          <el-col :span="12">
+            <el-form-item label="SPU" prop="spu">
+              <el-input v-model="formData.spu" placeholder="自动生成或手动输入">
+                <template #append>
+                  <el-button
+                    @click="generateSpu(false)"
+                    :loading="spuGenerating"
+                    :disabled="spuGenerating"
+                    >生成</el-button
+                  >
+                </template>
+              </el-input>
+            </el-form-item>
+          </el-col>
         </el-row>
 
         <el-row :gutter="20">
           <el-col :span="12">
             <el-form-item label="来源 URL" prop="sourceUrl">
               <el-input
+                ref="sourceUrlInputRef"
                 v-model="formData.sourceUrl"
                 type="textarea"
                 :rows="2"
@@ -88,7 +89,7 @@
         <el-form-item label="采购商品选项">
           <div class="options-container">
             <div
-              v-for="(option, optIndex) in purchaseOptionList"
+              v-for="(option, optIndex) in optionList"
               :key="optIndex"
               class="option-row"
               :class="{ 'option-row-collapsed': option.collapsed }"
@@ -103,14 +104,12 @@
                       placeholder="采购选项名称"
                       class="input-left"
                       size="small"
-                      @change="generateVariants"
                     />
                     <el-input
                       v-model="option.productName"
                       placeholder="英文选项名称"
                       class="input-right"
                       size="small"
-                      @change="generateVariants"
                     />
                     <div class="delete-button-wrapper">
                       <!-- <el-button
@@ -136,7 +135,6 @@
                       placeholder="采购选项值"
                       class="input-left"
                       size="small"
-                      @change="generateVariants"
                       @keyup.enter.prevent="
                         handleEnterKey($event, optIndex, valIndex, 'purchase')
                       "
@@ -147,7 +145,6 @@
                       placeholder="英文选项值"
                       class="input-right"
                       size="small"
-                      @change="generateVariants"
                       @keyup.enter.prevent="
                         handleEnterKey($event, optIndex, valIndex, 'product')
                       "
@@ -165,15 +162,6 @@
                     </div>
                   </div>
                 </div>
-                <!-- <el-button
-                  type="primary"
-                  icon="Plus"
-                  size="small"
-                  @click="addOptionValue(optIndex)"
-                  class="mt-2"
-                >
-                  添加选项值
-                </el-button> -->
                 <div class="option-footer" v-show="!option.collapsed">
                   <el-button
                     type="danger"
@@ -196,18 +184,34 @@
 
               <!-- 收起状态提示 -->
               <div class="option-collapsed-hint" v-show="option.collapsed">
-                <el-tag size="small" type="info">
-                  已收起：{{ option.purchaseName || "采购选项" }} →
-                  {{ option.productName || "商品选项" }} ({{
-                    option.values?.length || 0
-                  }}
-                  个选项值)
-                </el-tag>
+                <div class="collapsed-content">
+                  <span class="option-name-display">
+                    <strong>{{ option.purchaseName || "采购选项" }}</strong>
+                    <span class="en-name"
+                      >[{{ option.productName || "商品选项" }}]</span
+                    >
+                  </span>
+                  <div class="option-values-display">
+                    <template v-for="(value, idx) in option.values" :key="idx">
+                      <el-tag
+                        v-if="value.purchaseValue || value.productValue"
+                        size="small"
+                        class="value-tag"
+                      >
+                        {{ value.purchaseValue || "-" }}
+                        <span class="en-value"
+                          >[{{ value.productValue || "-" }}]</span
+                        >
+                      </el-tag>
+                    </template>
+                  </div>
+                </div>
                 <el-button
                   type="primary"
                   link
                   size="small"
                   @click="toggleCollapse(optIndex)"
+                  class="expand-btn"
                 >
                   展开
                 </el-button>
@@ -233,15 +237,31 @@
             row-key="variantId"
             @row-drop="handleRowDrop"
           >
-            <el-table-column
-              label="选项组合"
-              prop="optionCombination"
-              width="200"
-            >
-              <template #default="{ row }">
-                <span>{{ row.optionCombination || "Default Title" }}</span>
+            <!-- 动态生成选项列 -->
+            <template v-if="getActiveOptions().length > 0">
+              <el-table-column
+                v-for="(opt, idx) in getActiveOptions()"
+                :key="opt.purchaseName || idx"
+                :label="opt.purchaseName || '选项'"
+                width="120"
+                align="center"
+              >
+                <template #default="{ row }">
+                  <span>{{
+                    `${row.optionValueList[idx]?.purchaseName}[${row.optionValueList[idx]?.optionValue}]` ||
+                    "-"
+                  }}</span>
+                </template>
+              </el-table-column>
+            </template>
+
+            <!-- 当没有选项时，显示默认规格列 -->
+            <el-table-column v-else label="默认规格" width="120" align="center">
+              <template #default>
+                <span>-</span>
               </template>
             </el-table-column>
+
             <el-table-column
               label="采购链接"
               prop="purchaseUrl"
@@ -581,6 +601,7 @@ import {
   watch,
   onMounted,
   getCurrentInstance,
+  nextTick,
 } from "vue";
 import { Picture } from "@element-plus/icons-vue";
 import {
@@ -603,6 +624,7 @@ const title = ref("新增商品");
 const loading = ref(false);
 const step1FormRef = ref();
 const step2FormRef = ref();
+const sourceUrlInputRef = ref(); // 来源 URL 输入框引用
 
 // 表单数据
 const formData = reactive({
@@ -628,7 +650,6 @@ const formData = reactive({
 });
 
 // 采购商品选项
-const purchaseOptionList = ref([]);
 const optionList = ref([]);
 
 // 变体列表
@@ -701,6 +722,17 @@ const imageLoading = ref(false);
 const imageSearchKeyword = ref("");
 const draggedImage = ref(null);
 
+// 监听来源 URL 变化，同步到采购链接
+watch(
+  () => formData.sourceUrl,
+  (newVal) => {
+    // 如果采购链接为空，且来源 URL 有值，则同步
+    if (newVal && !formData.purchaseUrl) {
+      formData.purchaseUrl = newVal;
+    }
+  },
+);
+
 // 监听 SPU 变化，自动更新搜索关键词
 watch(
   () => formData.spu,
@@ -711,6 +743,40 @@ watch(
   },
   { immediate: true },
 );
+
+// 监听 activeStep 和 visible，动态管理快捷键监听器
+watch([() => activeStep.value, () => visible.value], ([step, isVisible]) => {
+  // 只有当弹窗可见 且 处于第一步时，才挂载监听器
+  if (isVisible && step === 0) {
+    nextTick(() => {
+      const formEl = step1FormRef.value?.$el;
+      if (formEl) {
+        // 移除旧的（防止重复绑定）
+        formEl.removeEventListener("keydown", handleGlobalKeydown);
+        // 绑定新的
+        formEl.addEventListener("keydown", handleGlobalKeydown);
+      }
+    });
+  } else {
+    // 如果切换到第二步或关闭弹窗，则移除监听器
+    const formEl = step1FormRef.value?.$el;
+    if (formEl) {
+      formEl.removeEventListener("keydown", handleGlobalKeydown);
+    }
+  }
+});
+
+// 处理键盘事件
+function handleGlobalKeydown(event) {
+  // 检查是否按下了 Ctrl (或 Mac 上的 Cmd) + '+' 或 '='
+  if (
+    (event.ctrlKey || event.metaKey) &&
+    (event.key === "+" || event.key === "=")
+  ) {
+    event.preventDefault(); // 防止浏览器缩放
+    addOption();
+  }
+}
 
 const menuLoading = ref(false);
 // 扁平化的标签列表（缓存）
@@ -752,24 +818,38 @@ function flattenTagList(tagList) {
 }
 
 // 打开编辑页面
-const open = async (selectedTagIds, data) => {
+const open = async (selectedTagIds, productId) => {
+  console.log(
+    "打开 ProductCreationWizard，selectedTagIds:",
+    selectedTagIds,
+    "productId:",
+    productId,
+  );
   await fetchTags();
   visible.value = true;
 
-  if (!data || data.productId == null) {
+  if (productId == null) {
     title.value = "新增选品";
     resetForm(selectedTagIds);
 
     generateSpu(true);
+
+    // 优化1：打开弹窗时，来源 URL 自动获得焦点
+    nextTick(() => {
+      setTimeout(() => {
+        console.log("尝试设置焦点到来源 URL 输入框");
+        sourceUrlInputRef.value.focus();
+      }, 50); // 增加延迟以等待 Dialog 动画完成
+    });
     return;
   }
 
+  resetForm();
   title.value = "编辑商品";
-  Object.assign(form, data);
   activeStep.value = 0;
 
   // 加载商品详情
-  const response = await getProduct(data.productId || data);
+  const response = await getProduct(productId);
   const productData = response.data;
 
   // 填充表单
@@ -801,14 +881,14 @@ const open = async (selectedTagIds, data) => {
     try {
       const parsed = JSON.parse(productData.purchaseOptionJson);
       // 确保 values 是数组对象格式
-      purchaseOptionList.value = parsed.map((opt) => ({
+      optionList.value = parsed.map((opt) => ({
         name: opt.name,
         values: Array.isArray(opt.values)
           ? opt.values.map((v) => (typeof v === "string" ? { name: v } : v))
           : [],
       }));
     } catch (e) {
-      purchaseOptionList.value = [];
+      optionList.value = [];
     }
   }
 
@@ -849,7 +929,7 @@ const open = async (selectedTagIds, data) => {
   } else {
     variants.value = [
       {
-        variantId: 1,
+        variantId: null,
         sku:
           v.sku ||
           productData.spu + "-" + (index + 1).toString().padStart(3, "0"),
@@ -908,7 +988,6 @@ function resetForm(selectedTagIds) {
     description: "",
   });
 
-  purchaseOptionList.value = [];
   optionList.value = [];
   variants.value = [
     {
@@ -939,6 +1018,7 @@ function resetForm(selectedTagIds) {
 
   step1FormRef.value?.resetFields();
   step2FormRef.value?.resetFields();
+  loading.value = false;
 }
 
 // 生成 SPU
@@ -983,29 +1063,29 @@ const generateSpu = async (auto) => {
 };
 // 添加选项值
 function addOptionValue(optIndex) {
-  if (!purchaseOptionList.value[optIndex].values) {
-    purchaseOptionList.value[optIndex].values = [];
+  if (!optionList.value[optIndex].values) {
+    optionList.value[optIndex].values = [];
   }
-  purchaseOptionList.value[optIndex].values.push({
+  optionList.value[optIndex].values.push({
     purchaseValue: "",
     productValue: "",
   });
-  generateVariants();
 }
 function toggleCollapse(optIndex) {
-  purchaseOptionList.value[optIndex].collapsed =
-    !purchaseOptionList.value[optIndex].collapsed;
+  optionList.value[optIndex].collapsed = !optionList.value[optIndex].collapsed;
+  if (optionList.value[optIndex].collapsed) {
+    generateVariants();
+  }
 }
 
 // 删除选项值
 function removeOptionValue(optIndex, valIndex) {
-  purchaseOptionList.value[optIndex].values.splice(valIndex, 1);
-  generateVariants();
+  optionList.value[optIndex].values.splice(valIndex, 1);
 }
 
 // 处理 Enter 键导航
 function handleEnterKey(event, optIndex, valIndex, type) {
-  const values = purchaseOptionList.value[optIndex].values;
+  const values = optionList.value[optIndex].values;
   console.log(values);
   if (type === "purchase") {
     // 从采购选项值跳到下一个采购选项值
@@ -1054,7 +1134,7 @@ const autoAddingFlags = ref({});
 // 处理选项值输入，自动添加新行
 // 处理选项值输入，自动添加新行
 function handleValueInput(optIndex, valIndex) {
-  const values = purchaseOptionList.value[optIndex].values;
+  const values = optionList.value[optIndex].values;
   const currentValue = values[valIndex];
 
   // 生成唯一标识
@@ -1076,7 +1156,7 @@ function handleValueInput(optIndex, valIndex) {
     // 延迟执行，避免在输入过程中频繁触发
     setTimeout(() => {
       // 再次检查，确保仍然是最后一个且没有被其他操作改变
-      const currentValues = purchaseOptionList.value[optIndex].values;
+      const currentValues = optionList.value[optIndex].values;
       if (valIndex === currentValues.length - 1) {
         addOptionValue(optIndex);
         delete autoAddingFlags.value[key];
@@ -1090,7 +1170,7 @@ function handleValueInput(optIndex, valIndex) {
 
 // 添加选项
 const addOption = () => {
-  purchaseOptionList.value.push({
+  optionList.value.push({
     purchaseName: "",
     productName: "",
     values: [
@@ -1101,21 +1181,46 @@ const addOption = () => {
     ],
     collapsed: false,
   });
-  generateVariants();
+
+  // 优化3：点击添加选项时，新添加的选项名称自动获得光标
+  nextTick(() => {
+    // 使用 setTimeout 确保 DOM 完全渲染
+    setTimeout(() => {
+      const optionRows = document.querySelectorAll(".option-row");
+      if (optionRows.length > 0) {
+        const allInputs = optionRows[optionRows.length - 1].querySelectorAll(
+          ".option-value-row .input-left input",
+        );
+        if (allInputs.length > 0) {
+          const lastInput = allInputs[0];
+          lastInput.focus();
+        }
+      }
+    }, 50);
+  });
 };
+
 // 移除选项
 function removeOption(index) {
-  purchaseOptionList.value.splice(index, 1);
+  optionList.value.splice(index, 1);
   generateVariants();
+}
+
+// 获取当前有效的选项列表（用于生成动态表头）
+function getActiveOptions() {
+  return optionList.value.filter(
+    (opt) =>
+      (opt.purchaseName || opt.productName) &&
+      opt.values?.some((v) => v.purchaseValue || v.productValue),
+  );
 }
 
 // 生成变体（笛卡尔积）
 function generateVariants() {
   // 过滤有实际值的选项
-  const validOptions = purchaseOptionList.value.filter(
-    (opt) => opt.name && opt.values?.some((v) => v.name),
-  );
-  if (purchaseOptionList.value.length === 0) {
+  const activeOptions = getActiveOptions();
+
+  if (activeOptions.length === 0) {
     variants.value = [
       {
         variantId: null,
@@ -1142,29 +1247,41 @@ function generateVariants() {
     ];
     return;
   }
-
-  // 计算笛卡尔积（使用 values 数组）
-  const valueArrays = validOptions.map((opt) =>
-    opt.values.filter((v) => v.name).map((v) => v.name),
+  // 计算笛卡尔积（使用 values 数组，并保留 purchaseValue 和 productValue）
+  const valueArrays = activeOptions.map((opt) =>
+    opt.values
+      .filter((v) => v.purchaseValue || v.productValue)
+      .map((v) => ({
+        purchaseValue: v.purchaseValue,
+        productValue: v.productValue,
+      })),
   );
-
+  console.log("valueArrays", valueArrays);
   const combinations = cartesianProduct(valueArrays);
+  console.log("combinations", combinations);
 
+  // 2. 映射生成变体行
   variants.value = combinations.map((combo, index) => {
     const existingVariant = variants.value[index];
     console.log("existingVariant", existingVariant);
+    const optionValueList = combo.map((val, idx) => {
+      const opt = activeOptions[idx];
+      return {
+        optionName: opt.productName,
+        optionValue: val.productValue,
+        purchaseOptionName: opt.purchaseName,
+        purchaseName: val.purchaseValue,
+      };
+    });
     return {
-      variantId: existingVariant?.variantId || index + 1,
+      variantId: existingVariant?.variantId,
       sku:
         existingVariant?.sku ||
         formData.spu + "-" + (index + 1).toString().padStart(3, "0"),
       purchaseUrl: existingVariant?.purchaseUrl || formData.purchaseUrl,
       purchasePrice: existingVariant?.purchasePrice || 0,
-      optionValues: combo.join(" / "),
-      optionValueList: combo.map((val, idx) => ({
-        optionName: validOptions[idx].name,
-        optionValue: val,
-      })),
+      optionValues: JSON.stringify(optionValueList),
+      optionValueList: optionValueList,
       price: existingVariant?.price || null,
       compareAtPrice: existingVariant?.compareAtPrice || null,
       purchaseProductName: existingVariant?.purchaseProductName || "",
@@ -1181,14 +1298,27 @@ function generateVariants() {
       remark: existingVariant?.remark || "",
     };
   });
+  console.log("variants.value", variants.value);
 }
 
 // 笛卡尔积工具函数
+// 笛卡尔积工具函数
 function cartesianProduct(arrays) {
-  if (arrays.length === 0) return [[]];
-  return arrays.reduce((acc, curr) =>
-    acc.flatMap((item) => curr.map((value) => [...item, value])),
+  // 1. 过滤掉非数组或空数组的项，确保输入纯净
+  const validArrays = arrays.filter(
+    (arr) => Array.isArray(arr) && arr.length > 0,
   );
+
+  // 2. 如果没有有效数组，返回包含一个空数组的数组（表示一种“空”组合）
+  if (validArrays.length === 0) return [[]];
+
+  // 3. 执行笛卡尔积计算
+  return validArrays.reduce(
+    (acc, curr) => {
+      return acc.flatMap((item) => curr.map((value) => [...item, value]));
+    },
+    [[]],
+  ); // 初始值设为 [[]]，确保 reduce 能正确启动
 }
 
 // 移除变体
@@ -1201,7 +1331,7 @@ function removeVariant(index) {
 // 变体行拖拽排序
 function handleRowDrop({ row, $index }, targetIndex) {
   const sourceIndex = variants.value.findIndex(
-    (v) => v.variantId === row.variantId,
+    (v) => v.position === row.position,
   );
   if (sourceIndex !== -1 && sourceIndex !== targetIndex) {
     const item = variants.value.splice(sourceIndex, 1)[0];
@@ -1217,7 +1347,8 @@ function calculateVariantCost(row) {
   }
   // 自动计算销售价格
   if (row.costPrice > 0) {
-    row.salePrice = (row.costPrice * 1.3) / 7.2; // 假设美元汇率 7.2
+    // 假设美元汇率 7.2，成本价基础上加30%作为销售价 向上取整
+    row.salePrice = Math.ceil((row.costPrice * 1.3) / 7.2); // 假设美元汇率 7.2
   }
 }
 
@@ -1311,9 +1442,24 @@ function handleVariantImageDrop(event, row) {
 async function handleNext() {
   try {
     await step1FormRef.value?.validate();
+    // 如果没有父级标签ID，就填充
+    const menuTag = getCurrentMenuTag();
+    if (menuTag) {
+      menuTag.ancestors.split(",").forEach((ancestorId) => {
+        if (
+          ancestorId != "0" &&
+          !formData.tagIds.some((path) => path.includes(ancestorId))
+        ) {
+          formData.tagIds.push(ancestorId);
+        }
+      });
+    } else {
+      proxy.$modal.msgError("请至少选择一个菜单类型的标签");
+      return;
+    }
 
     // 保存采购商品选项
-    formData.purchaseOptionJson = JSON.stringify(purchaseOptionList.value);
+    formData.purchaseOptionJson = JSON.stringify(optionList.value);
 
     // 同步变体的采购链接
     variants.value.forEach((v) => {
@@ -1323,19 +1469,22 @@ async function handleNext() {
     });
     const submitData = {
       ...formData,
-      optionJson: JSON.stringify(purchaseOptionList.value),
-      purchaseOptionJson: JSON.stringify(purchaseOptionList.value),
+      optionJson: JSON.stringify(optionList.value),
+      purchaseOptionJson: JSON.stringify(optionList.value),
       variants: variants.value,
     };
     loading.value = true;
-    await updateBaseInfo(submitData);
+    await addSelectionInfo(submitData);
     emit("submit", { action, data: submitData });
 
     activeStep.value = 1;
   } catch (error) {
     console.error("第一步验证失败", error);
+  } finally {
+    loading.value = false;
   }
 }
+
 // 提交表单
 async function handleSubmit(action) {
   try {
@@ -1345,8 +1494,8 @@ async function handleSubmit(action) {
     // 准备提交数据
     const submitData = {
       ...formData,
-      optionJson: JSON.stringify(purchaseOptionList.value),
-      purchaseOptionJson: JSON.stringify(purchaseOptionList.value),
+      optionJson: JSON.stringify(optionList.value),
+      purchaseOptionJson: JSON.stringify(optionList.value),
       variants: variants.value,
       mediaIdList: formData.mediaIdList, // 使用 mediaIdList
     };
@@ -1524,7 +1673,60 @@ defineExpose({
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 5px 0;
+  background: #f5f7fa;
+  border-radius: 4px;
+  gap: 12px;
+}
+
+.collapsed-content {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
+  flex-wrap: wrap;
+}
+
+.option-name-display {
+  font-size: 14px;
+  color: #303133;
+  white-space: nowrap;
+}
+
+.option-name-display strong {
+  font-weight: 600;
+  color: #303133;
+}
+
+.option-name-display .en-name {
+  color: #909399;
+  font-size: 13px;
+  margin-left: 4px;
+}
+
+.option-values-display {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  flex: 1;
+}
+
+.value-tag {
+  background-color: #f4f4f5 !important;
+  border-color: #e9e9eb !important;
+  color: #606266 !important;
+  font-size: 12px;
+  padding: 2px 8px;
+}
+
+.value-tag .en-value {
+  color: #909399;
+  font-size: 11px;
+  margin-left: 2px;
+}
+
+.expand-btn {
+  flex-shrink: 0;
 }
 
 .mt-2 {
