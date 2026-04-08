@@ -2,6 +2,7 @@ package com.ruoyi.erp.service.impl;
 
 import com.alibaba.fastjson2.JSON;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.ruoyi.common.exception.ServiceException;
 import com.ruoyi.common.utils.DateUtils;
 import com.ruoyi.common.utils.SecurityUtils;
 import com.ruoyi.common.utils.StringUtils;
@@ -11,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.CollectionUtils;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -27,19 +29,21 @@ public class ProductWizardServiceImpl implements IProductWizardService {
 
     @Autowired
     private IProductService productService;
+    @Autowired
     private IProductVariantService productVariantService;
-
     @Autowired
     private IProductTagRelService productTagRelService;
-
     @Autowired
     private ITagDictService tagDictService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public boolean saveProductWithWizard(Product product) {
+    public Long saveProductWithWizard(Product product) {
         Long productId = product.getProductId();
         List<Long> tagIds = product.getTagIds();
+        if(CollectionUtils.isEmpty(tagIds)){
+            throw new ServiceException("请选择标签");
+        }
 
         if (StringUtils.isNull(productId)) {
             // ==================== 新增逻辑 ====================
@@ -63,7 +67,7 @@ public class ProductWizardServiceImpl implements IProductWizardService {
             // 5. 保存变体信息
             this.saveProductVariant(product);
 
-            return save;
+            return product.getProductId();
         } else {
             // ==================== 编辑逻辑 ====================
             product.setUpdateTime(DateUtils.getNowDate());
@@ -80,7 +84,8 @@ public class ProductWizardServiceImpl implements IProductWizardService {
             this.saveProductVariant(product);
 
             // 6. 更新商品主表
-            return productService.updateById(product);
+            productService.updateById(product);
+            return product.getProductId();
         }
     }
 
@@ -170,8 +175,9 @@ public class ProductWizardServiceImpl implements IProductWizardService {
      * @param tagIds 标签 ID 列表
      */
     private void saveProductTags(Long productId, List<Long> tagIds) {
-        if (StringUtils.isEmpty(tagIds)) {
-            return;
+        List<TagDict> tagDicts = tagDictService.listByIds(tagIds);
+        if (StringUtils.isEmpty(tagDicts)) {
+            throw new ServiceException("标签不存在");
         }
 
         List<ProductTagRel> tagRelList = new ArrayList<>();
@@ -244,12 +250,13 @@ public class ProductWizardServiceImpl implements IProductWizardService {
         // 删除其他变体
         productVariantService.remove(new LambdaQueryWrapper<ProductVariant>()
                 .eq(ProductVariant::getProductId, productId)
-                .notIn(ProductVariant::getVariantId, existList));
+                // 如果existList不为空就删除其他变体
+                .notIn(!existList.isEmpty(),ProductVariant::getVariantId, existList));
         log.info("删除其他变体成功，商品 ID: {}, 变体ID：{}", productId, existList);
 
         // 批量插入变体数据
         if (!saveList.isEmpty()) {
-            productVariantService.saveBatch(saveList);
+            productVariantService.saveOrUpdateBatch(saveList);
             log.info("批量保存商品变体成功，商品 ID: {}", productId);
         }
     }

@@ -56,10 +56,6 @@ public class ProductVariant implements Serializable
     @Excel(name = "采购链接")
     private String purchaseUrl;
 
-    /** 采购产品名称 */
-    @Excel(name = "采购产品名称")
-    private String purchaseProductName;
-
     /** 变体对应的选项 */
     @Excel(name = "变体对应的选项")
     private String optionValues;

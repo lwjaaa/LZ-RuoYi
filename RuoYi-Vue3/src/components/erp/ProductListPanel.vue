@@ -218,13 +218,6 @@
         :show-overflow-tooltip="true"
       />
       <el-table-column
-        label="采购商品选项"
-        align="center"
-        prop="purchaseOptionJson"
-        v-if="columns[8].visible"
-        :show-overflow-tooltip="true"
-      />
-      <el-table-column
         label="创建时间"
         align="center"
         prop="createTime"
@@ -566,15 +559,16 @@ function handleUpdate(row) {
 }
 
 /** 向导提交处理 */
-function handleWizardSubmit({ action, data }) {
+function handleWizardSubmit({ action, hasChanged }) {
+  console.log("向导提交处理", action, hasChanged);
   if (action === "cancel") {
     console.log("用户取消操作");
   } else {
     // 加载数据
-    getList();
-    proxy.$modal.msgSuccess(
-      action === "close" ? "保存成功" : "保存成功，继续新增",
-    );
+    if (hasChanged) {
+      getList();
+      proxy.$modal.msgSuccess("保存成功");
+    }
   }
 }
 

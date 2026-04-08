@@ -13,7 +13,6 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="compareAtPrice"    column="compare_at_price"    />
         <result property="purchasePrice"    column="purchase_price"    />
         <result property="purchaseUrl"    column="purchase_url"    />
-        <result property="purchaseProductName"    column="purchase_product_name"    />
         <result property="optionValues"    column="option_values"    />
         <result property="mediaId"    column="media_id"    />
         <result property="position"    column="position"    />
@@ -34,7 +33,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     </resultMap>
 
     <sql id="selectProductVariantVo">
-        select variant_id, product_id, shopify_variant_id, sku, price, compare_at_price, purchase_price, purchase_url, purchase_product_name, option_values, media_id, position, pk_width, pk_height, pk_length, material_weight, pk_weight, freight, is_actual_shipment, unit_cost_price, create_by, create_time, update_by, update_time, remark, del_flag from erp_product_variant
+        select variant_id, product_id, shopify_variant_id, sku, price, compare_at_price, purchase_price, purchase_url, option_values, media_id, position, pk_width, pk_height, pk_length, material_weight, pk_weight, freight, is_actual_shipment, unit_cost_price, create_by, create_time, update_by, update_time, remark, del_flag from erp_product_variant
     </sql>
 
     <select id="selectProductVariantList" parameterType="ProductVariant" resultMap="ProductVariantResult">
@@ -65,7 +64,6 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="compareAtPrice != null">compare_at_price,</if>
             <if test="purchasePrice != null">purchase_price,</if>
             <if test="purchaseUrl != null">purchase_url,</if>
-            <if test="purchaseProductName != null">purchase_product_name,</if>
             <if test="optionValues != null">option_values,</if>
             <if test="mediaId != null">media_id,</if>
             <if test="position != null">position,</if>
@@ -92,7 +90,6 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="compareAtPrice != null">#{compareAtPrice},</if>
             <if test="purchasePrice != null">#{purchasePrice},</if>
             <if test="purchaseUrl != null">#{purchaseUrl},</if>
-            <if test="purchaseProductName != null">#{purchaseProductName},</if>
             <if test="optionValues != null">#{optionValues},</if>
             <if test="mediaId != null">#{mediaId},</if>
             <if test="position != null">#{position},</if>
@@ -123,7 +120,6 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="compareAtPrice != null">compare_at_price = #{compareAtPrice},</if>
             <if test="purchasePrice != null">purchase_price = #{purchasePrice},</if>
             <if test="purchaseUrl != null">purchase_url = #{purchaseUrl},</if>
-            <if test="purchaseProductName != null">purchase_product_name = #{purchaseProductName},</if>
             <if test="optionValues != null">option_values = #{optionValues},</if>
             <if test="mediaId != null">media_id = #{mediaId},</if>
             <if test="position != null">position = #{position},</if>

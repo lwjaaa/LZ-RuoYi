@@ -61,10 +61,6 @@ public class Product implements Serializable
     @Excel(name = "商品选项")
     private String optionJson;
 
-    /** 采购商品选项 */
-    @Excel(name = "采购商品选项")
-    private String purchaseOptionJson;
-
     /** 发布状态 */
     @Excel(name = "发布状态", dictType = "erp_product_status")
     private String status;

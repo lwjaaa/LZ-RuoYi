@@ -69,7 +69,7 @@ public class ProductController extends BaseController {
     @GetMapping(value = "/{productId}")
     public AjaxResult getInfo(@PathVariable("productId") Long productId) {
         Product product = productService.selectProductByProductId(productId);
-        return success(ProductVo.objToVo(product));
+        return success(product);
     }
 
     /**
@@ -134,11 +134,11 @@ public class ProductController extends BaseController {
     public AjaxResult saveSelectionInfo(@RequestBody ProductSelectionEdit productSelectionEdit) {
         // 事务控制：保存 SPU -> 更新 Tag 流水号 -> 保存 Variants -> 保存 Media
         Product product = ProductSelectionEdit.editToObj(productSelectionEdit);
-        return toAjax(productWizardService.saveProductWithWizard(product));
+        return success(productWizardService.saveProductWithWizard(product));
     }
 
     /**
-     * 编辑 商品其他信息
+     * 编辑 商品其他信息16:03:02.718 16:03:02.914
      */
     @PreAuthorize("@ss.hasPermi('vh-erp:product:edit')")
     @Log(title = "编辑/新增 商品其他信息", businessType = BusinessType.UPDATE)
@@ -146,7 +146,7 @@ public class ProductController extends BaseController {
     public AjaxResult saveProductBaseInfo(@RequestBody ProductBaseInfoEdit productSelectionEdit) {
         // 事务控制：保存 SPU -> 更新 Tag 流水号 -> 保存 Variants -> 保存 Media
         Product product = ProductBaseInfoEdit.editToObj(productSelectionEdit);
-        return toAjax(productWizardService.saveProductWithWizard(product));
+        return success(productWizardService.saveProductWithWizard(product));
     }
 
 }

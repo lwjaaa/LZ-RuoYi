@@ -46,9 +46,6 @@ public class ProductVo implements Serializable
     /** 商品选项 */
     private String optionJson;
 
-    /** 采购商品选项 */
-    private String purchaseOptionJson;
-
     /** 发布状态 */
     private String status;
 

@@ -38,9 +38,6 @@ public class ProductVariantEdit implements Serializable
     /** 采购链接 */
     private String purchaseUrl;
 
-    /** 采购产品名称 */
-    private String purchaseProductName;
-
     /** 变体对应的选项 */
     private String optionValues;
 

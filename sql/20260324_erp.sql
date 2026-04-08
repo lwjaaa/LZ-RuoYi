@@ -35,8 +35,7 @@ CREATE TABLE `erp_product`
     PRIMARY KEY (`product_id`),
     UNIQUE KEY `uk_shopify_product_id` (`shopify_product_id`) COMMENT 'Shopify ID唯一索引',
     KEY `idx_product_title` (`product_title`),
-    KEY `idx_spu` (`spu`),
-    KEY `idx_del_flag` (`del_flag`)
+    KEY `idx_spu` (`spu`)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4 COMMENT ='erp商品主表';
 
@@ -51,7 +50,6 @@ CREATE TABLE `erp_product_variant`
     `compare_at_price`      int(10)      DEFAULT NULL COMMENT '原价/对比价',
     `purchase_price`        int(10)      DEFAULT NULL COMMENT '采购价（分）',
     `purchase_url`          varchar(500) DEFAULT NULL COMMENT '采购链接',
-    `purchase_product_name` json         DEFAULT NULL COMMENT '采购产品名称',
     `option_values`         json         DEFAULT NULL COMMENT '变体对应的选项',
     `media_id`              bigint(20)   DEFAULT NULL COMMENT '关联的图片ID (若有)',
     `position`              int(11)      DEFAULT 1 COMMENT '排序位置 列表中的第一个位置是 1',
@@ -75,8 +73,7 @@ CREATE TABLE `erp_product_variant`
     PRIMARY KEY (`variant_id`),
     UNIQUE KEY `uk_shopify_variant_id` (`shopify_variant_id`) COMMENT 'Shopify变体ID唯一索引',
     KEY `idx_product_id` (`product_id`),
-    KEY `idx_sku` (`sku`),
-    KEY `idx_del_flag` (`del_flag`)
+    KEY `idx_sku` (`sku`)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4 COMMENT ='erp商品变体表';
 
@@ -126,8 +123,7 @@ CREATE TABLE `erp_tag_dict`
     `remark`          varchar(500)         DEFAULT NULL COMMENT '备注',
     `del_flag`        char(1)              DEFAULT '0' COMMENT '删除标志',
     PRIMARY KEY (`tag_id`),
-    UNIQUE KEY `uk_tag_code` (`tag_code`) COMMENT '标签编码唯一',
-    KEY `idx_del_flag` (`del_flag`)
+    UNIQUE KEY `uk_tag_code` (`tag_code`) COMMENT '标签编码唯一'
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4 COMMENT ='erp标签字典表';
 

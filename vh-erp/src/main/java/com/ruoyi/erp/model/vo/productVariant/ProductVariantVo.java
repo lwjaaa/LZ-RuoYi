@@ -1,14 +1,10 @@
 package com.ruoyi.erp.model.vo.productVariant;
 
-import java.io.Serializable;
-import java.util.Date;
-import java.util.Date;
-import com.fasterxml.jackson.annotation.JsonFormat;
-import lombok.Data;
-import com.ruoyi.common.annotation.Excel;
-import org.springframework.beans.BeanUtils;
-import com.fasterxml.jackson.annotation.JsonFormat;
 import com.ruoyi.erp.model.domain.ProductVariant;
+import lombok.Data;
+import org.springframework.beans.BeanUtils;
+
+import java.io.Serializable;
 /**
  * erp商品变体Vo对象 erp_product_variant
  *
@@ -40,9 +36,6 @@ public class ProductVariantVo implements Serializable
 
     /** 采购链接 */
     private String purchaseUrl;
-
-    /** 采购产品名称 */
-    private String purchaseProductName;
 
     /** 变体对应的选项 */
     private String optionValues;

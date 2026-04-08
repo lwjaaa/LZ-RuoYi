@@ -1,9 +1,9 @@
 package com.ruoyi.erp.mapper;
 
-import java.util.List;
-import com.ruoyi.erp.model.domain.Product;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import com.ruoyi.erp.model.domain.ProductVariant;
+import com.ruoyi.erp.model.domain.Product;
+
+import java.util.List;
 
 /**
  * erp商品Mapper接口
@@ -68,15 +68,6 @@ public interface ProductMapper extends BaseMapper<Product>
      * @return 结果
      */
     public int deleteProductVariantByProductIds(Long[] productIds);
-    
-    /**
-     * 批量新增erp商品变体
-     * 
-     * @param productVariantList erp商品变体列表
-     * @return 结果
-     */
-    public int batchProductVariant(List<ProductVariant> productVariantList);
-    
 
     /**
      * 通过erp商品主键删除erp商品变体信息

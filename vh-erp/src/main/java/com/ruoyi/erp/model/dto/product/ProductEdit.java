@@ -49,10 +49,6 @@ public class ProductEdit implements Serializable
     private String optionJson;
     private ProductOption option;
 
-    /** 采购商品选项 */
-    private String purchaseOptionJson;
-    private ProductOption purchaseOption;
-
     /** 发布状态 */
     private String status;
 
