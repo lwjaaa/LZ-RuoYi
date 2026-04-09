@@ -126,6 +126,6 @@ public class RuoYiConfig
      */
     public static String getMediaPath()
     {
-        return getProfile() + "/产品图片";
+        return getProfile() + "/media/";
     }
 }

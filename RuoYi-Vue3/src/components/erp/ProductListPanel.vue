@@ -555,7 +555,7 @@ function handleAdd() {
 function handleUpdate(row) {
   const _productId = row.productId || ids.value;
   console.log("编辑 erp 商品，productId:", _productId, "row", row);
-  creationWizardModal.value.open(null, _productId);
+  creationWizardModal.value.open(null, _productId, 1);
 }
 
 /** 向导提交处理 */

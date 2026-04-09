@@ -131,7 +131,7 @@ public class MediaController extends BaseController {
      */
     @PreAuthorize("@ss.hasPermi('vh-erp:media:list')")
     @GetMapping("/scan")
-    public AjaxResult scanMedia(String dirPath, String productId) {
+    public AjaxResult scanMedia(@RequestParam("dirPath") String dirPath, @RequestParam("productId") String productId) {
         List<Media> mediaList = mediaService.scanMediaToProduct(dirPath, productId);
         return success(mediaList);
     }

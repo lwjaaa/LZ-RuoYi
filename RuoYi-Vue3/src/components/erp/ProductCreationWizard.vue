@@ -21,7 +21,7 @@
     <div v-show="activeStep === 0" class="step-content">
       <el-form
         ref="step1FormRef"
-        :model="formData"
+        :model="step1FormData"
         :rules="step1Rules"
         label-width="120px"
       >
@@ -29,7 +29,7 @@
           <el-col :span="12">
             <el-form-item label="标签" prop="tagIds">
               <el-cascader
-                v-model="formData.tagIds"
+                v-model="step1FormData.tagIds"
                 :options="tagList"
                 :props="{
                   value: 'tagId',
@@ -47,7 +47,10 @@
           </el-col>
           <el-col :span="12">
             <el-form-item label="SPU" prop="spu">
-              <el-input v-model="formData.spu" placeholder="自动生成或手动输入">
+              <el-input
+                v-model="step1FormData.spu"
+                placeholder="自动生成或手动输入"
+              >
                 <template #append>
                   <el-button
                     @click="generateSpu(false)"
@@ -66,7 +69,7 @@
             <el-form-item label="来源 URL" prop="sourceUrl">
               <el-input
                 ref="sourceUrlInputRef"
-                v-model="formData.sourceUrl"
+                v-model="step1FormData.sourceUrl"
                 type="textarea"
                 :rows="2"
                 placeholder="请输入来源 URL"
@@ -77,7 +80,7 @@
           <el-col :span="12">
             <el-form-item label="采购链接" prop="purchaseUrl">
               <el-input
-                v-model="formData.purchaseUrl"
+                v-model="step1FormData.purchaseUrl"
                 type="textarea"
                 :rows="2"
                 placeholder="请输入采购链接"
@@ -240,7 +243,7 @@
         <!-- 变体分录表格 -->
         <el-form-item label="变体分录">
           <el-table
-            :data="variants"
+            :data="step1Variants"
             border
             style="width: 100%"
             row-key="variantId"
@@ -307,7 +310,7 @@
             <el-table-column label="操作" width="80" fixed="right">
               <template #default="{ row, $index }">
                 <el-button
-                  v-if="variants.length > 1"
+                  v-if="step1Variants.length > 1"
                   type="danger"
                   icon="Delete"
                   circle
@@ -326,9 +329,9 @@
     <div v-show="activeStep === 1" class="step-content">
       <el-form
         ref="step2FormRef"
-        :model="formData"
+        :model="step2FormData"
         :rules="step2Rules"
-        label-width="120px"
+        label-width="68px"
         class="step2-form"
         :label-position="'left'"
       >
@@ -337,20 +340,29 @@
 
         <!-- SPU 与 商品标题 同行 -->
         <el-row :gutter="20">
-          <el-col :span="6">
+          <el-col :span="8">
             <el-form-item label="SPU" prop="spu">
               <el-input
-                v-model="formData.spu"
+                v-model="step2FormData.spu"
                 disabled
                 placeholder="系统自动生成"
               />
             </el-form-item>
           </el-col>
-          <el-col :span="18">
-            <el-form-item label="商品标题" prop="productTitle">
+
+          <el-col :span="8">
+            <el-form-item label="商品类别" prop="category">
               <el-input
-                v-model="formData.productTitle"
-                placeholder="请输入商品标题"
+                v-model="step2FormData.category"
+                placeholder="请输入商品类别"
+              />
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item label="商品类型" prop="productType">
+              <el-input
+                v-model="step2FormData.productType"
+                placeholder="请输入商品类型"
               />
             </el-form-item>
           </el-col>
@@ -358,146 +370,97 @@
 
         <!-- 商品类别 与 商品类型 同行 -->
         <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item label="商品类别" prop="category">
+          <el-col :span="24">
+            <el-form-item label="商品标题" prop="productTitle">
               <el-input
-                v-model="formData.category"
-                placeholder="请输入商品类别"
-              />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="商品类型" prop="productType">
-              <el-input
-                v-model="formData.productType"
-                placeholder="请输入商品类型"
+                v-model="step2FormData.productTitle"
+                placeholder="请输入商品标题"
               />
             </el-form-item>
           </el-col>
         </el-row>
 
-        <!-- SIZE 文本域 -->
-        <el-form-item label="SIZE" prop="size">
-          <div class="expandable-textarea">
-            <el-input
-              v-if="textareaExpand.size || formData.size"
-              v-model="formData.size"
-              type="textarea"
-              :rows="2"
-              placeholder="请输入SIZE"
-              @blur="handleTextareaBlur('size')"
-              @focus="textareaExpand.size = true"
-            />
-            <div
-              v-else
-              class="textarea-collapse"
-              @click="textareaExpand.size = true"
-            >
-              <span class="placeholder-text">点击展开输入 SIZE</span>
-              <el-icon><ArrowDown /></el-icon>
-            </div>
-          </div>
-        </el-form-item>
-
-        <!-- MATERIAL 文本域 -->
-        <el-form-item label="MATERIAL" prop="material">
-          <div class="expandable-textarea">
-            <el-input
-              v-if="textareaExpand.material || formData.material"
-              v-model="formData.material"
-              type="textarea"
-              :rows="2"
-              placeholder="请输入MATERIAL"
-              @blur="handleTextareaBlur('material')"
-              @focus="textareaExpand.material = true"
-            />
-            <div
-              v-else
-              class="textarea-collapse"
-              @click="textareaExpand.material = true"
-            >
-              <span class="placeholder-text">点击展开输入 MATERIAL</span>
-              <el-icon><ArrowDown /></el-icon>
-            </div>
-          </div>
-        </el-form-item>
-
-        <!-- NOTE 文本域（默认展开） -->
-        <el-form-item label="NOTE" prop="note">
-          <el-input
-            v-model="formData.note"
-            type="textarea"
-            :rows="2"
-            placeholder="请输入NOTE"
-          />
-        </el-form-item>
-
-        <!-- PACKAGE_INCLUDE 文本域 -->
-        <el-form-item label="PACKAGE_INCLUDE" prop="packageInclude">
-          <div class="expandable-textarea">
-            <el-input
-              v-if="textareaExpand.packageInclude || formData.packageInclude"
-              v-model="formData.packageInclude"
-              type="textarea"
-              :rows="2"
-              placeholder="请输入PACKAGE_INCLUDE"
-              @blur="handleTextareaBlur('packageInclude')"
-              @focus="textareaExpand.packageInclude = true"
-            />
-            <div
-              v-else
-              class="textarea-collapse"
-              @click="textareaExpand.packageInclude = true"
-            >
-              <span class="placeholder-text">点击展开输入 PACKAGE_INCLUDE</span>
-              <el-icon><ArrowDown /></el-icon>
-            </div>
-          </div>
-        </el-form-item>
-
-        <!-- 富文本编辑器 -->
-        <el-form-item label="商品详情描述" prop="bodyHtml">
-          <div class="rich-text-editor-container">
-            <div
-              v-if="!richTextEditor.expanded && !formData.bodyHtml"
-              class="rich-text-editor-collapse"
-              @click="richTextEditor.expanded = true"
-            >
-              <span class="placeholder-text">点击编辑商品详情描述</span>
-              <el-icon><Edit /></el-icon>
-            </div>
-            <div v-else class="rich-text-editor-expanded">
-              <div class="rich-text-editor-toolbar">
-                <el-radio-group v-model="richTextEditor.mode" size="small">
-                  <el-radio-button value="edit">HTML 输入</el-radio-button>
-                  <el-radio-button value="preview">预览</el-radio-button>
-                </el-radio-group>
-                <el-button
-                  type="danger"
-                  size="small"
-                  link
-                  @click="richTextEditor.expanded = false"
-                  v-if="!formData.bodyHtml"
-                >
-                  收起
-                </el-button>
-              </div>
+        <!-- 商品详情选项卡 -->
+        <el-form-item label="商品详情" prop="detailTabs">
+          <el-tabs
+            v-model="activeDetailTab"
+            type="border-card"
+            class="detail-tabs"
+          >
+            <!-- NOTE 选项卡 -->
+            <el-tab-pane label="DESCRIPTION" name="description">
               <el-input
-                v-if="richTextEditor.mode === 'edit'"
-                v-model="formData.bodyHtml"
+                v-model="step2FormData.description"
                 type="textarea"
-                :rows="6"
-                placeholder="请输入商品详情描述 (HTML)"
+                :rows="4"
+                placeholder="请输入商品详情"
               />
-              <div
-                v-else
-                class="rich-text-preview"
-                v-html="
-                  formData.bodyHtml || '<span class=no-content>暂无内容</span>'
-                "
-              ></div>
-            </div>
-          </div>
+            </el-tab-pane>
+            <!-- SIZE 选项卡 -->
+            <el-tab-pane label="SIZE" name="size">
+              <el-input
+                v-model="step2FormData.size"
+                type="textarea"
+                :rows="4"
+                placeholder="请输入SIZE"
+              />
+            </el-tab-pane>
+            <!-- MATERIAL 选项卡 -->
+            <el-tab-pane label="MATERIAL" name="material">
+              <el-input
+                v-model="step2FormData.material"
+                type="textarea"
+                :rows="4"
+                placeholder="请输入MATERIAL"
+              />
+            </el-tab-pane>
+            <!-- NOTE 选项卡 -->
+            <el-tab-pane label="NOTE" name="note">
+              <el-input
+                v-model="step2FormData.note"
+                type="textarea"
+                :rows="4"
+                placeholder="请输入NOTE"
+              />
+            </el-tab-pane>
+            <!-- PACKAGE_INCLUDE 选项卡 -->
+            <el-tab-pane label="PACKAGE_INCLUDE" name="packageInclude">
+              <el-input
+                v-model="step2FormData.packageInclude"
+                type="textarea"
+                :rows="4"
+                placeholder="请输入PACKAGE_INCLUDE"
+              />
+            </el-tab-pane>
+            <!-- 商品详情描述选项卡 -->
+            <el-tab-pane label="商品详情描述" name="bodyHtml">
+              <div class="rich-text-editor-container">
+                <div class="rich-text-editor-expanded">
+                  <div class="rich-text-editor-toolbar">
+                    <el-radio-group v-model="richTextEditor.mode" size="small">
+                      <el-radio-button value="edit">HTML 输入</el-radio-button>
+                      <el-radio-button value="preview">预览</el-radio-button>
+                    </el-radio-group>
+                  </div>
+                  <el-input
+                    v-if="richTextEditor.mode === 'edit'"
+                    v-model="step2FormData.bodyHtml"
+                    type="textarea"
+                    :rows="6"
+                    placeholder="请输入商品详情描述 (HTML)"
+                  />
+                  <div
+                    v-else
+                    class="rich-text-preview"
+                    v-html="
+                      step2FormData.bodyHtml ||
+                      '<span class=no-content>暂无内容</span>'
+                    "
+                  ></div>
+                </div>
+              </div>
+            </el-tab-pane>
+          </el-tabs>
         </el-form-item>
 
         <!-- 商品图片列表 -->
@@ -505,6 +468,13 @@
         <el-form-item label="图片列表">
           <div class="image-manager">
             <div class="image-toolbar mb-2">
+              <el-input
+                v-model="step2FormData.imageSearchKeyword"
+                placeholder="输入图片所在目录路径搜索"
+                style="width: 300px"
+                clearable
+                @keyup.enter="loadServerImages"
+              />
               <el-button
                 type="primary"
                 icon="Upload"
@@ -514,45 +484,75 @@
               >
                 从服务器导入
               </el-button>
-              <el-input
-                v-model="imageSearchKeyword"
-                placeholder="输入 SPU 或目录路径搜索"
-                style="width: 300px; margin-left: 10px"
-                clearable
-                @keyup.enter="loadServerImages"
-              />
             </div>
             <!-- 添加拖拽排序事件 -->
-            <div class="image-grid" @dragover.prevent @drop="handleImageDrop">
+            <div
+              class="image-grid"
+              @dragover.prevent
+              @drop="handleImageDrop($event)"
+            >
               <div
-                v-for="(img, index) in formData.mediaIdList"
-                :key="img.id || index"
+                v-for="(media, index) in step2FormData.mediaList"
+                :key="media.mediaId || index"
                 class="image-item"
                 draggable
-                @dragstart="handleImageDragStart($event, index)"
-                @dragover.prevent="handleImageDragOver($event)"
-                :title="img.name"
+                @dragstart="handleImageDragStart($event, media)"
+                @dragenter.prevent="handleImageDragEnter($event, index)"
+                @dragleave.prevent="handleImageDragLeave($event)"
+                :title="media.alt || media.filename"
+                :class="{
+                  'drag-over':
+                    dragOverIndex === index && draggedImage !== media,
+                }"
               >
-                <img :src="img.url" :alt="img.name" class="image-thumb" />
-                <div class="image-overlay">
-                  <el-button
-                    type="danger"
-                    icon="Delete"
-                    circle
-                    size="small"
-                    @click="removeImage(index)"
-                    title="删除图片"
+                <!-- 图片展示 -->
+                <template v-if="isImage(media)">
+                  <el-image
+                    :src="
+                      baseUrl + (media.nasMediaUrl || media.shopifyMediaUrl)
+                    "
+                    :alt="media.alt || media.filename"
+                    class="image-thumb"
+                    :preview-src-list="imagePreviewList"
+                    :initial-index="
+                      imagePreviewList.indexOf(
+                        baseUrl + (media.nasMediaUrl || media.shopifyMediaUrl),
+                      )
+                    "
+                    lazy
+                    show-progress
+                    preview-teleported
+                    fit="cover"
                   />
+                </template>
+                <!-- 视频展示 -->
+                <template v-else-if="isVideo(media)">
+                  <video class="image-thumb" muted>
+                    <source :src="media.nasMediaUrl || media.shopifyMediaUrl" />
+                  </video>
+                  <div class="video-indicator">
+                    <el-icon><VideoPlay /></el-icon>
+                  </div>
+                </template>
+                <!-- 其他类型文件 -->
+                <template v-else>
+                  <div class="file-placeholder">
+                    <el-icon><Document /></el-icon>
+                    <span class="file-name">{{ media.filename }}</span>
+                  </div>
+                </template>
+                <div class="image-overlay">
+                  <span class="media-type-badge">{{
+                    getMediaTypeLabel(media)
+                  }}</span>
                 </div>
               </div>
               <div
                 class="image-placeholder"
-                v-if="formData.mediaIdList?.length === 0"
+                v-if="step2FormData.mediaList?.length === 0"
               >
                 <el-icon class="placeholder-icon"><Picture /></el-icon>
-                <span class="placeholder-text"
-                  >点击"从服务器导入"或拖拽图片到下方变体行</span
-                >
+                <span class="placeholder-text">点击"从服务器导入"</span>
               </div>
             </div>
           </div>
@@ -561,44 +561,42 @@
         <!-- 变体详细设置 -->
         <el-divider content-position="left">变体详细设置</el-divider>
         <el-table
-          :data="variants"
+          :data="step2Variants"
           border
           style="width: 100%"
           stripe
           :loading="loading"
+          row-key="variantId"
         >
-          <!-- 修正选项组合列，支持编辑且与第一步逻辑一致 -->
-          <el-table-column
-            label="选项组合"
-            prop="optionCombination"
-            min-width="200"
-          >
-            <template #default="{ row }">
-              <div
-                v-if="row.optionValueList && row.optionValueList.length > 0"
-                class="option-value-list"
-              >
-                <div
-                  v-for="(opt, idx) in row.optionValueList"
-                  :key="idx"
-                  class="option-value-item"
-                >
-                  <!-- 使用 purchaseName 和 purchaseValue 以匹配第一步逻辑，并允许编辑 -->
-                  <el-input
-                    v-model="opt.purchaseName"
-                    size="small"
-                    placeholder="选项名"
-                    style="width: 45%; margin-right: 5px"
-                  />
-                  <el-input
-                    v-model="opt.purchaseValue"
-                    size="small"
-                    placeholder="值"
-                    style="width: 45%"
-                  />
-                </div>
-              </div>
-              <span v-else>{{ row.optionCombination || "Default Title" }}</span>
+          <!-- 动态生成选项列 -->
+          <template v-if="getActiveOptions().length > 0">
+            <el-table-column
+              v-for="(opt, idx) in getActiveOptions()"
+              :key="opt.purchaseName || idx"
+              :label="opt.purchaseName || '选项'"
+              width="120"
+              align="center"
+            >
+              <template #default="{ row }">
+                <!-- <span>{{
+                    `${row.optionValueList[idx]?.purchaseName}[${row.optionValueList[idx]?.optionValue}]` ||
+                    "-"
+                  }}</span> -->
+
+                <span>
+                  {{ row.optionValueList[idx]?.purchaseName || "-" }}
+                  <span v-if="row.optionValueList[idx]?.optionValue">
+                    [{{ row.optionValueList[idx]?.optionValue }}]
+                  </span>
+                </span>
+              </template>
+            </el-table-column>
+          </template>
+
+          <!-- 当没有选项时，显示默认规格列 -->
+          <el-table-column v-else label="默认规格" width="120" align="center">
+            <template #default>
+              <span>-</span>
             </template>
           </el-table-column>
           <el-table-column label="SKU" width="150">
@@ -614,18 +612,37 @@
           <el-table-column label="图片" width="100">
             <template #default="{ row }">
               <div
-                class="variant-image-drop"
+                class="variant-image-item"
                 @dragover.prevent
                 @drop="handleVariantImageDrop($event, row)"
-                title="拖拽图片到此处"
+                @dragstart="handleVariantImageDragStart($event, row)"
+                @dragenter.prevent="handleVariantImageDragEnter($event, row)"
+                @dragleave.prevent="handleVariantImageDragLeave($event)"
+                draggable
+                title="拖拽图片到此处或拖拽出区域删除"
+                :class="{
+                  'drag-over':
+                    dragOverVariant === row && draggedVariantRow !== row,
+                }"
               >
-                <img
-                  v-if="row.imagePath"
-                  :src="row.imagePath"
-                  class="variant-thumb"
-                  :alt="'Variant Image'"
-                />
-                <span v-else class="drop-hint">拖拽图片</span>
+                <!-- 图片展示 -->
+                <template v-if="row.media">
+                  <el-image
+                    :src="
+                      baseUrl +
+                      (row.media.nasMediaUrl || row.media.shopifyMediaUrl)
+                    "
+                    class="variant-thumb"
+                    :alt="'Variant Image'"
+                    :preview-src-list="[
+                      baseUrl +
+                        (row.media.nasMediaUrl || row.media.shopifyMediaUrl),
+                    ]"
+                    preview-teleported
+                    fit="cover"
+                  />
+                </template>
+                <span v-else class="drop-hint">无规格图</span>
               </div>
             </template>
           </el-table-column>
@@ -730,7 +747,9 @@
             content="快捷键: Ctrl+←"
             placement="top"
           >
-            <el-button @click="activeStep--" type="primary">上一步</el-button>
+            <el-button @click="handleSubmit('prev')" type="primary"
+              >上一步</el-button
+            >
           </el-tooltip>
           <el-tooltip
             v-if="activeStep === 0"
@@ -784,7 +803,14 @@ import {
   getCurrentInstance,
   nextTick,
 } from "vue";
-import { Picture, ArrowDown, Edit } from "@element-plus/icons-vue";
+import {
+  Picture,
+  ArrowDown,
+  Edit,
+  VideoPlay,
+  Document,
+} from "@element-plus/icons-vue";
+import { ElMessageBox } from "element-plus";
 import {
   getProduct,
   addSelectionInfo,
@@ -793,6 +819,8 @@ import {
 import { treeList } from "@/api/erp/tag";
 import { scanMedia, calculateShipping } from "@/api/erp/media";
 const { proxy } = getCurrentInstance();
+
+const baseUrl = import.meta.env.VITE_APP_BASE_API;
 
 // Emit
 const emit = defineEmits(["submit"]);
@@ -807,44 +835,70 @@ const step1FormRef = ref();
 const step2FormRef = ref();
 const sourceUrlInputRef = ref(); // 来源 URL 输入框引用
 
+// 拖拽相关状态
+const draggedVariantRow = ref(null); // 存储拖拽的变体行数据
+const dragOverVariant = ref(null); // 存储当前拖拽经过的变体
+
 // 表单数据
 
-/** @type {Product} */
-const formData = reactive({
+/** 第一步表单数据 */
+const step1FormData = reactive({
   productId: null,
   spu: "",
+  sourceUrl: "",
+  purchaseUrl: "",
+  tagIds: [],
+});
+
+/** 第二步表单数据 */
+const step2FormData = reactive({
+  productId: null,
   productTitle: "",
   category: "",
   productType: "",
-  sourceUrl: "",
-  purchaseUrl: "",
-  optionJson: null,
+  description: "",
+  size: "",
+  material: "",
   note: "",
   packageInclude: "",
   bodyHtml: "",
-  size: "",
-  material: "",
-  tagIds: [],
-  mediaIdList: [],
+  mediaList: [],
   mainMediaId: null,
   remark: "",
-  description: "",
+  imageSearchKeyword: "",
+});
+
+// 计算属性：所有图片的 URL 列表（不包含视频）
+const imagePreviewList = computed(() => {
+  return step2FormData.mediaList
+    .filter((item) => isImage(item))
+    .map((item) => baseUrl + (item.nasMediaUrl || item.shopifyMediaUrl));
 });
 
 // 采购商品选项
 /** @type {ProductOption[]} */
 const optionList = ref([]);
 
+const step1Variants = ref([
+  {
+    variantId: null,
+    purchasePrice: null,
+    purchaseUrl: "",
+    optionValues: "",
+    optionValueList: [],
+    position: 0,
+    remark: "",
+  },
+]);
+
 // 变体列表
 /** @type {ProductVariant[]} */
-const variants = ref([
+const step2Variants = ref([
   {
     variantId: null,
     sku: "",
     price: null,
     compareAtPrice: null,
-    purchasePrice: null,
-    purchaseUrl: "",
     optionValues: "",
     optionValueList: [],
     mediaId: null,
@@ -866,7 +920,8 @@ const variants = ref([
 const tagList = ref([]);
 
 // 初始数据快照，用于检测数据变更
-const initialDataSnapshot = ref(null);
+const step1DataSnapshot = ref(null);
+const step2DataSnapshot = ref(null);
 
 // SPU 生成相关
 // 获取 MENU 类型的标签 ID
@@ -906,16 +961,8 @@ const step2Rules = {};
 
 // 图片加载状态
 const imageLoading = ref(false);
-const imageSearchKeyword = ref("");
 const draggedImage = ref(null);
-
-// 文本域展开/收起状态
-const textareaExpand = reactive({
-  size: false,
-  material: false,
-  note: true, // NOTE 默认展开
-  packageInclude: false,
-});
+const dragOverIndex = ref(-1); // 拖拽悬停索引，用于排序提示
 
 // 富文本编辑器状态
 const richTextEditor = reactive({
@@ -923,33 +970,25 @@ const richTextEditor = reactive({
   mode: "edit", // 'edit' | 'preview'
 });
 
+// 商品详情选项卡当前激活项，description 排在第一位
+const activeDetailTab = ref("description");
+
 // 监听采购链接 变化，同步到变体的采购链接
 // 如果采购链接 有值，变体采购链接等于旧值, 则同步
 watch(
-  () => formData.purchaseUrl,
+  () => step1FormData.purchaseUrl,
   (newVal, oldVal) => {
-    if (!variants.value || variants.value.length === 0) {
+    if (!step1Variants.value || step1Variants.value.length === 0) {
       return;
     }
 
-    variants.value.forEach((variant) => {
+    step1Variants.value.forEach((variant) => {
       // 如果变体的采购链接为空，或者等于旧的采购链接值，则同步新值
       if (!variant.purchaseUrl || variant.purchaseUrl === oldVal) {
         variant.purchaseUrl = newVal;
       }
     });
   },
-);
-
-// 监听 SPU 变化，自动更新搜索关键词
-watch(
-  () => formData.spu,
-  (newVal) => {
-    if (newVal && !imageSearchKeyword.value) {
-      imageSearchKeyword.value = newVal;
-    }
-  },
-  { immediate: true },
 );
 
 // 监听弹窗可见性，动态管理快捷键监听器
@@ -982,6 +1021,7 @@ watch(
       if (step === 0) {
         // 切换到第一步，添加监听器
         window.addEventListener("keydown", handleSetp1Keydown);
+        window.removeEventListener("keydown", handleSetp2Keydown);
       } else if (step === 1) {
         // 切换到其他步骤，移除监听器
         window.removeEventListener("keydown", handleSetp1Keydown);
@@ -1003,8 +1043,8 @@ onUnmounted(() => {
 
 // 处理来源 URL 失去焦点事件
 function handleSourceUrlBlur() {
-  if (formData.sourceUrl && !formData.purchaseUrl) {
-    formData.purchaseUrl = formData.sourceUrl;
+  if (step1FormData.sourceUrl && !step1FormData.purchaseUrl) {
+    step1FormData.purchaseUrl = step1FormData.sourceUrl;
   }
 }
 // 处理第一步的键盘事件
@@ -1049,7 +1089,7 @@ function handleSetp2Keydown(event) {
   if ((event.ctrlKey || event.metaKey) && event.key === "ArrowLeft") {
     event.preventDefault();
     if (visible.value && activeStep.value === 1) {
-      activeStep.value--;
+      handleSubmit("prev");
     }
   }
 
@@ -1103,36 +1143,14 @@ function flattenTagList(tagList) {
 }
 
 // 打开编辑页面
-const open = async (selectedTagIds, productId) => {
+const open = async (selectedTagIds, productId, step = 0) => {
   await fetchTags();
   visible.value = true;
 
   if (productId == null) {
     title.value = "新增选品";
-    if (selectedTagIds) {
-      const selectedMenuTags = getMenuTag(selectedTagIds);
-      if (!selectedMenuTags) {
-        if (!auto) proxy.$modal.msgError("未选择标签");
-        return;
-      }
-      if (selectedMenuTags.length > 1) {
-        if (!auto)
-          proxy.$modal.msgError("选择了多个标签，请确保每个选品只选择一个标签");
-        return;
-      }
-      const selectedMenuTag = selectedMenuTags[0];
-      if (selectedMenuTag) {
-        selectedMenuTag.ancestors.split(",").forEach((ancestorId) => {
-          if (
-            ancestorId != "0" &&
-            !formData.tagIds.some((path) => path.includes(ancestorId))
-          ) {
-            formData.tagIds.push(ancestorId);
-          }
-        });
-      }
-    }
-    resetForm(selectedTagIds);
+
+    resetForm(selectedTagIds, step);
 
     generateSpu(true);
 
@@ -1144,16 +1162,16 @@ const open = async (selectedTagIds, productId) => {
     });
 
     // 保存初始数据快照
-    saveInitialDataSnapshot();
+    saveStep1DataSnapshot();
     return;
+  } else {
+    title.value = "编辑商品";
+
+    resetForm(null, step);
+
+    // 加载商品表单数据
+    await handleLoadData(productId);
   }
-
-  title.value = "编辑商品";
-  activeStep.value = 0;
-  resetForm();
-
-  // 加载商品表单数据
-  await handleLoadData(productId);
 };
 
 // 加载商品表单数据
@@ -1162,26 +1180,33 @@ const handleLoadData = async (productId) => {
   const response = await getProduct(productId);
   const productData = response.data;
 
-  // 填充表单
-  Object.assign(formData, {
+  // 填充第一步表单
+  Object.assign(step1FormData, {
     productId: productData.productId,
     spu: productData.spu || null,
-    productTitle: productData.productTitle || null,
     category: productData.category || null,
     productType: productData.productType || null,
     sourceUrl: productData.sourceUrl || null,
     purchaseUrl: productData.purchaseUrl || null,
-    optionJson: productData.optionJson || null,
-    note: productData.note || null,
-    packageInclude: productData.packageInclude || null,
-    bodyHtml: productData.bodyHtml || null,
-    size: productData.size || null,
-    material: productData.material || null,
     tagIds: productData.tagIds || [],
-    mediaIdList: productData.mediaIdList || [],
+  });
+
+  // 填充第二步表单
+  Object.assign(step2FormData, {
+    productId: productData.productId,
+    productTitle: productData.productTitle,
+    category: productData.category,
+    productType: productData.productType,
+    description: productData.description,
+    size: productData.size,
+    material: productData.material,
+    note: productData.note,
+    packageInclude: productData.packageInclude,
+    bodyHtml: productData.bodyHtml,
+    mediaList: productData.mediaList || [],
     mainMediaId: productData.mainMediaId,
-    remark: productData.remark || null,
-    description: productData.description || null,
+    remark: productData.remark,
+    imageSearchKeyword: productData.imageSearchKeyword,
   });
 
   // 解析采购商品选项
@@ -1198,100 +1223,140 @@ const handleLoadData = async (productId) => {
     productData.productVariantList &&
     productData.productVariantList.length > 0
   ) {
-    variants.value = productData.productVariantList.map((v, index) => ({
-      variantId: v.variantId,
-      productId: v.productId || productId,
-      sku:
-        v.sku ||
-        productData.spu + "-" + (index + 1).toString().padStart(3, "0"),
-      price: v.price,
-      compareAtPrice: v.compareAtPrice,
-      purchasePrice: v.purchasePrice,
-      purchaseUrl: v.purchaseUrl || formData.purchaseUrl,
-      optionValues: v.optionValues || "",
-      optionValueList: v.optionValues ? JSON.parse(v.optionValues) : [],
-      mediaId: v.mediaId,
-      position: v.position || 0,
-      pkWidth: v.pkWidth,
-      pkHeight: v.pkHeight,
-      pkLength: v.pkLength,
-      materialWeight: v.materialWeight,
-      pkWeight: v.pkWeight,
-      freight: v.freight,
-      isActualShipment: v.isActualShipment,
-      unitCostPrice: v.unitCostPrice,
-      remark: v.remark,
-    }));
+    const step1V = [];
+    const step2V = [];
+    productData.productVariantList.forEach((v, index) => {
+      const optionValueList = v.optionValues ? JSON.parse(v.optionValues) : [];
+
+      step1V.push({
+        variantId: v.variantId,
+        purchasePrice: v.purchasePrice,
+        purchaseUrl: v.purchaseUrl,
+        optionValues: v.optionValues,
+        optionValueList,
+        position: v.position,
+        remark: v.remark,
+      });
+      step2V.push({
+        ...v,
+        sku:
+          v.sku ||
+          productData.spu + "-" + (index + 1).toString().padStart(3, "0"),
+        optionValueList: v.optionValues ? JSON.parse(v.optionValues) : [],
+      });
+      step1Variants.value = step1V;
+      step2Variants.value = step2V;
+    });
   }
 
   // 保存初始数据快照
-  saveInitialDataSnapshot();
+  saveStep1DataSnapshot();
+  saveStep2DataSnapshot();
 };
 
 // 保存初始数据快照
-function saveInitialDataSnapshot() {
-  initialDataSnapshot.value = {
-    formData: JSON.parse(JSON.stringify(formData)),
+function saveStep1DataSnapshot() {
+  step1DataSnapshot.value = {
+    step1FormData: JSON.parse(JSON.stringify(step1FormData)),
     optionList: JSON.parse(JSON.stringify(optionList.value)),
-    variants: JSON.parse(JSON.stringify(variants.value)),
+    step1Variants: JSON.parse(JSON.stringify(step1Variants.value)),
   };
-  console.log("保存初始数据快照:", initialDataSnapshot.value);
+  console.log("保存步骤1初始数据快照:", step1DataSnapshot.value);
+}
+function saveStep2DataSnapshot() {
+  step2DataSnapshot.value = {
+    step2FormData: JSON.parse(JSON.stringify(step2FormData)),
+    step2Variants: JSON.parse(JSON.stringify(step2Variants.value)),
+  };
+  console.log("保存步骤2初始数据快照:", step2DataSnapshot.value);
 }
 
 // 比较数据是否发生变化
-function hasDataChanged() {
-  if (!initialDataSnapshot.value) {
+function hasStep1DataChanged() {
+  if (!step1DataSnapshot.value) {
     return true; // 没有初始快照，默认为有变化
   }
 
   const currentData = {
-    formData: JSON.parse(JSON.stringify(formData)),
-    optionList: JSON.parse(JSON.stringify(optionList.value)),
-    variants: JSON.parse(JSON.stringify(variants.value)),
+    step1FormData: step1FormData,
+    optionList: optionList.value,
+    step1Variants: step1Variants.value,
   };
   console.log("当前数据:", currentData);
 
   // 比较数据是否相同
   return (
-    JSON.stringify(currentData) !== JSON.stringify(initialDataSnapshot.value)
+    JSON.stringify(currentData) !== JSON.stringify(step1DataSnapshot.value)
+  );
+}
+// 比较数据是否发生变化
+function hasStep2DataChanged() {
+  if (!step2DataSnapshot.value) {
+    return true; // 没有初始快照，默认为有变化
+  }
+
+  const currentData = {
+    step2FormData: step2FormData,
+    step2Variants: step2Variants.value,
+  };
+  console.log("当前数据:", currentData);
+
+  // 比较数据是否相同
+  return (
+    JSON.stringify(currentData) !== JSON.stringify(step2DataSnapshot.value)
   );
 }
 
 // 重置表单
-function resetForm(selectedTagIds) {
+function resetForm(selectedTagIds, step) {
   title.value = "新增商品";
-  activeStep.value = 0;
+  activeStep.value = step;
 
-  Object.assign(formData, {
+  // 重置第一步表单数据
+  Object.assign(step1FormData, {
     productId: null,
     spu: "",
-    productTitle: "",
     category: "",
     productType: "",
     sourceUrl: "",
     purchaseUrl: "",
-    optionJson: null,
+    tagIds: selectedTagIds || [],
+  });
+
+  // 重置第二步表单数据
+  Object.assign(step2FormData, {
+    productId: null,
+    productTitle: "",
     note: "",
     packageInclude: "",
     bodyHtml: "",
     size: "",
     material: "",
-    tagIds: selectedTagIds || [],
-    mediaIdList: [],
+    mediaList: [],
     mainMediaId: null,
     remark: "",
     description: "",
+    imageSearchKeyword: "",
   });
 
   optionList.value = [];
-  variants.value = [
+  step1Variants.value = [
+    {
+      variantId: null,
+      purchasePrice: null,
+      purchaseUrl: "",
+      optionValues: "",
+      optionValueList: [],
+      position: 0,
+      remark: "",
+    },
+  ];
+  step2Variants.value = [
     {
       variantId: null,
       sku: "",
       price: null,
       compareAtPrice: null,
-      purchasePrice: null,
-      purchaseUrl: "",
       optionValues: "",
       optionValueList: [],
       mediaId: null,
@@ -1308,8 +1373,6 @@ function resetForm(selectedTagIds) {
     },
   ];
 
-  imageSearchKeyword.value = ""; // 重置搜索关键词
-
   step1FormRef.value?.resetFields();
   step2FormRef.value?.resetFields();
   loading.value = false;
@@ -1325,7 +1388,7 @@ const generateSpu = async (auto) => {
   spuGenerating.value = true;
 
   try {
-    const selectedMenuTags = getMenuTag(formData.tagIds);
+    const selectedMenuTags = getMenuTag(step1FormData.tagIds);
 
     if (!selectedMenuTags) {
       if (!auto) proxy.$modal.msgError("未选择标签");
@@ -1350,7 +1413,7 @@ const generateSpu = async (auto) => {
     const seq = selectedMenuTag.currentMaxSeq || 0;
     const nextSeq = seq + 1;
     const paddedSeq = String(nextSeq).padStart(3, "0");
-    formData.spu = `${selectedMenuTag.spuPrefix}${paddedSeq}`;
+    step1FormData.spu = `${selectedMenuTag.spuPrefix}${paddedSeq}`;
 
     if (!auto) proxy.$modal.msgSuccess("SPU 生成成功");
   } catch (error) {
@@ -1425,45 +1488,6 @@ function focusNextInput(optIndex, valIndex, type) {
   }, 50);
 }
 
-// 用于跟踪每个选项是否正在自动添加新行
-const autoAddingFlags = ref({});
-// 处理选项值输入，自动添加新行
-// 处理选项值输入，自动添加新行
-function handleValueInput(optIndex, valIndex) {
-  const values = optionList.value[optIndex].values;
-  const currentValue = values[valIndex];
-
-  // 生成唯一标识
-  const key = `${optIndex}-${valIndex}`;
-
-  // 检查是否是最后一个选项值且有输入内容
-  if (
-    valIndex === values.length - 1 &&
-    (currentValue.purchaseValue || currentValue.productValue)
-  ) {
-    // 如果已经在添加中，直接返回
-    if (autoAddingFlags.value[key]) {
-      return;
-    }
-
-    // 设置标志位
-    autoAddingFlags.value[key] = true;
-
-    // 延迟执行，避免在输入过程中频繁触发
-    setTimeout(() => {
-      // 再次检查，确保仍然是最后一个且没有被其他操作改变
-      const currentValues = optionList.value[optIndex].values;
-      if (valIndex === currentValues.length - 1) {
-        addOptionValue(optIndex);
-        delete autoAddingFlags.value[key];
-      } else {
-        // 如果不是最后一个了，清除标志位
-        delete autoAddingFlags.value[key];
-      }
-    }, 300);
-  }
-}
-
 // 添加选项
 const addOption = () => {
   optionList.value.push({
@@ -1517,27 +1541,14 @@ function generateVariants() {
   const activeOptions = getActiveOptions();
 
   if (activeOptions.length === 0) {
-    variants.value = [
+    step1Variants.value = [
       {
         variantId: null,
-        sku: formData.spu + "-",
-        price: null,
-        compareAtPrice: null,
         purchasePrice: null,
-        purchaseUrl: formData.purchaseUrl,
+        purchaseUrl: step1FormData.purchaseUrl,
         optionValues: "",
         optionValueList: [],
-        mediaId: null,
         position: 0,
-        pkWidth: null,
-        pkHeight: null,
-        pkLength: null,
-        materialWeight: null,
-        pkWeight: null,
-        freight: null,
-        isActualShipment: "0",
-        unitCostPrice: null,
-        remark: "",
       },
     ];
     return;
@@ -1554,8 +1565,8 @@ function generateVariants() {
   const combinations = cartesianProduct(valueArrays);
 
   // 2. 映射生成变体行
-  variants.value = combinations.map((combo, index) => {
-    const existingVariant = variants.value[index];
+  step1Variants.value = combinations.map((combo, index) => {
+    const existingVariant = step1Variants.value[index];
     const optionValueList = combo.map((val, idx) => {
       const opt = activeOptions[idx];
       return {
@@ -1567,25 +1578,11 @@ function generateVariants() {
     });
     return {
       variantId: existingVariant?.variantId,
-      sku:
-        existingVariant?.sku ||
-        formData.spu + "-" + (index + 1).toString().padStart(3, "0"),
-      purchaseUrl: existingVariant?.purchaseUrl || formData.purchaseUrl,
+      purchaseUrl: existingVariant?.purchaseUrl || step1FormData.purchaseUrl,
       purchasePrice: existingVariant?.purchasePrice || 0,
       optionValues: JSON.stringify(optionValueList),
       optionValueList: optionValueList,
-      price: existingVariant?.price || null,
-      compareAtPrice: existingVariant?.compareAtPrice || null,
-      mediaId: existingVariant?.mediaId || null,
       position: existingVariant?.position || index,
-      pkWidth: existingVariant?.pkWidth || null,
-      pkHeight: existingVariant?.pkHeight || null,
-      pkLength: existingVariant?.pkLength || null,
-      materialWeight: existingVariant?.materialWeight || null,
-      pkWeight: existingVariant?.pkWeight || null,
-      freight: existingVariant?.freight || null,
-      isActualShipment: existingVariant?.isActualShipment || "0",
-      unitCostPrice: existingVariant?.unitCostPrice || null,
       remark: existingVariant?.remark || "",
     };
   });
@@ -1613,19 +1610,17 @@ function cartesianProduct(arrays) {
 
 // 移除变体
 function removeVariant(index) {
-  if (variants.value.length > 1) {
-    variants.value.splice(index, 1);
+  if (step1Variants.value.length > 1) {
+    step1Variants.value.splice(index, 1);
   }
 }
 
 // 变体行拖拽排序
 function handleRowDrop({ row, $index }, targetIndex) {
-  const sourceIndex = variants.value.findIndex(
-    (v) => v.position === row.position,
-  );
+  const sourceIndex = s.value.findIndex((v) => v.position === row.position);
   if (sourceIndex !== -1 && sourceIndex !== targetIndex) {
-    const item = variants.value.splice(sourceIndex, 1)[0];
-    variants.value.splice(targetIndex, 0, item);
+    const item = step2Variants.value.splice(sourceIndex, 1)[0];
+    step2Variants.value.splice(targetIndex, 0, item);
   }
 }
 
@@ -1689,11 +1684,15 @@ async function calculateShippingFee(row) {
 
 // 加载服务器图片（直接添加到列表）
 async function loadServerImages() {
+  if (!step2FormData.imageSearchKeyword) {
+    proxy.$modal.msgError("请输入搜索关键词");
+    return;
+  }
   imageLoading.value = true;
   try {
     const response = await scanMedia({
-      dirPath: imageSearchKeyword.value || formData.spu,
-      productId: formData.productId,
+      dirPath: step2FormData.imageSearchKeyword,
+      productId: step2FormData.productId,
     });
 
     const serverImages = response.data || [];
@@ -1702,26 +1701,11 @@ async function loadServerImages() {
       proxy.$modal.msgWarning("未找到图片");
       return;
     }
-
-    // 直接添加到图片列表，避免重复
-    let addedCount = 0;
-    serverImages.forEach((img) => {
-      const exists = formData.mediaIdList.some((item) => item.id === img.id);
-      if (!exists) {
-        formData.mediaIdList.push({
-          id: img.id,
-          url: img.url,
-          name: img.name,
-          type: img.type || "image",
-        });
-        addedCount++;
-      }
-    });
-
-    proxy.$modal.msgSuccess(`已导入 ${addedCount} 张图片/视频`);
+    step2FormData.mediaList = serverImages;
+    proxy.$modal.msgSuccess(`已导入 ${serverImages.length} 张图片/视频`);
   } catch (error) {
     console.error("加载服务器图片失败", error);
-    proxy.$modal.msgError("加载服务器图片失败");
+    // proxy.$modal.msgError("加载服务器图片失败");
   } finally {
     imageLoading.value = false;
   }
@@ -1729,23 +1713,269 @@ async function loadServerImages() {
 
 // 移除图片
 function removeImage(index) {
-  formData.mediaIdList.splice(index, 1);
+  step2FormData.mediaList.splice(index, 1);
+}
+
+// 变体图片拖拽开始
+function handleVariantImageDragStart(event, row) {
+  event.dataTransfer.effectAllowed = "move";
+  if (row.media) {
+    // 保存被拖拽的媒体对象
+    event.dataTransfer.setData("variant-media", JSON.stringify(row.media));
+    // 保存当前行数据到全局变量，用于删除操作
+    draggedVariantRow.value = row;
+  }
+  // 添加全局dragend事件监听器
+  document.addEventListener("dragend", handleVariantImageDragEnd);
+}
+
+// 变体图片拖拽进入
+function handleVariantImageDragEnter(event, row) {
+  event.preventDefault();
+  dragOverVariant.value = row;
+}
+
+// 变体图片拖拽离开
+function handleVariantImageDragLeave(event) {
+  event.preventDefault();
+  dragOverVariant.value = null;
+}
+
+// 变体图片拖拽结束
+function handleVariantImageDragEnd(event) {
+  // 检查是否拖拽出了变体图片区域
+  const variantImageItems = document.querySelectorAll(".variant-image-item");
+  let isInside = false;
+
+  // 检查鼠标是否在任何变体图片区域内
+  const mouseX = event.clientX;
+  const mouseY = event.clientY;
+
+  variantImageItems.forEach((item) => {
+    const rect = item.getBoundingClientRect();
+    if (
+      mouseX >= rect.left &&
+      mouseX <= rect.right &&
+      mouseY >= rect.top &&
+      mouseY <= rect.bottom
+    ) {
+      isInside = true;
+    }
+  });
+
+  // 如果拖拽出了区域，显示删除确认对话框
+  if (!isInside && draggedVariantRow.value) {
+    try {
+      ElMessageBox.confirm("确定要取消绑定这张规格图吗？", "确认取消绑定", {
+        confirmButtonText: "确定",
+        cancelButtonText: "取消",
+        type: "warning",
+      })
+        .then(() => {
+          // 找到对应的行并删除图片
+          console.log(draggedVariantRow.value);
+          step2Variants.value.forEach((row) => {
+            if (row.variantId === draggedVariantRow.value.variantId) {
+              row.media = null;
+              row.mediaId = null;
+            }
+          });
+        })
+        .catch(() => {
+          // 取消删除
+        })
+        .finally(() => {
+          // 清空拖拽状态
+          draggedVariantRow.value = null;
+        });
+    } catch (error) {
+      console.error("处理拖拽删除时出错:", error);
+      // 清空拖拽状态
+      draggedVariantRow.value = null;
+    }
+  } else {
+    // 清空拖拽状态
+    draggedVariantRow.value = null;
+  }
+
+  // 清空拖拽状态
+  dragOverVariant.value = null;
+
+  // 移除全局事件监听器
+  document.removeEventListener("dragend", handleVariantImageDragEnd);
+}
+
+// 判断是否为图片
+function isImage(media) {
+  if (!media) return false;
+  const contentType = media.mediaContentType || "";
+  return (
+    contentType === "IMAGE" ||
+    /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(media.filename || "")
+  );
+}
+
+// 判断是否为视频
+function isVideo(media) {
+  if (!media) return false;
+  const contentType = media.mediaContentType || "";
+  return (
+    contentType === "VIDEO" ||
+    /\.(mp4|webm|ogg|mov|avi)$/i.test(media.filename || "")
+  );
+}
+
+// 获取媒体类型标签
+function getMediaTypeLabel(media) {
+  if (isVideo(media)) return "视频";
+  if (isImage(media)) return "图片";
+  return "文件";
 }
 
 // 图片拖拽开始
-function handleImageDragStart(event, img) {
-  draggedImage.value = img;
-  event.dataTransfer.setData("image-url", img.url);
-  event.dataTransfer.setData("image-id", img.id);
+function handleImageDragStart(event, media) {
+  console.log("handleImageDragStart", media);
+  draggedImage.value = media;
+  event.dataTransfer.effectAllowed = "move";
+  event.dataTransfer.setData("media-id", media.mediaId);
+  event.dataTransfer.setData(
+    "media-index",
+    step2FormData.mediaList.indexOf(media),
+  );
+  // 添加全局dragend事件监听器
+  document.addEventListener("dragend", handleImageDragEnd);
+}
+
+// 图片拖拽进入
+function handleImageDragEnter(event, index) {
+  console.log("handleImageDragEnter", index);
+  event.preventDefault();
+  dragOverIndex.value = index;
+}
+
+// 图片拖拽离开
+function handleImageDragLeave(event) {
+  console.log("handleImageDragLeave");
+  event.preventDefault();
+
+  // 检查鼠标是否真的离开了图片项，还是只是进入了子元素
+  // const target = event.currentTarget;
+  // const relatedTarget = event.relatedTarget;
+  // // 如果relatedTarget是target的子元素，则不重置dragOverIndex
+  // if (
+  //   !relatedTarget ||
+  //   (target !== relatedTarget && !target.contains(relatedTarget))
+}
+
+// 图片拖拽结束
+function handleImageDragEnd(event) {
+  // 检查是否拖拽出了图片列表区域
+  const imageGrid = document.querySelector(".image-grid");
+  let isInside = false;
+
+  if (imageGrid) {
+    const rect = imageGrid.getBoundingClientRect();
+    const mouseX = event.clientX;
+    const mouseY = event.clientY;
+    if (
+      mouseX >= rect.left &&
+      mouseX <= rect.right &&
+      mouseY >= rect.top &&
+      mouseY <= rect.bottom
+    ) {
+      isInside = true;
+    }
+  }
+
+  // 如果拖拽出了区域，显示删除确认对话框
+  if (!isInside && draggedImage.value) {
+    try {
+      ElMessageBox.confirm("确定要删除这张图片吗？", "删除确认", {
+        confirmButtonText: "确定",
+        cancelButtonText: "取消",
+        type: "warning",
+      })
+        .then(() => {
+          // 找到对应的图片并删除
+          const index = step2FormData.mediaList.indexOf(draggedImage.value);
+          if (index > -1) {
+            step2FormData.mediaList.splice(index, 1);
+          }
+        })
+        .catch(() => {
+          // 取消删除
+        })
+        .finally(() => {
+          // 清空拖拽状态
+          draggedImage.value = null;
+          dragOverIndex.value = -1;
+        });
+    } catch (error) {
+      console.error("处理图片拖拽删除时出错:", error);
+      // 清空拖拽状态
+      draggedImage.value = null;
+      dragOverIndex.value = -1;
+    }
+  } else {
+    // 清空拖拽状态
+    draggedImage.value = null;
+    dragOverIndex.value = -1;
+  }
+
+  // 移除全局事件监听器
+  document.removeEventListener("dragend", handleImageDragEnd);
+}
+
+// 图片拖拽放下（排序）
+function handleImageDrop(event) {
+  console.log("handleImageDrop");
+  event.preventDefault();
+
+  // 处理内部拖拽排序
+  if (draggedImage.value) {
+    const fromIndex = step2FormData.mediaList.indexOf(draggedImage.value);
+    const toIndex = dragOverIndex.value;
+
+    if (fromIndex >= 0 && toIndex >= 0 && fromIndex !== toIndex) {
+      // 重新排序
+      const item = step2FormData.mediaList.splice(fromIndex, 1)[0];
+      step2FormData.mediaList.splice(toIndex, 0, item);
+    }
+  }
+
+  dragOverIndex.value = -1;
+  draggedImage.value = null;
 }
 
 // 图片拖拽到变体
 function handleVariantImageDrop(event, row) {
+  console.log("handleVariantImageDrop", row);
+  event.preventDefault();
+
+  // 优先从dataTransfer获取数据（从变体图片拖拽）
+  try {
+    const mediaData = event.dataTransfer.getData("variant-media");
+    if (mediaData) {
+      const media = JSON.parse(mediaData);
+      if (media) {
+        row.media = media;
+        row.mediaId = media.mediaId;
+        return;
+      }
+    }
+  } catch (error) {
+    console.error("处理变体图片拖拽放下时出错:", error);
+  }
+
+  // 从draggedImage获取数据（从图片列表拖拽）
   if (draggedImage.value) {
-    row.imagePath = draggedImage.value.url;
-    row.mediaId = draggedImage.value.id;
+    row.media = draggedImage.value;
+    row.mediaId = draggedImage.value.mediaId;
     draggedImage.value = null;
   }
+
+  // 清空拖拽状态
+  dragOverVariant.value = null;
 }
 
 // 提交表单continue、next、close
@@ -1756,58 +1986,58 @@ async function handleSubmit(action) {
       await step1FormRef.value?.validate();
     } else if (activeStep.value === 1) {
       // 第二步自定义校验：变体选项必填
-      for (let i = 0; i < variants.value.length; i++) {
-        const variant = variants.value[i];
-        if (variant.optionValueList && variant.optionValueList.length > 0) {
-          for (let j = 0; j < variant.optionValueList.length; j++) {
-            const opt = variant.optionValueList[j];
-            if (!opt.purchaseName || !opt.purchaseValue) {
-              proxy.$modal.msgError(
-                `第 ${i + 1} 个变体的第 ${j + 1} 个选项名称和值不能为空`,
-              );
-              return;
-            }
-          }
-        }
-      }
+      // for (let i = 0; i < variants.value.length; i++) {
+      //   const variant = variants.value[i];
+      //   if (variant.optionValueList && variant.optionValueList.length > 0) {
+      //     for (let j = 0; j < variant.optionValueList.length; j++) {
+      //       const opt = variant.optionValueList[j];
+      //       if (!opt.purchaseName || !opt.purchaseValue) {
+      //         proxy.$modal.msgError(
+      //           `第 ${i + 1} 个变体的第 ${j + 1} 个选项名称和值不能为空`,
+      //         );
+      //         return;
+      //       }
+      //     }
+      //   }
+      // }
       await step2FormRef.value?.validate();
     }
     loading.value = true;
 
     let hasChanged = true;
     if (activeStep.value === 0) {
-      hasChanged = hasDataChanged();
-      if (hasChanged) {
+      hasChanged = hasStep1DataChanged();
+      if (hasStep1DataChanged()) {
         // 保存第一步数据
         const submitData = {
-          ...formData,
+          ...step1FormData,
           optionJson: JSON.stringify(optionList.value),
-          productVariantList: variants.value,
+          productVariantList: step1Variants.value,
         };
 
         const response = await addSelectionInfo(submitData);
-        if (response.code !== 200) {
-          proxy.$modal.msgError(response.msg || "保存失败");
-          return;
-        }
         // 重新加载商品表单数据
         await handleLoadData(response.data);
       }
     } else {
       // 保存第二步数据
-      // 确保变体中的 optionValueList 同步更新到 optionValues 字符串（如果需要后端兼容）
-      const variantsToSubmit = variants.value.map((v) => ({
-        ...v,
-        optionValues: JSON.stringify(v.optionValueList),
-      }));
+      hasChanged = hasStep2DataChanged();
+      if (hasChanged) {
+        // 确保变体中的 optionValueList 同步更新到 optionValues 字符串（如果需要后端兼容）
+        const variantsToSubmit = step2Variants.value.map((v) => ({
+          ...v,
+          optionValues: JSON.stringify(v.optionValueList),
+        }));
 
-      const submitData = {
-        ...formData,
-        optionJson: JSON.stringify(optionList.value),
-        productVariantList: variantsToSubmit,
-        mediaIdList: formData.mediaIdList, // 使用 mediaIdList
-      };
-      await updateBaseInfo(submitData);
+        const submitData = {
+          ...step2FormData,
+          productId: step1FormData.productId, // 确保productId一致
+          optionJson: JSON.stringify(optionList.value),
+          productVariantList: variantsToSubmit,
+          //mediaList: step2FormData.mediaList, // 使用 mediaList
+        };
+        await updateBaseInfo(submitData);
+      }
     }
 
     emit("submit", { action, hasChanged });
@@ -1815,11 +2045,14 @@ async function handleSubmit(action) {
     if (action === "close") {
       visible.value = false;
     } else if (action === "continue") {
-      resetForm(formData.tagIds);
+      resetForm(step1FormData.tagIds);
       activeStep.value = 0;
-    } else {
+    } else if (action === "next") {
       // next
       activeStep.value = 1;
+    } else {
+      // prev
+      activeStep.value = 0;
     }
   } catch (error) {
     console.error("提交失败", error);
@@ -2054,26 +2287,6 @@ defineExpose({
   width: 100%;
 }
 
-.image-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  min-height: 100px;
-  padding: 10px;
-  border: 1px dashed #dcdfe6;
-  border-radius: 4px;
-}
-
-.image-item {
-  position: relative;
-  width: 100px;
-  height: 100px;
-  border: 1px solid #e4e7ed;
-  border-radius: 4px;
-  overflow: hidden;
-  cursor: move;
-}
-
 /* 当拖拽经过时高亮 */
 .image-item.drag-over {
   border-color: #409eff;
@@ -2098,6 +2311,11 @@ defineExpose({
   justify-content: center;
   opacity: 0;
   transition: opacity 0.3s;
+  pointer-events: none;
+}
+
+.image-overlay .el-button {
+  pointer-events: auto;
 }
 
 .image-item:hover .image-overlay {
@@ -2114,7 +2332,8 @@ defineExpose({
   color: #909399;
 }
 
-.variant-image-drop {
+.variant-image-item {
+  position: relative;
   width: 80px;
   height: 60px;
   border: 1px dashed #dcdfe6;
@@ -2123,12 +2342,24 @@ defineExpose({
   align-items: center;
   justify-content: center;
   overflow: hidden;
+  cursor: pointer;
 }
 
 .variant-thumb {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transition: transform 0.3s;
+}
+
+.variant-image-item:hover .variant-thumb {
+  transform: scale(1.1);
+}
+
+/* 当拖拽经过时高亮 */
+.variant-image-item.drag-over {
+  border-color: #409eff;
+  border-style: dashed;
 }
 
 .drop-hint {
@@ -2169,79 +2400,6 @@ defineExpose({
 /* 可展开文本域样式 */
 .expandable-textarea {
   width: 100%;
-}
-
-.textarea-collapse {
-  width: 100%;
-  padding: 12px;
-  border: 1px solid #dcdfe6;
-  border-radius: 4px;
-  background: #f5f7fa;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  transition: all 0.3s;
-}
-
-.textarea-collapse:hover {
-  border-color: #c0c4cc;
-  background: #ecf5ff;
-}
-
-.placeholder-text {
-  color: #909399;
-  font-size: 14px;
-}
-
-/* 富文本编辑器样式 */
-.rich-text-editor-container {
-  width: 100%;
-}
-
-.rich-text-editor-collapse {
-  width: 100%;
-  padding: 20px;
-  border: 1px solid #dcdfe6;
-  border-radius: 4px;
-  background: #f5f7fa;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  transition: all 0.3s;
-}
-
-.rich-text-editor-collapse:hover {
-  border-color: #409eff;
-  background: #ecf5ff;
-}
-
-.rich-text-editor-expanded {
-  width: 100%;
-  border: 1px solid #dcdfe6;
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.rich-text-editor-toolbar {
-  padding: 8px 12px;
-  background: #f5f7fa;
-  border-bottom: 1px solid #e4e7ed;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.rich-text-preview {
-  padding: 12px;
-  min-height: 150px;
-  background: #fff;
-}
-
-.rich-text-preview .no-content {
-  color: #909399;
 }
 
 /* 选项值列表样式 */
@@ -2366,52 +2524,11 @@ defineExpose({
   display: flex;
   flex-wrap: wrap;
   gap: 16px;
+  min-height: 100px;
+  padding: 10px;
+  border: 1px dashed #dcdfe6;
+  border-radius: 4px;
   margin-top: 16px;
-}
-
-.image-item {
-  position: relative;
-  width: 120px;
-  height: 120px;
-  border-radius: 6px;
-  overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease;
-  cursor: move;
-}
-
-.image-item:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-.image-thumb {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: all 0.3s ease;
-}
-
-.image-item:hover .image-thumb {
-  transform: scale(1.05);
-}
-
-.image-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  transition: all 0.3s ease;
-}
-
-.image-item:hover .image-overlay {
-  opacity: 1;
 }
 
 .image-placeholder {
@@ -2608,5 +2725,110 @@ defineExpose({
   .rich-text-preview {
     min-height: 150px;
   }
+}
+
+/* 商品详情选项卡样式 */
+.detail-tabs {
+  width: 100%;
+}
+
+.detail-tabs .el-tabs__header {
+  margin-bottom: 0;
+}
+
+.detail-tabs .el-tabs__content {
+  padding: 16px;
+  background: #ffffff;
+  border: 1px solid #dcdfe6;
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+}
+
+.detail-tabs .el-tab-pane {
+  min-height: 120px;
+}
+
+.detail-tabs .el-textarea__inner {
+  border-radius: 4px;
+  resize: vertical;
+}
+
+/* 媒体类型样式 */
+.image-item {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.image-item.drag-over {
+  border: 2px dashed #409eff;
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.3);
+}
+
+.image-item video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.video-indicator {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 40px;
+  height: 40px;
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 20px;
+  pointer-events: none;
+}
+
+.file-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #f5f7fa;
+  color: #909399;
+  font-size: 12px;
+  padding: 8px;
+}
+
+.file-placeholder .el-icon {
+  font-size: 32px;
+  margin-bottom: 8px;
+}
+
+.file-name {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: center;
+}
+
+.media-type-badge {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  padding: 2px 6px;
+  background: rgba(64, 158, 255, 0.9);
+  color: #fff;
+  font-size: 10px;
+  border-radius: 3px;
+  pointer-events: none;
 }
 </style>

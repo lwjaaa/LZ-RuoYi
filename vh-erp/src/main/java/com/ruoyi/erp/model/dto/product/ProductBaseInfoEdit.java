@@ -32,7 +32,7 @@ public class ProductBaseInfoEdit implements Serializable
     private String productTitle;
 
     /** 商品类别ID (Category) */
-    private Long category;
+    private String category;
 
     /** 商品类型 */
     private String productType;
@@ -62,12 +62,8 @@ public class ProductBaseInfoEdit implements Serializable
     /** 包含的包材 */
     private String packageInclude;
 
-    /** 更新者 */
-    private String updateBy;
-
-    /** 更新时间 */
-    @JsonFormat(pattern = "yyyy-MM-dd")
-    private Date updateTime;
+    /** 图片搜索关键字 */
+    private String imageSearchKeyword;
 
     /** 备注 */
     private String remark;

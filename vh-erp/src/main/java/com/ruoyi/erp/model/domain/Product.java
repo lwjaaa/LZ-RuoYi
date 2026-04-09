@@ -43,7 +43,7 @@ public class Product implements Serializable
 
     /** 商品类别ID (Category) */
     @Excel(name = "商品类别ID (Category)")
-    private Long category;
+    private String category;
 
     /** 商品类型 */
     @Excel(name = "商品类型")
@@ -110,6 +110,9 @@ public class Product implements Serializable
     @Excel(name = "PACKAGEINCLUDE")
     private String packageInclude;
 
+    /** 图片搜索关键字 */
+    private String imageSearchKeyword;
+
     /** 创建者 */
     private String createBy;
 
@@ -145,4 +148,6 @@ public class Product implements Serializable
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
     @TableField(exist = false)
     private Map<String, Object> params;
+
+    private List<Media> mediaList;
 }

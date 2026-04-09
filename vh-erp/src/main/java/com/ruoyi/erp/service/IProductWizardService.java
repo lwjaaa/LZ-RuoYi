@@ -16,5 +16,5 @@ public interface IProductWizardService {
      * @param product 商品对象
      * @return 结果
      */
-    Long saveProductWithWizard(Product product);
+    Long saveProductWithWizard(Product product,int step);
 }

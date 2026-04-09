@@ -134,7 +134,7 @@ public class ProductController extends BaseController {
     public AjaxResult saveSelectionInfo(@RequestBody ProductSelectionEdit productSelectionEdit) {
         // 事务控制：保存 SPU -> 更新 Tag 流水号 -> 保存 Variants -> 保存 Media
         Product product = ProductSelectionEdit.editToObj(productSelectionEdit);
-        return success(productWizardService.saveProductWithWizard(product));
+        return success(productWizardService.saveProductWithWizard(product,1));
     }
 
     /**
@@ -146,7 +146,7 @@ public class ProductController extends BaseController {
     public AjaxResult saveProductBaseInfo(@RequestBody ProductBaseInfoEdit productSelectionEdit) {
         // 事务控制：保存 SPU -> 更新 Tag 流水号 -> 保存 Variants -> 保存 Media
         Product product = ProductBaseInfoEdit.editToObj(productSelectionEdit);
-        return success(productWizardService.saveProductWithWizard(product));
+        return success(productWizardService.saveProductWithWizard(product,2));
     }
 
 }

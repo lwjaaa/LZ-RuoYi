@@ -33,7 +33,7 @@ public class ProductInsert implements Serializable
     private String spu;
 
     /** 商品类别ID (Category) */
-    private Long category;
+    private String category;
 
     /** 商品类型 */
     private String productType;

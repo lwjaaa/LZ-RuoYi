@@ -105,11 +105,13 @@ ruoyi:
     # 版权年份
     copyrightYear: 2026
     # 文件路径 示例（ Windows配置D:/ruoyi/uploadPath，Linux配置 /home/ruoyi/uploadPath）
-    profile: C:/ruoyi/uploadPath
+    profile: C:/velarthome
     # 获取ip地址开关
     addressEnabled: false
     # 验证码类型 math 数字计算 char 字符验证
     captchaType: math
+    # 静态资源映射开关（开发环境启用，生产环境使用Nginx）
+    enableStaticResourceMapping: true
 
 # 开发环境配置
 server:

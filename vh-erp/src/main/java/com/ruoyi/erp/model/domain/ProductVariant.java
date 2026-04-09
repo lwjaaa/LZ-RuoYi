@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.ruoyi.common.annotation.Excel;
+import com.ruoyi.erp.model.vo.media.MediaVo;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -66,6 +67,8 @@ public class ProductVariant implements Serializable
     /** 关联的图片ID (若有) */
     @Excel(name = "关联的图片ID (若有)")
     private Long mediaId;
+    @TableField(exist = false)
+    private MediaVo media;
 
     /** 排序位置 列表中的第一个位置是 1 */
     @Excel(name = "排序位置 列表中的第一个位置是 1")

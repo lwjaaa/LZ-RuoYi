@@ -59,6 +59,10 @@ public class Media implements Serializable
     @Excel(name = "排序")
     private Integer position;
 
+    /** 媒体类型:VIDEO/IMAGE/MODEL_3D/EXTERNAL_VIDEO */
+    @Excel(name = "媒体类型")
+    private String mediaContentType;
+
     /** $column.columnComment */
     private Date createTime;
 

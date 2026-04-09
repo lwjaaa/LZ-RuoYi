@@ -1,14 +1,10 @@
 package com.ruoyi.erp.model.vo.media;
 
-import java.io.Serializable;
-import java.util.Date;
-import java.util.Date;
-import com.fasterxml.jackson.annotation.JsonFormat;
-import lombok.Data;
-import com.ruoyi.common.annotation.Excel;
-import org.springframework.beans.BeanUtils;
-import com.fasterxml.jackson.annotation.JsonFormat;
 import com.ruoyi.erp.model.domain.Media;
+import lombok.Data;
+import org.springframework.beans.BeanUtils;
+
+import java.io.Serializable;
 /**
  * erp媒体Vo对象 erp_media
  *
@@ -43,6 +39,9 @@ public class MediaVo implements Serializable
 
     /** 排序 */
     private Long position;
+
+    /** 媒体类型:VIDEO/IMAGE/MODEL_3D/EXTERNAL_VIDEO */
+    private String mediaContentType;
 
 
      /**

@@ -13,7 +13,7 @@ export interface Product {
   spu: string;
 
   /** 商品类别ID (Category) */
-  category?: number;
+  category?: string;
 
   /** 商品类型 */
   productType?: string;
@@ -92,6 +92,9 @@ export interface Product {
 
   /** 请求参数 */
   params?: Record<string, any>;
+
+  /** 商品媒体列表,非数据库字段 */
+  mediaList?: Media[];
 }
 
 // 商品选项类型
@@ -242,4 +245,43 @@ export interface TagDictMenu {
 
   /** 子节点列表 */
   children?: TagDictMenu[];
+}
+
+// 媒体类型
+export interface Media {
+  /** 媒体ID */
+  mediaId: number;
+
+  /** 关联商品ID */
+  productId?: number;
+
+  /** Shopify媒体ID */
+  shopifyMediaId?: string;
+
+  /** Shopify媒体URL */
+  shopifyMediaUrl?: string;
+
+  /** shopify的暂存上传URL */
+  stagedUploadUrl?: string;
+
+  /** 本地nas的媒体URL */
+  nasMediaUrl?: string;
+
+  /** 文件名 */
+  filename?: string;
+
+  /** 替代文本 */
+  alt?: string;
+
+  /** 排序 */
+  position?: number;
+
+  /** 媒体类型 */
+  mediaContentType?: string;
+
+  /** 创建时间 */
+  createTime?: Date;
+
+  /** 更新时间 */
+  updateTime?: Date;
 }

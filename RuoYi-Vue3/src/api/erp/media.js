@@ -62,11 +62,11 @@ export function importTemplateMedia() {
 }
 
 // 扫描媒体
-export function scanMedia(dirPath) {
+export function scanMedia({ dirPath, productId }) {
   return request({
-    url: "/scan",
+    url: "/erp/media/scan",
     method: "get",
-    params: { dirPath },
+    params: { dirPath, productId },
   });
 }
 

@@ -7,9 +7,13 @@ import com.ruoyi.common.utils.DateUtils;
 import com.ruoyi.common.utils.StringUtils;
 import com.ruoyi.erp.mapper.ProductMapper;
 import com.ruoyi.erp.mapper.TagDictMapper;
+import com.ruoyi.erp.model.domain.Media;
 import com.ruoyi.erp.model.domain.Product;
+import com.ruoyi.erp.model.domain.ProductVariant;
 import com.ruoyi.erp.model.dto.product.ProductQuery;
+import com.ruoyi.erp.model.vo.media.MediaVo;
 import com.ruoyi.erp.model.vo.product.ProductVo;
+import com.ruoyi.erp.service.IMediaService;
 import com.ruoyi.erp.service.IProductService;
 import com.ruoyi.erp.service.IProductTagRelService;
 import com.ruoyi.erp.service.IProductVariantService;
@@ -37,6 +41,8 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
     private TagDictMapper tagDictMapper;
     @Resource
     private IProductVariantService productVariantService;
+    @Resource
+    private IMediaService mediaService;
 
     //region mybatis代码
 
@@ -53,7 +59,13 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
             return null;
         }
         product.setTagIds(productTagRelService.getTagIdListByProductId(productId));
-        product.setProductVariantList(productVariantService.selectListByProductId(productId));
+        List<ProductVariant> productVariants = productVariantService.selectListByProductId(productId);
+        List<Media> media = mediaService.listByProductId(productId);
+        Map<Long, MediaVo> collect = media.stream().collect(Collectors.toMap(Media::getMediaId, MediaVo::objToVo, (oldVal, newVal) -> newVal));
+        productVariants.forEach(x->x.setMedia(collect.get(x.getMediaId())));
+
+        product.setProductVariantList(productVariants);
+        product.setMediaList(media);
         return product;
     }
 

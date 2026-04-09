@@ -38,10 +38,10 @@ public class ProductWizardServiceImpl implements IProductWizardService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public Long saveProductWithWizard(Product product) {
+    public Long saveProductWithWizard(Product product,int step) {
         Long productId = product.getProductId();
         List<Long> tagIds = product.getTagIds();
-        if(CollectionUtils.isEmpty(tagIds)){
+        if(step == 1 && CollectionUtils.isEmpty(tagIds)){
             throw new ServiceException("请选择标签");
         }
 
@@ -72,12 +72,15 @@ public class ProductWizardServiceImpl implements IProductWizardService {
             // ==================== 编辑逻辑 ====================
             product.setUpdateTime(DateUtils.getNowDate());
 
-            // 1. 删除所有商品标签关联
-            this.deleteProductTagsByProductId(productId);
+            if(step == 1){
+                // 编辑第一步
+                // 1. 删除所有商品标签关联
+                this.deleteProductTagsByProductId(productId);
 
-            // 2. 重新新增商品标签关联
-            if (StringUtils.isNotEmpty(tagIds)) {
-                this.saveProductTags(productId, tagIds);
+                // 2. 重新新增商品标签关联
+                if (StringUtils.isNotEmpty(tagIds)) {
+                    this.saveProductTags(productId, tagIds);
+                }
             }
 
             // 5. 保存变体信息

@@ -1,5 +1,6 @@
 package com.ruoyi.erp.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.ruoyi.common.config.RuoYiConfig;
@@ -8,14 +9,16 @@ import com.ruoyi.common.exception.ServiceException;
 import com.ruoyi.common.utils.DateUtils;
 import com.ruoyi.common.utils.StringUtils;
 import com.ruoyi.erp.mapper.MediaMapper;
+import com.ruoyi.erp.mapper.ProductMapper;
 import com.ruoyi.erp.model.domain.Media;
+import com.ruoyi.erp.model.domain.Product;
 import com.ruoyi.erp.model.dto.media.MediaQuery;
 import com.ruoyi.erp.model.vo.media.MediaVo;
-import com.ruoyi.erp.model.vo.media.ServerMediaVo;
 import com.ruoyi.erp.service.IMediaService;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.io.File;
 import java.util.*;
@@ -34,6 +37,8 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, Media> implements
 
     @Resource
     private MediaMapper mediaMapper;
+    @Resource
+    private ProductMapper productMapper;
 
     //region mybatis代码
     /**
@@ -216,6 +221,7 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, Media> implements
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public List<Media> scanMediaToProduct(String dirPath, String productId) {
         log.info("开始扫描媒体目录");
         List<Media> mediaList = new ArrayList<>();
@@ -231,36 +237,69 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, Media> implements
         }
 
         // 获取目录下所有文件
-        File[] files = dir.listFiles((f, name) ->
-                name.toLowerCase().endsWith(".jpg") ||
-                        name.toLowerCase().endsWith(".jpeg") ||
-                        name.toLowerCase().endsWith(".png") ||
-                        name.toLowerCase().endsWith(".gif") ||
-                        name.toLowerCase().endsWith(".webp") ||
-                        name.toLowerCase().endsWith(".bmp")
-        );
+        // 获取目录下所有文件（包括图片和视频）
+        File[] files = dir.listFiles((f, name) -> {
+            String lowerName = name.toLowerCase();
+            return lowerName.endsWith(".jpg") ||
+                    lowerName.endsWith(".jpeg") ||
+                    lowerName.endsWith(".png") ||
+                    lowerName.endsWith(".gif") ||
+                    lowerName.endsWith(".webp") ||
+                    lowerName.endsWith(".bmp") ||
+                    lowerName.endsWith(".mp4") ||
+                    lowerName.endsWith(".avi") ||
+                    lowerName.endsWith(".mov") ||
+                    lowerName.endsWith(".wmv") ||
+                    lowerName.endsWith(".flv") ||
+                    lowerName.endsWith(".mkv");
+        });
 
         if (files != null) {
-
+            this.remove(new LambdaQueryWrapper<>(Media.class).eq(Media::getProductId, productId));
             for (int i = 0; i < files.length; i++) {
                 File file = files[i];
                 Media media = new Media();
                 media.setProductId(Long.parseLong(productId));
                 media.setFilename(file.getName());
-                media.setNasMediaUrl(getFileUrl(file));
+                media.setNasMediaUrl(getFileUrl(file,dirPath));
                 media.setPosition(i);
+
+                // 根据文件扩展名判断媒体类型
+                String mediaType = getMediaType(file.getName());
+                media.setMediaContentType(mediaType);
+
                 this.save(media);
                 mediaList.add(media);
             }
+            Product product = new Product();
+            product.setProductId(Long.parseLong(productId));
+            product.setImageSearchKeyword(dirPath);
+            productMapper.updateById(product);
         }
         return mediaList;
     }
 
+    /**
+     * 根据文件名判断媒体类型
+     */
+    private String getMediaType(String filename) {
+        String lowerName = filename.toLowerCase();
+        if (lowerName.endsWith(".jpg") || lowerName.endsWith(".jpeg") ||
+                lowerName.endsWith(".png") || lowerName.endsWith(".gif") ||
+                lowerName.endsWith(".webp") || lowerName.endsWith(".bmp")) {
+            return "image";
+        } else if (lowerName.endsWith(".mp4") || lowerName.endsWith(".avi") ||
+                lowerName.endsWith(".mov") || lowerName.endsWith(".wmv") ||
+                lowerName.endsWith(".flv") || lowerName.endsWith(".mkv")) {
+            return "video";
+        }
+        return "unknown";
+    }
 
     /**
      * 将文件路径转换为可访问的 URL
      */
-    private String getFileUrl(File file) {
+    private String getFileUrl(File file,String dirPath) {
         String profile = RuoYiConfig.getProfile();
         String absolutePath = file.getAbsolutePath();
 
@@ -268,7 +307,12 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, Media> implements
         if (absolutePath.startsWith(profile)) {
             return Constants.RESOURCE_PREFIX + absolutePath.substring(profile.length());
         }
-        return Constants.RESOURCE_PREFIX + "/" + file.getName();
+        return Constants.RESOURCE_PREFIX + "/media/" +dirPath + "/"+ file.getName();
+    }
+
+    @Override
+    public List<Media> listByProductId(Long productId) {
+        return this.list(new LambdaQueryWrapper<>(Media.class).eq(Media::getProductId, productId));
     }
 
 }
