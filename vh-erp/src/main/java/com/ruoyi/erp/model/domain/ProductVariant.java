@@ -10,6 +10,7 @@ import com.ruoyi.erp.model.vo.media.MediaVo;
 import lombok.Data;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -102,9 +103,24 @@ public class ProductVariant implements Serializable
     @Excel(name = "运费是否来自实际发货数据(0:否, 1:是)", dictType = "erp_product_variant_is_actual_shipment")
     private String isActualShipment;
 
+    /** 美国汇率 */
+    @Excel(name = "美国汇率")
+    private BigDecimal exchangeRate;
+
     /** 商品成本价（分） */
     @Excel(name = "商品成本价", readConverterExp = "分=")
     private Integer unitCostPrice;
+
+    /** 建议售价(美元*100) */
+    @Excel(name = "建议售价(美元*100)")
+    private Integer suggestedPrice;
+
+    /** 实际利润率 */
+    @Excel(name = "实际利润率")
+    private BigDecimal profitRate;
+    /** 利润 */
+    @Excel(name = "利润 （美分）")
+    private BigDecimal profit;
 
     /** 创建者 */
     private String createBy;

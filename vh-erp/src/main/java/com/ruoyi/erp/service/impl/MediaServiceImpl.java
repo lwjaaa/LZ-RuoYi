@@ -2,6 +2,7 @@ package com.ruoyi.erp.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.ruoyi.common.config.RuoYiConfig;
 import com.ruoyi.common.constant.Constants;
@@ -12,9 +13,11 @@ import com.ruoyi.erp.mapper.MediaMapper;
 import com.ruoyi.erp.mapper.ProductMapper;
 import com.ruoyi.erp.model.domain.Media;
 import com.ruoyi.erp.model.domain.Product;
+import com.ruoyi.erp.model.domain.ProductVariant;
 import com.ruoyi.erp.model.dto.media.MediaQuery;
 import com.ruoyi.erp.model.vo.media.MediaVo;
 import com.ruoyi.erp.service.IMediaService;
+import graphql.com.google.common.collect.Sets;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -222,6 +225,41 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, Media> implements
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    public void updateProductMedia(Product product) {
+        // 根据下标设置media的顺序属性position，
+        List<Media> mediaList = this.listByProductId(product.getProductId());
+        Long productId = product.getProductId();
+        if (mediaList == null || mediaList.isEmpty()) {
+            return;
+        }
+        ;
+
+        Set<Long> mediaIds = Sets.newHashSet();
+        for (int i = 0; i < mediaList.size(); i++) {
+            Long mediaId = mediaList.get(i).getMediaId();
+            mediaIds.add(mediaId);
+            this.update(new LambdaUpdateWrapper<>(Media.class)
+                    .eq(Media::getMediaId, mediaId)
+                    .set(Media::getPosition, i));
+        }
+
+        // 校验规格图片是否存在
+        List<ProductVariant> variantList = product.getProductVariantList();
+        for (int i = 0; i < variantList.size(); i++) {
+            Long mediaId = variantList.get(i).getMediaId();
+            if (mediaId != null && !mediaIds.contains(mediaId)){
+                throw new ServiceException("第" + (i + 1) + "个变体图片不存在！");
+            }
+        }
+
+        // 删除该商品的其他media。
+        this.remove(new LambdaQueryWrapper<>(Media.class)
+                .eq(Media::getProductId, productId)
+                .notIn(Media::getMediaId, mediaIds));
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
     public List<Media> scanMediaToProduct(String dirPath, String productId) {
         log.info("开始扫描媒体目录");
         List<Media> mediaList = new ArrayList<>();
@@ -262,7 +300,6 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, Media> implements
                 media.setProductId(Long.parseLong(productId));
                 media.setFilename(file.getName());
                 media.setNasMediaUrl(getFileUrl(file,dirPath));
-                media.setPosition(i);
 
                 // 根据文件扩展名判断媒体类型
                 String mediaType = getMediaType(file.getName());
@@ -278,6 +315,8 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, Media> implements
         }
         return mediaList;
     }
+
+
 
     /**
      * 根据文件名判断媒体类型
@@ -312,7 +351,7 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, Media> implements
 
     @Override
     public List<Media> listByProductId(Long productId) {
-        return this.list(new LambdaQueryWrapper<>(Media.class).eq(Media::getProductId, productId));
+        return this.list(new LambdaQueryWrapper<>(Media.class).eq(Media::getProductId, productId).orderByAsc(Media::getPosition));
     }
 
 }

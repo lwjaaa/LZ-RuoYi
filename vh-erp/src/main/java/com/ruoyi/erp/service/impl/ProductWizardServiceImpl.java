@@ -1,5 +1,6 @@
 package com.ruoyi.erp.service.impl;
 
+import cn.hutool.core.collection.CollectionUtil;
 import com.alibaba.fastjson2.JSON;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.ruoyi.common.exception.ServiceException;
@@ -7,6 +8,7 @@ import com.ruoyi.common.utils.DateUtils;
 import com.ruoyi.common.utils.SecurityUtils;
 import com.ruoyi.common.utils.StringUtils;
 import com.ruoyi.erp.model.domain.*;
+import com.ruoyi.erp.model.dto.productVariant.ShippingFeeQurey;
 import com.ruoyi.erp.service.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,6 +37,8 @@ public class ProductWizardServiceImpl implements IProductWizardService {
     private IProductTagRelService productTagRelService;
     @Autowired
     private ITagDictService tagDictService;
+    @Autowired
+    private IMediaService mediaService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -81,15 +85,43 @@ public class ProductWizardServiceImpl implements IProductWizardService {
                 if (StringUtils.isNotEmpty(tagIds)) {
                     this.saveProductTags(productId, tagIds);
                 }
+            }else{
+                // 3更新商品媒体，会校验规格主图，必须在保存变体之前。
+                mediaService.updateProductMedia(product);
             }
 
-            // 5. 保存变体信息
+            // 4. 保存变体信息
             this.saveProductVariant(product);
 
+
+            if(CollectionUtil.isNotEmpty(product.getMediaList())){
+                product.setMainMediaId(product.getMediaList().get(0).getMediaId());
+            }else{
+                product.setMainMediaId(null);
+            }
             // 6. 更新商品主表
             productService.updateById(product);
             return product.getProductId();
         }
+    }
+
+    @Override
+    public Integer calculateShipping(ShippingFeeQurey shippingFeeQurey) {
+
+        log.info("查询运费信息，请求参数：{}", shippingFeeQurey);
+        Integer res = 60;
+        log.info("查询运费信息，返回参数: {}", res);
+        return res;
+    }
+
+    @Override
+    public Map<String, Object> getUsdRate() {
+        log.info("查询汇率信息");
+        Map<String, Object> res = new HashMap<>();
+        res.put("usdRate", 7.0);
+        res.put("usdRateTime", DateUtils.getDate());
+        log.info("查询汇率信息，返回参数: {}", res);
+        return res;
     }
 
     /**

@@ -3,6 +3,7 @@ package com.ruoyi.erp.service;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.ruoyi.erp.model.domain.Media;
+import com.ruoyi.erp.model.domain.Product;
 import com.ruoyi.erp.model.dto.media.MediaQuery;
 import com.ruoyi.erp.model.vo.media.MediaVo;
 
@@ -96,6 +97,8 @@ public interface IMediaService extends IService<Media>
      * @return 媒体VO列表
      */
     List<Media> scanMediaToProduct(String dirPath, String productId);
+
+    void updateProductMedia(Product product);
 
     List<Media> listByProductId(Long productId);
 }

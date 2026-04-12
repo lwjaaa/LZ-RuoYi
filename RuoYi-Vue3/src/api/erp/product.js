@@ -17,23 +17,6 @@ export function getProduct(productId) {
   });
 }
 
-// 编辑/新增 选品信息
-export function addSelectionInfo(data) {
-  return request({
-    url: "/erp/product/selectionInfo",
-    method: "post",
-    data: data,
-  });
-}
-//
-export function updateBaseInfo(data) {
-  return request({
-    url: "/erp/product/baseInfo",
-    method: "post",
-    data: data,
-  });
-}
-
 // 修改erp商品
 export function updateProduct(data) {
   return request({

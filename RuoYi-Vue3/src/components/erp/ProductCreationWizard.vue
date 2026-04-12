@@ -2,7 +2,7 @@
   <el-dialog
     :title="title"
     v-model="visible"
-    width="900px"
+    width="1200px"
     append-to-body
     :close-on-click-modal="false"
     @close="handleClose"
@@ -141,7 +141,6 @@
                       @keydown.tab.prevent="
                         handleTabKey($event, optIndex, valIndex, 'purchase')
                       "
-                      @input="handleValueInput(optIndex, valIndex)"
                     />
                     <el-input
                       v-model="value.productValue"
@@ -292,18 +291,6 @@
                   placeholder="继承主商品"
                   size="small"
                   tabindex="-1"
-                />
-              </template>
-            </el-table-column>
-            <el-table-column label="采购价" prop="purchasePrice" width="120">
-              <template #default="{ row }">
-                <el-input-number
-                  v-model="row.purchasePrice"
-                  :min="0"
-                  :precision="2"
-                  size="small"
-                  style="width: 100%"
-                  @change="calculateVariantCost(row)"
                 />
               </template>
             </el-table-column>
@@ -463,14 +450,14 @@
           </el-tabs>
         </el-form-item>
 
-        <!-- 商品图片列表 -->
-        <el-divider content-position="left">商品图片管理</el-divider>
-        <el-form-item label="图片列表">
+        <!-- 媒体文件列表 -->
+        <el-divider content-position="left">商品媒体文件管理</el-divider>
+        <el-form-item label="媒体文件列表">
           <div class="image-manager">
             <div class="image-toolbar mb-2">
               <el-input
                 v-model="step2FormData.imageSearchKeyword"
-                placeholder="输入图片所在目录路径搜索"
+                placeholder="输入媒体文件所在目录搜索"
                 style="width: 300px"
                 clearable
                 @keyup.enter="loadServerImages"
@@ -527,11 +514,15 @@
                 </template>
                 <!-- 视频展示 -->
                 <template v-else-if="isVideo(media)">
-                  <video class="image-thumb" muted>
-                    <source :src="media.nasMediaUrl || media.shopifyMediaUrl" />
-                  </video>
-                  <div class="video-indicator">
-                    <el-icon><VideoPlay /></el-icon>
+                  <div class="video-thumbnail" @click="openVideoModal(media)">
+                    <el-image
+                      :src="getVideoThumbnail(media)"
+                      class="image-thumb"
+                      fit="cover"
+                    />
+                    <div class="video-play-button">
+                      <el-icon><VideoPlay /></el-icon>
+                    </div>
                   </div>
                 </template>
                 <!-- 其他类型文件 -->
@@ -564,9 +555,9 @@
           :data="step2Variants"
           border
           style="width: 100%"
-          stripe
           :loading="loading"
           row-key="variantId"
+          :row-class-name="tableRowClassName"
         >
           <!-- 动态生成选项列 -->
           <template v-if="getActiveOptions().length > 0">
@@ -576,13 +567,9 @@
               :label="opt.purchaseName || '选项'"
               width="120"
               align="center"
+              fixed="left"
             >
               <template #default="{ row }">
-                <!-- <span>{{
-                    `${row.optionValueList[idx]?.purchaseName}[${row.optionValueList[idx]?.optionValue}]` ||
-                    "-"
-                  }}</span> -->
-
                 <span>
                   {{ row.optionValueList[idx]?.purchaseName || "-" }}
                   <span v-if="row.optionValueList[idx]?.optionValue">
@@ -594,22 +581,29 @@
           </template>
 
           <!-- 当没有选项时，显示默认规格列 -->
-          <el-table-column v-else label="默认规格" width="120" align="center">
+          <el-table-column
+            v-else
+            label="默认规格"
+            width="120"
+            align="center"
+            fixed="left"
+          >
             <template #default>
               <span>-</span>
             </template>
           </el-table-column>
-          <el-table-column label="SKU" width="150">
+          <el-table-column label="SKU" width="150" fixed="left">
             <template #default="{ row }">
-              <el-input
-                v-model="row.sku"
-                placeholder="自动生成"
-                size="small"
-                :disabled="!row.sku"
-              />
+              <el-input v-model="row.sku" size="small" />
             </template>
           </el-table-column>
-          <el-table-column label="图片" width="100">
+          <!-- 规格图 -->
+          <el-table-column
+            label="规格图"
+            align="center"
+            width="100"
+            fixed="left"
+          >
             <template #default="{ row }">
               <div
                 class="variant-image-item"
@@ -646,9 +640,16 @@
               </div>
             </template>
           </el-table-column>
-          <el-table-column label="采购价" width="100">
+
+          <el-table-column label="采购价" align="center" width="110">
+            <template #header>
+              <el-tooltip content="单位：元" placement="top">
+                <span>采购价</span>
+              </el-tooltip>
+            </template>
             <template #default="{ row }">
               <el-input-number
+                :controls="false"
                 v-model="row.purchasePrice"
                 :min="0"
                 :precision="2"
@@ -659,59 +660,232 @@
               />
             </template>
           </el-table-column>
-          <el-table-column label="尺寸 (L/W/H)" width="180">
+          <el-table-column label="包装长度" align="center" width="90">
+            <template #header>
+              <el-tooltip content="单位：厘米" placement="top">
+                <span>包装长度</span>
+              </el-tooltip>
+            </template>
             <template #default="{ row }">
-              <el-input
-                v-model="row.dimension"
-                placeholder="如: 10/10/10"
+              <el-input-number
+                :controls="false"
+                v-model="row.pkLength"
+                :min="0"
+                :precision="0"
                 size="small"
-                @change="calculateVolumetricWeight(row)"
+                style="width: 60px"
+                @change="calculateMaterialWeight(row)"
               />
             </template>
           </el-table-column>
-          <el-table-column label="材积重" width="80">
-            <template #default="{ row }">
-              <span>{{ row.volumetricWeight || 0 }} kg</span>
+          <el-table-column label="包装宽度" align="center" width="90">
+            <template #header>
+              <el-tooltip content="单位：厘米" placement="top">
+                <span>包装宽度</span>
+              </el-tooltip>
             </template>
-          </el-table-column>
-          <el-table-column label="重量" width="80">
             <template #default="{ row }">
               <el-input-number
-                v-model="row.weight"
+                :controls="false"
+                v-model="row.pkWidth"
+                :min="0"
+                :precision="0"
+                size="small"
+                style="width: 60px"
+                @change="calculateMaterialWeight(row)"
+              />
+            </template>
+          </el-table-column>
+          <el-table-column label="包装高度" align="center" width="90">
+            <template #header>
+              <el-tooltip content="单位：厘米" placement="top">
+                <span>包装高度</span>
+              </el-tooltip>
+            </template>
+            <template #default="{ row }">
+              <el-input-number
+                :controls="false"
+                v-model="row.pkHeight"
+                :min="0"
+                :precision="0"
+                size="small"
+                style="width: 60px"
+                @change="calculateMaterialWeight(row)"
+              />
+            </template>
+          </el-table-column>
+          <el-table-column label="实重" align="center" width="94">
+            <template #header>
+              <el-tooltip content="单位：KG" placement="top">
+                <span>实重</span>
+              </el-tooltip>
+            </template>
+            <template #default="{ row }">
+              <el-input-number
+                v-model="row.pkWeight"
+                :controls="false"
+                :min="0"
+                :precision="3"
+                size="small"
+                style="width: 65px"
+                @change="calculateFreight(row)"
+                placeholder="0.000"
+              />
+            </template>
+          </el-table-column>
+          <el-table-column label="材积重" align="right" width="80">
+            <template #header>
+              <el-tooltip content="材积重 = (L * W * H) / 8000" placement="top">
+                <span>材积重</span>
+              </el-tooltip>
+            </template>
+            <template #default="{ row }">
+              <span>{{ row.materialWeight || 0 }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="实际发货" align="center" width="80">
+            <template #default="{ row }">
+              <el-switch
+                v-model="row.isActualShipment"
+                :active-value="'1'"
+                :inactive-value="'0'"
+                @change="calculateVariantCost(row)"
+              />
+            </template>
+          </el-table-column>
+          <el-table-column label="运费" align="center" width="110">
+            <template #header>
+              <el-tooltip placement="top">
+                <template #content>
+                  单位：元<br />输入包装尺寸和实重，自动计算运费</template
+                >
+                <span>运费</span>
+              </el-tooltip>
+            </template>
+            <template #default="{ row }">
+              <el-input-number
+                :controls="false"
+                v-model="row.freight"
                 :min="0"
                 :precision="2"
                 size="small"
-                style="width: 60px"
-                @change="calculateShippingFee(row)"
+                style="width: 80px"
+                @change="calculateVariantCost(row)"
                 placeholder="0.00"
               />
             </template>
           </el-table-column>
-          <el-table-column label="运费" width="80">
-            <template #default="{ row }">
-              <span>{{ row.shippingFee || 0 }}</span>
+          <el-table-column label="成本价" align="center" width="110">
+            <template #header>
+              <el-tooltip placement="top">
+                <template #content>
+                  单位：元<br />成本价 = 采购价 + 运费</template
+                >
+                <span>成本价</span>
+              </el-tooltip>
             </template>
-          </el-table-column>
-          <el-table-column label="成本价" width="80">
-            <template #default="{ row }">
-              <span>{{ row.costPrice || 0 }}</span>
-            </template>
-          </el-table-column>
-          <el-table-column label="销售价格" width="100">
             <template #default="{ row }">
               <el-input-number
-                v-model="row.salePrice"
+                :controls="false"
+                v-model="row.unitCostPrice"
+                :min="0"
+                :precision="2"
+                size="small"
+                style="width: 80px"
+                @change="calculateVariantCost(row)"
+                placeholder="0.00"
+              />
+            </template>
+          </el-table-column>
+          <!-- 美国汇率 -->
+          <el-table-column label="汇率" align="center" width="110">
+            <template #header>
+              <el-tooltip content="首次默认填充今日美国汇率" placement="top">
+                <span>美国汇率</span>
+              </el-tooltip>
+            </template>
+            <template #default="{ row }">
+              <el-input-number
+                :controls="false"
+                v-model="row.exchangeRate"
+                :min="0"
+                :precision="4"
+                size="small"
+                style="width: 80px"
+                placeholder="0.0000"
+              />
+            </template>
+          </el-table-column>
+          <!-- 建议售价 -->
+          <el-table-column label="建议售价" align="center" width="110">
+            <template #header>
+              <el-tooltip placement="top">
+                <template #content> 单位：美元<br />按照30%利润计算</template>
+                <span>建议售价</span>
+              </el-tooltip>
+            </template>
+            <template #default="{ row }">
+              <span>{{ row.suggestedPrice || "" }}</span>
+            </template>
+          </el-table-column>
+          <!-- 销售价格 -->
+          <el-table-column
+            label="售价"
+            align="center"
+            width="110"
+            fixed="right"
+          >
+            <template #header>
+              <el-tooltip placement="top">
+                <template #content>
+                  单位：美元<br />默认按照30%利润计算</template
+                >
+                <span>售价</span>
+              </el-tooltip>
+            </template>
+            <template #default="{ row }">
+              <el-input-number
+                :controls="false"
+                v-model="row.price"
                 :min="0"
                 :precision="2"
                 size="small"
                 style="width: 80px"
                 placeholder="0.00"
+                @change="calculateProfitRate(row)"
               />
             </template>
           </el-table-column>
-          <el-table-column label="对比价" width="100">
+          <!-- 利润率 -->
+          <el-table-column label="利润率" align="center" width="110">
+            <template #header>
+              <el-tooltip content="单位：%" placement="top">
+                <template #content>
+                  单位：%<br />实际利润率 = 售价 * 汇率 - 成本价 / (销售价格 *
+                  汇率）</template
+                >
+                <span>利润率</span>
+              </el-tooltip>
+            </template>
+            <template #default="{ row }">
+              <span>{{ row.profitRate || "" }}</span>
+            </template>
+          </el-table-column>
+          <!-- 对比价 -->
+          <el-table-column
+            label="对比价"
+            align="center"
+            width="110"
+            fixed="right"
+          >
+            <template #header>
+              <el-tooltip content="单位：美元" placement="top">
+                <span>对比价</span>
+              </el-tooltip>
+            </template>
             <template #default="{ row }">
               <el-input-number
+                :controls="false"
                 v-model="row.comparePrice"
                 :min="0"
                 :precision="2"
@@ -721,21 +895,16 @@
               />
             </template>
           </el-table-column>
-          <el-table-column label="是否实际发货" width="100">
-            <template #default="{ row }">
-              <el-switch
-                v-model="row.isActualShipment"
-                :active-value="'1'"
-                :inactive-value="'0'"
-                @change="calculateVariantCost(row)"
-                active-text="是"
-                inactive-text="否"
-              />
-            </template>
-          </el-table-column>
         </el-table>
       </el-form>
     </div>
+
+    <!-- 视频播放弹框 -->
+    <CustomVideoModal
+      v-model:visible="videoModalVisible"
+      :video="currentVideo"
+      :base-url="baseUrl"
+    />
 
     <!-- 底部操作按钮 -->
     <template #footer>
@@ -811,19 +980,30 @@ import {
   Document,
 } from "@element-plus/icons-vue";
 import { ElMessageBox } from "element-plus";
+import CustomVideoModal from "./CustomVideoModal.vue";
 import {
-  getProduct,
   addSelectionInfo,
   updateBaseInfo,
-} from "@/api/erp/product";
+  calculateShipping,
+} from "@/api/erp/productWizard";
+import { getProduct } from "@/api/erp/product";
 import { treeList } from "@/api/erp/tag";
-import { scanMedia, calculateShipping } from "@/api/erp/media";
+import { scanMedia } from "@/api/erp/media";
+import { useExchangeRateStore } from "@/store/modules/exchangeRate";
 const { proxy } = getCurrentInstance();
+
+// 汇率状态管理
+const exchangeRateStore = useExchangeRateStore();
 
 const baseUrl = import.meta.env.VITE_APP_BASE_API;
 
 // Emit
 const emit = defineEmits(["submit"]);
+
+// 注册组件
+const components = {
+  CustomVideoModal,
+};
 
 // 状态
 const visible = ref(false);
@@ -882,7 +1062,6 @@ const optionList = ref([]);
 const step1Variants = ref([
   {
     variantId: null,
-    purchasePrice: null,
     purchaseUrl: "",
     optionValues: "",
     optionValueList: [],
@@ -970,6 +1149,10 @@ const richTextEditor = reactive({
   mode: "edit", // 'edit' | 'preview'
 });
 
+// 视频播放相关状态
+const videoModalVisible = ref(false);
+const currentVideo = ref(null);
+
 // 商品详情选项卡当前激活项，description 排在第一位
 const activeDetailTab = ref("description");
 
@@ -1039,6 +1222,11 @@ watch(
 onUnmounted(() => {
   window.removeEventListener("keydown", handleSetp1Keydown);
   window.removeEventListener("keydown", handleSetp2Keydown);
+});
+
+// 组件挂载时加载缓存的汇率数据
+onMounted(() => {
+  exchangeRateStore.loadCachedRate();
 });
 
 // 处理来源 URL 失去焦点事件
@@ -1230,20 +1418,28 @@ const handleLoadData = async (productId) => {
 
       step1V.push({
         variantId: v.variantId,
-        purchasePrice: v.purchasePrice,
         purchaseUrl: v.purchaseUrl,
         optionValues: v.optionValues,
         optionValueList,
         position: v.position,
         remark: v.remark,
       });
-      step2V.push({
+
+      // 检查并填充汇率
+      const variant = {
         ...v,
         sku:
           v.sku ||
           productData.spu + "-" + (index + 1).toString().padStart(3, "0"),
         optionValueList: v.optionValues ? JSON.parse(v.optionValues) : [],
-      });
+      };
+
+      // 如果exchangeRate为空，自动填入缓存的汇率
+      if (!variant.exchangeRate) {
+        fillExchangeRate(variant);
+      }
+
+      step2V.push(variant);
       step1Variants.value = step1V;
       step2Variants.value = step2V;
     });
@@ -1343,7 +1539,6 @@ function resetForm(selectedTagIds, step) {
   step1Variants.value = [
     {
       variantId: null,
-      purchasePrice: null,
       purchaseUrl: "",
       optionValues: "",
       optionValueList: [],
@@ -1544,7 +1739,6 @@ function generateVariants() {
     step1Variants.value = [
       {
         variantId: null,
-        purchasePrice: null,
         purchaseUrl: step1FormData.purchaseUrl,
         optionValues: "",
         optionValueList: [],
@@ -1579,7 +1773,6 @@ function generateVariants() {
     return {
       variantId: existingVariant?.variantId,
       purchaseUrl: existingVariant?.purchaseUrl || step1FormData.purchaseUrl,
-      purchasePrice: existingVariant?.purchasePrice || 0,
       optionValues: JSON.stringify(optionValueList),
       optionValueList: optionValueList,
       position: existingVariant?.position || index,
@@ -1625,20 +1818,31 @@ function handleRowDrop({ row, $index }, targetIndex) {
 }
 
 // 计算变体成本
-function calculateVariantCost(row) {
+async function calculateVariantCost(row) {
   try {
-    if (row.purchasePrice == null) {
+    if (row.purchasePrice == null || row.freight == null) {
+      row.unitCostPrice = 0;
       return;
     }
-    console.log("calculateVariantCost", row);
-    row.unitCostPrice = (row.purchasePrice || 0) + (row.shippingFee || 0);
-    if (row.isActualShipment !== "0") {
-      row.unitCostPrice = row.purchasePrice || 0;
+    row.unitCostPrice = (row.purchasePrice || 0) + (row.freight || 0);
+
+    // 如果exchangeRate为空，自动填入缓存的汇率
+    if (!row.exchangeRate) {
+      await fillExchangeRate(row);
     }
-    // 自动计算销售价格
-    if (row.unitCostPrice > 0) {
-      // 假设美元汇率 7.2，成本价基础上加30%作为销售价 向上取整
-      row.price = Math.ceil((row.unitCostPrice * 1.3) / 7.2); // 假设美元汇率 7.2
+
+    // 自动计算推荐销售价格
+    // 成本价基础上加30%作为销售价 向上取整
+    if (row.exchangeRate) {
+      row.suggestedPrice = Math.ceil(
+        row.unitCostPrice / 0.7 / row.exchangeRate,
+      );
+      // 自动计算推荐销售价格
+      if (row.price == null) {
+        row.price = row.suggestedPrice;
+      }
+      // 计算利润率
+      calculateProfitRate(row);
     }
   } catch (error) {
     console.error("计算变体成本失败:", error);
@@ -1646,21 +1850,50 @@ function calculateVariantCost(row) {
   }
 }
 
-// 计算材积重
-function calculateVolumetricWeight(row) {
+// 计算利润率
+function calculateProfitRate(row) {
   try {
-    if (row.dimension) {
-      const dims = row.dimension
-        .split(/[\/\*x]/)
-        .map((d) => parseFloat(d.trim()));
-      if (dims.length >= 3 && dims.every((d) => !isNaN(d))) {
-        row.volumetricWeight = (dims[0] * dims[1] * dims[2]) / 8000;
-      } else {
-        proxy.$modal.msgWarning(
-          "尺寸格式不正确，请使用 L/W/H 格式，如: 10/10/10",
-        );
-      }
+    if (row.unitCostPrice == null || row.price == null) {
+      row.profitRate = null;
+      return;
     }
+    const rmbPrice = row.price * row.exchangeRate;
+    // 保留两位小数
+    row.profitRate = parseFloat(
+      (((rmbPrice - row.unitCostPrice) / rmbPrice) * 100).toFixed(2),
+    );
+  } catch (error) {
+    console.error("计算利润率失败:", error);
+    proxy.$modal.msgError("计算利润率失败，请检查输入数据");
+  }
+}
+
+// 计算材积重
+async function calculateMaterialWeight(row) {
+  try {
+    // 检查 row 是否存在
+    if (!row) {
+      console.error("计算材积重失败: 缺少必要参数");
+      return;
+    }
+
+    const { pkLength, pkWidth, pkHeight } = row;
+
+    // 检查尺寸是否存在且为有效数字
+    if (pkLength && pkWidth && pkHeight) {
+      const dims = [Number(pkLength), Number(pkWidth), Number(pkHeight)];
+      if (dims.every((d) => !isNaN(d) && d > 0)) {
+        row.materialWeight = (dims[0] * dims[1] * dims[2]) / 8000;
+      } else {
+        row.materialWeight = 0;
+        console.log("请检查输入数据，尺寸必须为正数");
+      }
+    } else {
+      // 如果尺寸不完整，设置材积重为0
+      row.materialWeight = 0;
+    }
+    // 计算运费
+    await calculateFreight(row);
   } catch (error) {
     console.error("计算材积重失败:", error);
     proxy.$modal.msgError("计算材积重失败，请检查尺寸格式");
@@ -1668,19 +1901,50 @@ function calculateVolumetricWeight(row) {
 }
 
 // 计算运费
-async function calculateShippingFee(row) {
+async function calculateFreight(row) {
   try {
-    console.log("calculateShippingFee", row);
-    if (row.weight > 0) {
-      const response = await calculateShipping({ weight: row.weight });
-      row.shippingFee = response.data?.fee || 0;
-      calculateVariantCost(row);
+    console.log("计算运费:", row);
+    if (
+      row.isActualShipment === "0" &&
+      row.pkWeight > 0 &&
+      row.materialWeight > 0
+    ) {
+      const param = {
+        pkWidth: row.pkWidth,
+        pkHeight: row.pkHeight,
+        pkLength: row.pkLength,
+        materialWeight: row.materialWeight,
+        pkWeight: row.pkWeight,
+      };
+      const response = await calculateShipping(param);
+      row.freight = response.data || 0;
+      await calculateVariantCost(row);
     }
   } catch (error) {
     console.error("计算运费失败", error);
     proxy.$modal.msgError("计算运费失败，请稍后重试");
   }
 }
+
+// 填充汇率数据
+async function fillExchangeRate(row) {
+  try {
+    // 检查并更新汇率
+    const usdRate = await exchangeRateStore.checkAndUpdateRate();
+    if (usdRate) {
+      row.exchangeRate = usdRate;
+    }
+  } catch (error) {
+    console.error("填充汇率失败:", error);
+  }
+}
+
+const tableRowClassName = ({ row, rowIndex }) => {
+  if (row.optionValues && row.optionValues.toUpperCase().indexOf("色") !== -1) {
+    return "set-row";
+  }
+  return "";
+};
 
 // 加载服务器图片（直接添加到列表）
 async function loadServerImages() {
@@ -1830,6 +2094,19 @@ function getMediaTypeLabel(media) {
   if (isVideo(media)) return "视频";
   if (isImage(media)) return "图片";
   return "文件";
+}
+
+// 获取视频缩略图
+function getVideoThumbnail(media) {
+  // 这里可以返回视频的第一帧作为缩略图
+  // 暂时使用一个默认的视频缩略图
+  return "https://via.placeholder.com/200x150/3498db/ffffff?text=Video";
+}
+
+// 打开视频播放弹框
+function openVideoModal(media) {
+  currentVideo.value = media;
+  videoModalVisible.value = true;
 }
 
 // 图片拖拽开始
@@ -2830,5 +3107,48 @@ defineExpose({
   font-size: 10px;
   border-radius: 3px;
   pointer-events: none;
+}
+
+/* 视频缩略图样式 */
+.video-thumbnail {
+  position: relative;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+  width: 100%;
+  height: 100%;
+  min-height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.video-thumbnail:hover {
+  transform: scale(1.05);
+}
+
+.video-play-button {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 40px;
+  height: 40px;
+  background-color: rgba(0, 0, 0, 0.6);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 20px;
+  transition: all 0.2s ease;
+}
+
+.video-thumbnail:hover .video-play-button {
+  background-color: rgba(0, 0, 0, 0.8);
+  transform: translate(-50%, -50%) scale(1.1);
+}
+
+:deep(.el-table .set-row) {
+  --el-table-tr-bg-color: var(--el-color-primary-light-9) !important;
 }
 </style>

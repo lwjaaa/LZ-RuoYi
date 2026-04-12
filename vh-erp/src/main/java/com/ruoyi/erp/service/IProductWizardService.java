@@ -1,6 +1,9 @@
 package com.ruoyi.erp.service;
 
 import com.ruoyi.erp.model.domain.Product;
+import com.ruoyi.erp.model.dto.productVariant.ShippingFeeQurey;
+
+import java.util.Map;
 
 /**
  * erp商品Service接口
@@ -17,4 +20,21 @@ public interface IProductWizardService {
      * @return 结果
      */
     Long saveProductWithWizard(Product product,int step);
+
+    /**
+     * 运费查询
+     *
+     * @param shippingFeeQurey
+     * @return java.lang.Integer
+     * @author lwj
+     **/
+    Integer calculateShipping(ShippingFeeQurey shippingFeeQurey);
+
+    /**
+     * 获取美元汇率
+     *
+     * @return java.lang.String
+     * @author lwj
+     **/
+    Map<String,Object> getUsdRate();
 }

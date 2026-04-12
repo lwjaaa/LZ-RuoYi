@@ -61,7 +61,10 @@ CREATE TABLE `erp_product_variant`
     `freight`            int(10)      DEFAULT NULL COMMENT '运费',
     `is_actual_shipment` char(1)      DEFAULT '0' COMMENT '运费是否来自实际发货数据(0:否, 1:是)',
     `unit_cost_price`    int(10)      DEFAULT NULL comment '商品成本价（分）',
-
+    `exchange_rate`       decimal(10, 4) DEFAULT NULL COMMENT '美元汇率',
+    `suggested_price`     int(10)      DEFAULT NULL COMMENT '建议销售价格（美分）',
+    `profit_rate`         decimal(10, 4) DEFAULT NULL COMMENT '利润率',
+    `profit`               int(10)      DEFAULT NULL COMMENT '利润（美分）',
     /* 若依标准字段 */
     `create_by`          varchar(64)  DEFAULT '' COMMENT '创建者',
     `create_time`        datetime     DEFAULT NULL COMMENT '创建时间',

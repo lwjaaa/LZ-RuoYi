@@ -37,6 +37,7 @@
 <!--        <spring-framework.version>5.3.39</spring-framework.version>-->
         <lombok.version>1.18.36</lombok.version>
         <mybatis-plus.version>3.5.9</mybatis-plus.version>
+        <hutool.version>5.8.38</hutool.version>
     </properties>
 
     <!-- 依赖声明 -->
@@ -193,6 +194,13 @@
                 <groupId>com.ruoyi</groupId>
                 <artifactId>vh-erp</artifactId>
                 <version>${ruoyi.version}</version>
+            </dependency>
+
+            <!--hutool 工具类-->
+            <dependency>
+                <groupId>cn.hutool</groupId>
+                <artifactId>hutool-all</artifactId>
+                <version>${hutool.version}</version>
             </dependency>
 
         </dependencies>

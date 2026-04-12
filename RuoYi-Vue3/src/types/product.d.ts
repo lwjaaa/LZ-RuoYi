@@ -171,6 +171,15 @@ export interface ProductVariant {
   /** 商品成本价（分） */
   unitCostPrice?: number;
 
+  /** 汇率 */
+  exchangeRate?: number;
+
+  /** 推荐销售价格 */
+  suggestedPrice?: number;
+
+  /** 利润率 */
+  profitRate?: number;
+
   /** 创建者 */
   createBy?: string;
 
