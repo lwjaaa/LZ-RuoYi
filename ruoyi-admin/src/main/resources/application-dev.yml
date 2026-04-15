@@ -185,3 +185,18 @@ xss:
     excludes: /system/notice
     # 匹配链接
     urlPatterns: /system/*,/monitor/*,/tool/*
+
+# ExchangeRate-API配置
+exchange-rate:
+    # API Key (从 https://www.exchangerate-api.com/ 获取)
+    api-key: YOUR_API_KEY_HERE
+    # API基础URL
+    base-url: https://v6.exchangerate-api.com/v6
+    # 连接超时时间（毫秒）
+    connect-timeout: 5000
+    # 读取超时时间（毫秒）
+    read-timeout: 10000
+    # 默认基准货币
+    default-base-currency: USD
+    # 目标货币列表，多个用英文逗号隔开
+    target-currencies: CNY

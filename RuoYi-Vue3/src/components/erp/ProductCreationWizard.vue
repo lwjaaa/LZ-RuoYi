@@ -1,12 +1,67 @@
 <template>
-  <el-dialog
+  <!--  <el-dialog
     :title="title"
     v-model="visible"
     width="1200px"
     append-to-body
     :close-on-click-modal="false"
     @close="handleClose"
-  >
+  >-->
+  <div class="product-wizard-container">
+    <!-- 页面头部 -->
+    <el-page-header @back="handleBack" class="wizard-header">
+      <!-- <template #content> -->
+      <!--        <span class="page-title">{{ title }}</span>-->
+      <!-- </template> -->
+      <template #extra>
+        <div class="right-buttons">
+          <el-tooltip
+            v-if="activeStep === 1"
+            content="快捷键: Ctrl+←"
+            placement="top"
+          >
+            <el-button @click="handleSubmit('prev')" type="primary"
+              >上一步</el-button
+            >
+          </el-tooltip>
+          <el-tooltip
+            v-if="activeStep === 0"
+            content="快捷键: Ctrl+Enter"
+            placement="top"
+          >
+            <el-button
+              type="primary"
+              @click="handleSubmit('continue')"
+              :loading="loading"
+            >
+              继续选品
+            </el-button>
+          </el-tooltip>
+          <el-tooltip
+            v-if="activeStep === 0"
+            content="快捷键: Ctrl+→"
+            placement="top"
+          >
+            <el-button
+              type="primary"
+              @click="handleSubmit('next')"
+              :loading="loading"
+            >
+              下一步
+            </el-button>
+          </el-tooltip>
+          <el-tooltip content="快捷键: Ctrl+S" placement="top">
+            <el-button
+              type="primary"
+              @click="handleSubmit('close')"
+              :loading="loading"
+            >
+              保存
+            </el-button>
+          </el-tooltip>
+        </div>
+      </template>
+    </el-page-header>
     <el-steps
       :active="activeStep"
       finish-status="success"
@@ -452,7 +507,7 @@
 
         <!-- 媒体文件列表 -->
         <el-divider content-position="left">商品媒体文件管理</el-divider>
-        <el-form-item label="媒体文件列表">
+        <el-form-item label="媒体文件">
           <div class="image-manager">
             <div class="image-toolbar mb-2">
               <el-input
@@ -551,6 +606,16 @@
 
         <!-- 变体详细设置 -->
         <el-divider content-position="left">变体详细设置</el-divider>
+
+        <el-row :gutter="10" class="mb8">
+          <right-toolbar
+            :showSearch="false"
+            :showrRefresh="false"
+            :search="false"
+            :columns="columns"
+          ></right-toolbar>
+        </el-row>
+
         <el-table
           :data="step2Variants"
           border
@@ -560,39 +625,46 @@
           :row-class-name="tableRowClassName"
         >
           <!-- 动态生成选项列 -->
-          <template v-if="getActiveOptions().length > 0">
+          <template v-if="columns[0].visible">
+            <template v-if="getActiveOptions().length > 0">
+              <el-table-column
+                v-for="(opt, idx) in getActiveOptions()"
+                :key="opt.purchaseName || idx"
+                :label="opt.purchaseName || '选项'"
+                width="120"
+                align="center"
+                fixed="left"
+              >
+                <template #default="{ row }">
+                  <span>
+                    {{ row.optionValueList[idx]?.purchaseName || "-" }}
+                    <span v-if="row.optionValueList[idx]?.optionValue">
+                      [{{ row.optionValueList[idx]?.optionValue }}]
+                    </span>
+                  </span>
+                </template>
+              </el-table-column>
+            </template>
+            <!-- 当没有选项时，显示默认规格列 -->
             <el-table-column
-              v-for="(opt, idx) in getActiveOptions()"
-              :key="opt.purchaseName || idx"
-              :label="opt.purchaseName || '选项'"
+              v-else
+              label="默认规格"
               width="120"
               align="center"
               fixed="left"
             >
-              <template #default="{ row }">
-                <span>
-                  {{ row.optionValueList[idx]?.purchaseName || "-" }}
-                  <span v-if="row.optionValueList[idx]?.optionValue">
-                    [{{ row.optionValueList[idx]?.optionValue }}]
-                  </span>
-                </span>
+              <template #default>
+                <span>-</span>
               </template>
             </el-table-column>
           </template>
 
-          <!-- 当没有选项时，显示默认规格列 -->
           <el-table-column
-            v-else
-            label="默认规格"
-            width="120"
-            align="center"
+            label="SKU"
+            width="150"
             fixed="left"
+            v-if="columns[1].visible"
           >
-            <template #default>
-              <span>-</span>
-            </template>
-          </el-table-column>
-          <el-table-column label="SKU" width="150" fixed="left">
             <template #default="{ row }">
               <el-input v-model="row.sku" size="small" />
             </template>
@@ -641,7 +713,12 @@
             </template>
           </el-table-column>
 
-          <el-table-column label="采购价" align="center" width="110">
+          <el-table-column
+            label="采购价"
+            align="center"
+            width="110"
+            v-if="columns[2].visible"
+          >
             <template #header>
               <el-tooltip content="单位：元" placement="top">
                 <span>采购价</span>
@@ -660,7 +737,12 @@
               />
             </template>
           </el-table-column>
-          <el-table-column label="包装长度" align="center" width="90">
+          <el-table-column
+            label="包装长度"
+            align="center"
+            width="90"
+            v-if="columns[3].visible"
+          >
             <template #header>
               <el-tooltip content="单位：厘米" placement="top">
                 <span>包装长度</span>
@@ -678,7 +760,12 @@
               />
             </template>
           </el-table-column>
-          <el-table-column label="包装宽度" align="center" width="90">
+          <el-table-column
+            label="包装宽度"
+            align="center"
+            width="90"
+            v-if="columns[3].visible"
+          >
             <template #header>
               <el-tooltip content="单位：厘米" placement="top">
                 <span>包装宽度</span>
@@ -696,7 +783,12 @@
               />
             </template>
           </el-table-column>
-          <el-table-column label="包装高度" align="center" width="90">
+          <el-table-column
+            label="包装高度"
+            align="center"
+            width="90"
+            v-if="columns[3].visible"
+          >
             <template #header>
               <el-tooltip content="单位：厘米" placement="top">
                 <span>包装高度</span>
@@ -714,7 +806,12 @@
               />
             </template>
           </el-table-column>
-          <el-table-column label="实重" align="center" width="94">
+          <el-table-column
+            label="实重"
+            align="center"
+            width="94"
+            v-if="columns[4].visible"
+          >
             <template #header>
               <el-tooltip content="单位：KG" placement="top">
                 <span>实重</span>
@@ -733,7 +830,12 @@
               />
             </template>
           </el-table-column>
-          <el-table-column label="材积重" align="right" width="80">
+          <el-table-column
+            label="材积重"
+            align="right"
+            width="80"
+            v-if="columns[5].visible"
+          >
             <template #header>
               <el-tooltip content="材积重 = (L * W * H) / 8000" placement="top">
                 <span>材积重</span>
@@ -743,7 +845,12 @@
               <span>{{ row.materialWeight || 0 }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="实际发货" align="center" width="80">
+          <el-table-column
+            label="实际发货"
+            align="center"
+            width="80"
+            v-if="columns[6].visible"
+          >
             <template #default="{ row }">
               <el-switch
                 v-model="row.isActualShipment"
@@ -753,7 +860,12 @@
               />
             </template>
           </el-table-column>
-          <el-table-column label="运费" align="center" width="110">
+          <el-table-column
+            label="运费"
+            align="center"
+            width="110"
+            v-if="columns[7].visible"
+          >
             <template #header>
               <el-tooltip placement="top">
                 <template #content>
@@ -775,7 +887,12 @@
               />
             </template>
           </el-table-column>
-          <el-table-column label="成本价" align="center" width="110">
+          <el-table-column
+            label="成本价"
+            align="center"
+            width="110"
+            v-if="columns[8].visible"
+          >
             <template #header>
               <el-tooltip placement="top">
                 <template #content>
@@ -798,10 +915,15 @@
             </template>
           </el-table-column>
           <!-- 美国汇率 -->
-          <el-table-column label="汇率" align="center" width="110">
+          <el-table-column
+            label="汇率"
+            align="center"
+            width="110"
+            v-if="columns[9].visible"
+          >
             <template #header>
               <el-tooltip content="首次默认填充今日美国汇率" placement="top">
-                <span>美国汇率</span>
+                <span>汇率</span>
               </el-tooltip>
             </template>
             <template #default="{ row }">
@@ -817,7 +939,12 @@
             </template>
           </el-table-column>
           <!-- 建议售价 -->
-          <el-table-column label="建议售价" align="center" width="110">
+          <el-table-column
+            label="建议售价"
+            align="center"
+            width="110"
+            v-if="columns[10].visible"
+          >
             <template #header>
               <el-tooltip placement="top">
                 <template #content> 单位：美元<br />按照30%利润计算</template>
@@ -828,12 +955,52 @@
               <span>{{ row.suggestedPrice || "" }}</span>
             </template>
           </el-table-column>
+          <!-- 利润率 -->
+          <el-table-column
+            label="利润"
+            align="center"
+            width="110"
+            v-if="columns[11].visible"
+          >
+            <template #header>
+              <el-tooltip placement="top">
+                <template #content>
+                  单位：元<br />实际利润 = 售价 * 汇率 - 成本价</template
+                >
+                <span>利润</span>
+              </el-tooltip>
+            </template>
+            <template #default="{ row }">
+              <span>{{ row.profit || "" }}</span>
+            </template>
+          </el-table-column>
+          <!-- 利润率 -->
+          <el-table-column
+            label="利润率"
+            align="center"
+            width="110"
+            v-if="columns[12].visible"
+          >
+            <template #header>
+              <el-tooltip content="单位：%" placement="top">
+                <template #content>
+                  单位：%<br />实际利润率 = 售价 * 汇率 - 成本价 / (销售价格 *
+                  汇率）</template
+                >
+                <span>利润率</span>
+              </el-tooltip>
+            </template>
+            <template #default="{ row }">
+              <span>{{ row.profitRate || "" }}</span>
+            </template>
+          </el-table-column>
           <!-- 销售价格 -->
           <el-table-column
             label="售价"
             align="center"
             width="110"
             fixed="right"
+            v-if="columns[13].visible"
           >
             <template #header>
               <el-tooltip placement="top">
@@ -856,27 +1023,13 @@
               />
             </template>
           </el-table-column>
-          <!-- 利润率 -->
-          <el-table-column label="利润率" align="center" width="110">
-            <template #header>
-              <el-tooltip content="单位：%" placement="top">
-                <template #content>
-                  单位：%<br />实际利润率 = 售价 * 汇率 - 成本价 / (销售价格 *
-                  汇率）</template
-                >
-                <span>利润率</span>
-              </el-tooltip>
-            </template>
-            <template #default="{ row }">
-              <span>{{ row.profitRate || "" }}</span>
-            </template>
-          </el-table-column>
           <!-- 对比价 -->
           <el-table-column
             label="对比价"
             align="center"
             width="110"
             fixed="right"
+            v-if="columns[14].visible"
           >
             <template #header>
               <el-tooltip content="单位：美元" placement="top">
@@ -906,59 +1059,7 @@
       :base-url="baseUrl"
     />
 
-    <!-- 底部操作按钮 -->
-    <template #footer>
-      <div class="dialog-footer">
-        <el-button @click="handleClose">取消</el-button>
-        <div class="footer-right-buttons">
-          <el-tooltip
-            v-if="activeStep === 1"
-            content="快捷键: Ctrl+←"
-            placement="top"
-          >
-            <el-button @click="handleSubmit('prev')" type="primary"
-              >上一步</el-button
-            >
-          </el-tooltip>
-          <el-tooltip
-            v-if="activeStep === 0"
-            content="快捷键: Ctrl+Enter"
-            placement="top"
-          >
-            <el-button
-              type="primary"
-              @click="handleSubmit('continue')"
-              :loading="loading"
-            >
-              继续选品
-            </el-button>
-          </el-tooltip>
-          <el-tooltip
-            v-if="activeStep === 0"
-            content="快捷键: Ctrl+→"
-            placement="top"
-          >
-            <el-button
-              type="primary"
-              @click="handleSubmit('next')"
-              :loading="loading"
-            >
-              下一步
-            </el-button>
-          </el-tooltip>
-          <el-tooltip content="快捷键: Ctrl+S" placement="top">
-            <el-button
-              type="primary"
-              @click="handleSubmit('close')"
-              :loading="loading"
-            >
-              保存
-            </el-button>
-          </el-tooltip>
-        </div>
-      </div>
-    </template>
-  </el-dialog>
+  </div>
 </template>
 
 <script setup>
@@ -998,7 +1099,17 @@ const exchangeRateStore = useExchangeRateStore();
 const baseUrl = import.meta.env.VITE_APP_BASE_API;
 
 // Emit
-const emit = defineEmits(["submit"]);
+// 新增：返回处理
+const emit = defineEmits(["submit", "back"]);
+
+function handleBack() {
+  emit("back");
+}
+
+// 修改：关闭对话框改为触发返回事件
+// function handleClose() {
+//   emit("back");
+// }
 
 // 注册组件
 const components = {
@@ -1009,7 +1120,6 @@ const components = {
 const visible = ref(false);
 
 const activeStep = ref(0);
-const title = ref("新增商品");
 const loading = ref(false);
 const step1FormRef = ref();
 const step2FormRef = ref();
@@ -1334,10 +1444,8 @@ function flattenTagList(tagList) {
 const open = async (selectedTagIds, productId, step = 0) => {
   await fetchTags();
   visible.value = true;
-
+  console.log("selectedTagIds", selectedTagIds);
   if (productId == null) {
-    title.value = "新增选品";
-
     resetForm(selectedTagIds, step);
 
     generateSpu(true);
@@ -1353,8 +1461,6 @@ const open = async (selectedTagIds, productId, step = 0) => {
     saveStep1DataSnapshot();
     return;
   } else {
-    title.value = "编辑商品";
-
     resetForm(null, step);
 
     // 加载商品表单数据
@@ -1372,30 +1478,13 @@ const handleLoadData = async (productId) => {
   Object.assign(step1FormData, {
     productId: productData.productId,
     spu: productData.spu || null,
-    category: productData.category || null,
-    productType: productData.productType || null,
     sourceUrl: productData.sourceUrl || null,
     purchaseUrl: productData.purchaseUrl || null,
     tagIds: productData.tagIds || [],
   });
 
   // 填充第二步表单
-  Object.assign(step2FormData, {
-    productId: productData.productId,
-    productTitle: productData.productTitle,
-    category: productData.category,
-    productType: productData.productType,
-    description: productData.description,
-    size: productData.size,
-    material: productData.material,
-    note: productData.note,
-    packageInclude: productData.packageInclude,
-    bodyHtml: productData.bodyHtml,
-    mediaList: productData.mediaList || [],
-    mainMediaId: productData.mainMediaId,
-    remark: productData.remark,
-    imageSearchKeyword: productData.imageSearchKeyword,
-  });
+  Object.assign(step2FormData, productData);
 
   // 解析采购商品选项
   if (productData.optionJson) {
@@ -1413,7 +1502,7 @@ const handleLoadData = async (productId) => {
   ) {
     const step1V = [];
     const step2V = [];
-    productData.productVariantList.forEach((v, index) => {
+    productData.productVariantList.forEach(async (v, index) => {
       const optionValueList = v.optionValues ? JSON.parse(v.optionValues) : [];
 
       step1V.push({
@@ -1435,8 +1524,9 @@ const handleLoadData = async (productId) => {
       };
 
       // 如果exchangeRate为空，自动填入缓存的汇率
+      console.log("variant", variant);
       if (!variant.exchangeRate) {
-        fillExchangeRate(variant);
+        await fillExchangeRate(variant);
       }
 
       step2V.push(variant);
@@ -1505,8 +1595,11 @@ function hasStep2DataChanged() {
 
 // 重置表单
 function resetForm(selectedTagIds, step) {
-  title.value = "新增商品";
   activeStep.value = step;
+
+  // 先重置表单字段
+  step1FormRef.value?.resetFields();
+  step2FormRef.value?.resetFields();
 
   // 重置第一步表单数据
   Object.assign(step1FormData, {
@@ -1568,8 +1661,6 @@ function resetForm(selectedTagIds, step) {
     },
   ];
 
-  step1FormRef.value?.resetFields();
-  step2FormRef.value?.resetFields();
   loading.value = false;
 }
 
@@ -1584,6 +1675,7 @@ const generateSpu = async (auto) => {
 
   try {
     const selectedMenuTags = getMenuTag(step1FormData.tagIds);
+    console.log("选中的标签:", selectedMenuTags);
 
     if (!selectedMenuTags) {
       if (!auto) proxy.$modal.msgError("未选择标签");
@@ -1859,9 +1951,8 @@ function calculateProfitRate(row) {
     }
     const rmbPrice = row.price * row.exchangeRate;
     // 保留两位小数
-    row.profitRate = parseFloat(
-      (((rmbPrice - row.unitCostPrice) / rmbPrice) * 100).toFixed(2),
-    );
+    row.profit = parseFloat((rmbPrice - row.unitCostPrice).toFixed(2));
+    row.profitRate = parseFloat(((row.profit / rmbPrice) * 100).toFixed(2));
   } catch (error) {
     console.error("计算利润率失败:", error);
     proxy.$modal.msgError("计算利润率失败，请检查输入数据");
@@ -2318,11 +2409,16 @@ async function handleSubmit(action) {
     }
 
     emit("submit", { action, hasChanged });
+    // if (hasChanged) {
+    //   proxy.$modal.msgSuccess("保存成功");
+    // }
 
     if (action === "close") {
       visible.value = false;
     } else if (action === "continue") {
       resetForm(step1FormData.tagIds);
+      await fetchTags();
+      generateSpu(true);
       activeStep.value = 0;
     } else if (action === "next") {
       // next
@@ -2339,10 +2435,29 @@ async function handleSubmit(action) {
 }
 
 // 关闭对话框
-function handleClose() {
+/*function handleClose() {
   visible.value = false;
   emit("submit", { action: "cancel", hasChanged: false });
-}
+}*/
+
+//表格展示列
+const columns = ref([
+  { key: 0, label: "规格", visible: true },
+  { key: 1, label: "SKU", visible: true },
+  { key: 2, label: "采购价", visible: true },
+  { key: 3, label: "包装", visible: true },
+  { key: 4, label: "实重", visible: true },
+  { key: 5, label: "材积重", visible: false },
+  { key: 6, label: "实际发货", visible: false },
+  { key: 7, label: "运费", visible: true },
+  { key: 8, label: "成本价", visible: false },
+  { key: 9, label: "汇率", visible: false },
+  { key: 10, label: "建议售价", visible: false },
+  { key: 11, label: "利润", visible: false },
+  { key: 12, label: "利润率", visible: true },
+  { key: 13, label: "售价", visible: true },
+  { key: 14, label: "对比价", visible: false },
+]);
 
 // 暴露方法给父组件
 defineExpose({
@@ -2351,22 +2466,54 @@ defineExpose({
 </script>
 
 <style scoped>
+.product-wizard-container {
+  padding: 0;
+  min-height: calc(100vh - 84px);
+  display: flex;
+  flex-direction: column;
+  background: #f5f7fa;
+}
+
+.wizard-header {
+  margin-bottom: 0;
+  padding: 12px 20px;
+  background: #ffffff;
+  border-bottom: 1px solid #e4e7ed;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+
+.page-title {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.wizard-steps {
+  margin-bottom: 0;
+  padding: 16px 20px;
+  background: #ffffff;
+  border-bottom: 1px solid #e4e7ed;
+}
+
 .step-content {
-  max-height: 60vh;
+  flex: 1;
   overflow-y: auto;
-  padding: 10px;
+  padding: 16px 20px;
+}
+
+.right-buttons {
+  display: flex;
+  gap: 8px;
 }
 
 .mb-4 {
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 
 .mb-2 {
-  margin-bottom: 8px;
-}
-
-.mt-3 {
-  margin-top: 12px;
+  margin-bottom: 6px;
 }
 
 .options-container {
@@ -2376,24 +2523,17 @@ defineExpose({
 .option-row {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  border: 1px solid #e4e7ed;
+  gap: 8px;
+  border: 1px solid #dcdfe6;
   border-radius: 4px;
   background: #fafafa;
-  transition: all 0.3s;
+  transition: all 0.2s;
+  margin-bottom: 8px;
 }
 
 .option-row-collapsed {
   background: #f5f7fa;
-  padding: 10px 15px;
-}
-
-.option-input-group {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  margin-bottom: 16px;
+  padding: 8px 12px;
 }
 
 .input-label {
@@ -2546,10 +2686,6 @@ defineExpose({
   flex-shrink: 0;
 }
 
-.mt-2 {
-  margin-top: 8px;
-}
-
 .ml-2 {
   margin-left: 8px !important;
 }
@@ -2644,54 +2780,15 @@ defineExpose({
   color: #909399;
 }
 
-.server-image-item {
-  border: 2px solid transparent;
-  border-radius: 4px;
-  overflow: hidden;
-  cursor: pointer;
-  transition: border-color 0.3s;
-}
-
-.server-image-item:hover,
-.server-image-item.selected {
-  border-color: #409eff;
-}
-
 .server-image-item img {
   width: 100%;
   height: 80px;
   object-fit: cover;
 }
 
-.dialog-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
 .footer-right-buttons {
   display: flex;
   gap: 10px;
-}
-
-/* 可展开文本域样式 */
-.expandable-textarea {
-  width: 100%;
-}
-
-/* 选项值列表样式 */
-.option-value-list {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  width: 100%;
-}
-
-.option-value-item {
-  display: flex;
-  align-items: center;
-  width: 100%;
-  gap: 8px;
 }
 
 /* 第二步表单美化样式 */

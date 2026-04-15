@@ -1,22 +1,13 @@
 import { defineStore } from "pinia";
-import { getUsdRate } from "@/api/erp/productWizard";
+import { getUsdRate } from "@/api/erp/exchange-rate";
 
 // 定义汇率状态管理
 export const useExchangeRateStore = defineStore("exchangeRate", {
   state: () => ({
-    usdRate: null,
-    usdRateTime: null,
+    rate: null,
+    rateDate: null,
     isLoading: false,
   }),
-
-  getters: {
-    // 检查汇率是否为当天
-    isRateUpToDate: (state) => {
-      if (!state.usdRateTime) return false;
-      const today = new Date().toISOString().split("T")[0];
-      return state.usdRateTime === today;
-    },
-  },
 
   actions: {
     // 获取汇率数据
@@ -24,8 +15,8 @@ export const useExchangeRateStore = defineStore("exchangeRate", {
       this.isLoading = true;
       try {
         const response = await getUsdRate();
-        this.usdRate = response.data.usdRate;
-        this.usdRateTime = response.data.usdRateTime;
+        this.rate = response.data.rate;
+        this.rateDate = response.data.rateDate;
         // 缓存到本地存储
         this.cacheRate();
         return response.data;
@@ -43,8 +34,8 @@ export const useExchangeRateStore = defineStore("exchangeRate", {
         const cached = localStorage.getItem("exchangeRate");
         if (cached) {
           const data = JSON.parse(cached);
-          this.usdRate = data.usdRate;
-          this.usdRateTime = data.usdRateTime;
+          this.rate = data.rate;
+          this.rateDate = data.rateDate;
         }
       } catch (error) {
         console.error("加载缓存汇率失败:", error);
@@ -57,8 +48,8 @@ export const useExchangeRateStore = defineStore("exchangeRate", {
         localStorage.setItem(
           "exchangeRate",
           JSON.stringify({
-            usdRate: this.usdRate,
-            usdRateTime: this.usdRateTime,
+            rate: this.rate,
+            rateDate: this.rateDate,
           }),
         );
       } catch (error) {
@@ -68,10 +59,13 @@ export const useExchangeRateStore = defineStore("exchangeRate", {
 
     // 检查并更新汇率
     async checkAndUpdateRate() {
-      if (!this.isRateUpToDate) {
+      console.log("检查汇率");
+      const today = new Date().toISOString().split("T")[0];
+      if (this.rateDate !== today) {
+        console.log("汇率已过期，开始更新汇率");
         await this.fetchUsdRate();
       }
-      return this.usdRate;
+      return this.rate;
     },
   },
 });

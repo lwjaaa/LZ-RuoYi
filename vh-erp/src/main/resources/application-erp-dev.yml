@@ -35,3 +35,11 @@ logging:
 ruoyi:
   # 文件路径 示例（ Windows配置D:/ruoyi/uploadPath，Linux配置 /home/ruoyi/uploadPath）
   profile: C:/velarthome
+
+exchange-rate:
+  api-key: 74d001f87bf041459e68fd9b
+  base-url: https://v6.exchangerate-api.com/v6
+  connect-timeout: 5000
+  read-timeout: 10000
+  default-base-currency: USD
+  target-currencies: CNY

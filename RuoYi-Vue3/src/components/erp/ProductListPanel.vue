@@ -355,10 +355,6 @@
       @submit="handleWizardSubmit"
       @refresh="getList"
     /> -->
-    <ProductCreationWizard
-      ref="creationWizardModal"
-      @submit="handleWizardSubmit"
-    />
 
     <!-- erp 商品导入对话框 -->
     <el-dialog
@@ -548,14 +544,26 @@ function handleSelectionChange(selection) {
 /** 新增按钮操作 - 打开向导 */
 function handleAdd() {
   const selectedTagIds = props.selectedTags?.map((tag) => tag.tagId) || [];
-  creationWizardModal.value.open(selectedTagIds, null);
+  // creationWizardModal.value.open(selectedTagIds, null);
+  // 改成新的页面打开
+  proxy.$tab.openPage(
+      '新增选品',
+      '/erp/product/creation-wizard/create',
+      { tagIds: JSON.stringify(selectedTagIds) }
+  );
+
 }
 
 /** 修改按钮操作 - 打开向导 */
 function handleUpdate(row) {
   const _productId = row.productId || ids.value;
   console.log("编辑 erp 商品，productId:", _productId, "row", row);
-  creationWizardModal.value.open(null, _productId, 1);
+  // creationWizardModal.value.open(null, _productId, 1);
+  proxy.$tab.openPage(
+      '编辑商品',
+      '/erp/product/creation-wizard/edit/' + _productId,
+      { step: 1 }
+  );
 }
 
 /** 向导提交处理 */

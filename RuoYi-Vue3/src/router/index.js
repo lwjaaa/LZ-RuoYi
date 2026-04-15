@@ -163,7 +163,35 @@ export const dynamicRoutes = [
         meta: { title: '修改生成配置', activeMenu: '/tool/gen' }
       }
     ]
-  }
+  },
+  {
+    path: '/erp/product/creation-wizard',
+    component: Layout,
+    hidden: true,
+    permissions: ['erp:product:add'],
+    children: [
+      {
+        path: 'create',
+        component: () => import('@/views/erp/product/create'),
+        name: 'ProductCreate',
+        meta: { title: '新增选品', activeMenu: '/erp/product' }
+      }
+    ]
+  },
+  {
+    path: '/erp/product/creation-wizard/edit',
+    component: Layout,
+    hidden: true,
+    permissions: ['erp:product:edit'],
+    children: [
+      {
+        path: ':productId(\\d+)',
+        component: () => import('@/views/erp/product/create'),
+        name: 'ProductEdit',
+        meta: { title: '编辑商品', activeMenu: '/erp/product', noCache: true }
+      }
+    ]
+  },
 ]
 
 const router = createRouter({
