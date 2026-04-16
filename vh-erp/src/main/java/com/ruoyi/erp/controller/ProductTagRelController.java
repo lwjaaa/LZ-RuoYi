@@ -34,7 +34,7 @@ import com.ruoyi.common.core.page.TableDataInfo;
  * @date 2026-03-24
  */
 @RestController
-@RequestMapping("/vh-erp/ProductTag")
+@RequestMapping("/erp/ProductTag")
 public class ProductTagRelController extends BaseController
 {
     @Resource
@@ -43,7 +43,7 @@ public class ProductTagRelController extends BaseController
     /**
      * 查询erp商品与标签关联列表
      */
-    @PreAuthorize("@ss.hasPermi('vh-erp:ProductTag:list')")
+    @PreAuthorize("@ss.hasPermi('erp:ProductTag:list')")
     @GetMapping("/list")
     public TableDataInfo list(ProductTagRelQuery productTagRelQuery)
     {
@@ -59,7 +59,7 @@ public class ProductTagRelController extends BaseController
     /**
      * 导出erp商品与标签关联列表
      */
-    @PreAuthorize("@ss.hasPermi('vh-erp:ProductTag:export')")
+    @PreAuthorize("@ss.hasPermi('erp:ProductTag:export')")
     @Log(title = "erp商品与标签关联", businessType = BusinessType.EXPORT)
     @PostMapping("/export")
     public void export(HttpServletResponse response, ProductTagRelQuery productTagRelQuery)
@@ -73,7 +73,7 @@ public class ProductTagRelController extends BaseController
     /**
      * 获取erp商品与标签关联详细信息
      */
-    @PreAuthorize("@ss.hasPermi('vh-erp:ProductTag:query')")
+    @PreAuthorize("@ss.hasPermi('erp:ProductTag:query')")
     @GetMapping(value = "/{relId}")
     public AjaxResult getInfo(@PathVariable("relId") Long relId)
     {
@@ -84,7 +84,7 @@ public class ProductTagRelController extends BaseController
     /**
      * 新增erp商品与标签关联
      */
-    @PreAuthorize("@ss.hasPermi('vh-erp:ProductTag:add')")
+    @PreAuthorize("@ss.hasPermi('erp:ProductTag:add')")
     @Log(title = "erp商品与标签关联", businessType = BusinessType.INSERT)
     @PostMapping
     public AjaxResult add(@RequestBody ProductTagRelInsert productTagRelInsert)
@@ -96,7 +96,7 @@ public class ProductTagRelController extends BaseController
     /**
      * 修改erp商品与标签关联
      */
-    @PreAuthorize("@ss.hasPermi('vh-erp:ProductTag:edit')")
+    @PreAuthorize("@ss.hasPermi('erp:ProductTag:edit')")
     @Log(title = "erp商品与标签关联", businessType = BusinessType.UPDATE)
     @PutMapping
     public AjaxResult edit(@RequestBody ProductTagRelEdit productTagRelEdit)
@@ -108,7 +108,7 @@ public class ProductTagRelController extends BaseController
     /**
      * 删除erp商品与标签关联
      */
-    @PreAuthorize("@ss.hasPermi('vh-erp:ProductTag:remove')")
+    @PreAuthorize("@ss.hasPermi('erp:ProductTag:remove')")
     @Log(title = "erp商品与标签关联", businessType = BusinessType.DELETE)
 	@DeleteMapping("/{relIds}")
     public AjaxResult remove(@PathVariable Long[] relIds)
@@ -119,7 +119,7 @@ public class ProductTagRelController extends BaseController
     /**
      * 导入erp商品与标签关联数据
      */
-    @PreAuthorize("@ss.hasPermi('vh-erp:ProductTag:import')")
+    @PreAuthorize("@ss.hasPermi('erp:ProductTag:import')")
     @Log(title = "erp商品与标签关联", businessType = BusinessType.IMPORT)
     @PostMapping("/importData")
     public AjaxResult importData(MultipartFile file, boolean updateSupport) throws Exception

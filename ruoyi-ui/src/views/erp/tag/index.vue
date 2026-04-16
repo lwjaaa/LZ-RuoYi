@@ -89,7 +89,7 @@
               icon="el-icon-plus"
               size="mini"
               @click="handleAdd"
-              v-hasPermi="['vh-erp:tag:add']"
+              v-hasPermi="['erp:tag:add']"
               >新增</el-button
             >
           </el-col>
@@ -110,7 +110,7 @@
               icon="el-icon-upload2"
               size="mini"
               @click="handleImport"
-              v-hasPermi="['vh-erp:tag:import']"
+              v-hasPermi="['erp:tag:import']"
               >导入</el-button
             >
           </el-col>
@@ -121,7 +121,7 @@
               icon="el-icon-download"
               size="mini"
               @click="handleExport"
-              v-hasPermi="['vh-erp:tag:export']"
+              v-hasPermi="['erp:tag:export']"
               >导出</el-button
             >
           </el-col>
@@ -237,7 +237,7 @@
                 type="text"
                 icon="el-icon-edit"
                 @click="handleUpdate(scope.row)"
-                v-hasPermi="['vh-erp:tag:edit']"
+                v-hasPermi="['erp:tag:edit']"
                 >修改</el-button
               >
               <el-button
@@ -245,7 +245,7 @@
                 type="text"
                 icon="el-icon-plus"
                 @click="handleAdd(scope.row)"
-                v-hasPermi="['vh-erp:tag:add']"
+                v-hasPermi="['erp:tag:add']"
                 >新增</el-button
               >
               <el-button
@@ -253,7 +253,7 @@
                 type="text"
                 icon="el-icon-delete"
                 @click="handleDelete(scope.row)"
-                v-hasPermi="['vh-erp:tag:remove']"
+                v-hasPermi="['erp:tag:remove']"
                 >删除</el-button
               >
             </template>
@@ -378,7 +378,7 @@ export default {
         createTime: null,
       },
       // 导出地址
-      exportUrl: "vh-erp/tag/export",
+      exportUrl: "erp/tag/export",
       // erp标签导入参数
       upload: {
         // 是否显示弹出层（erp标签导入）
@@ -392,9 +392,9 @@ export default {
         // 设置上传的请求头部
         headers: { Authorization: "Bearer " + getToken() },
         // 上传的地址
-        url: process.env.VUE_APP_BASE_API + "/vh-erp/tag/importData",
+        url: process.env.VUE_APP_BASE_API + "/erp/tag/importData",
         // 下载模板的地址
-        templateUrl: "vh-erp/tag/importTemplate",
+        templateUrl: "erp/tag/importTemplate",
       },
     };
   },

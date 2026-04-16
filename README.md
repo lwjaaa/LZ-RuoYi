@@ -1,747 +1,544 @@
-<p align="center">
-	<img alt="logo" src="https://oscimg.oschina.net/oscnet/up-d3d0a9303e11d522a06cd263f3079027715.png">
-</p>
-<h1 align="center" style="margin: 30px 0 30px; font-weight: bold;">RuoYi v3.9.1</h1>
-<h4 align="center">基于SpringBoot+Vue前后端分离的Java快速开发框架</h4>
-<p align="center">
-	<a href="https://gitee.com/y_project/RuoYi-Vue/stargazers"><img src="https://gitee.com/y_project/RuoYi-Vue/badge/star.svg?theme=dark"></a>
-	<a href="https://gitee.com/y_project/RuoYi-Vue"><img src="https://img.shields.io/badge/RuoYi-v3.8.9-brightgreen.svg"></a>
-	<a href="https://gitee.com/y_project/RuoYi-Vue/blob/master/LICENSE"><img src="https://img.shields.io/github/license/mashape/apistatus.svg"></a>
-</p>
+# LZ-RuoYi 项目说明文档 (AI Coding 友好版)
 
+## 📌 项目概述
 
-## 介绍地址
+本项目是基于若依（RuoYi）框架深度定制的开发项目。为了提供更高效的协作体验和精准的 AI 辅助编码支持，特编写此文档以明确项目的技术栈、目录结构及开发规范。
 
-B站 https://www.bilibili.com/video/BV15V9AYgEvL/?share_source=copy_web&vd_source=a4c1f9a58f1a8dd2e581c0f88e037fca
+## ⚠️ 重要声明 (AI Coding 核心上下文)
 
-抖音 https://v.douyin.com/i5jgjvss/ 
+1. **前端项目说明**：
+   - 🚫 **`ruoyi-ui` 是已弃用的前端项目**，仅作为历史代码归档或参考，**请勿在此目录下进行任何功能开发或代码修改**。
+   - ✅ **真正的前端项目是 `RuoYi-Vue3`**，所有前端相关的新需求、Bug 修复和代码生成请严格在 `RuoYi-Vue3` 目录下进行。
+2. **后端项目说明**：
+   - 后端依然沿用标准的若依 Spring Boot 多模块架构。
 
-![1](assets/1.png)
+## 🛠️ 技术栈
 
-![2](assets/2.png)
+### 后端 (Spring Boot)
 
-## 增加功能
+| 技术            | 版本    | 说明           |
+| --------------- | ------- | -------------- |
+| Spring Boot     | 3.5.11  | 核心框架       |
+| Java            | 17      | 开发语言       |
+| MyBatis-Plus    | 3.5.9   | ORM 框架       |
+| MyBatis         | 3.0.5   | 持久层框架     |
+| Druid           | 1.2.28  | 数据库连接池   |
+| PageHelper      | 2.1.1   | 分页插件       |
+| Spring Security | -       | 安全框架       |
+| JWT             | 0.9.1   | Token 认证     |
+| SpringDoc       | 2.8.16  | API 文档       |
+| FastJSON2       | 2.0.61  | JSON 解析      |
+| Hutool          | 5.8.38  | 工具类库       |
+| Lombok          | 1.18.36 | 代码简化       |
+| Spring GraphQL  | -       | GraphQL 客户端 |
+| POI             | 4.1.2   | Excel 处理     |
+| Quartz          | -       | 定时任务       |
 
-在不影响若依原本功能基础上，集成mybatisPlus、lombok、数据批量插入、优化前端代码生成
+### 前端 (RuoYi-Vue3)
 
-1. 集成mybatisPlus 3.5.9
-2. 集成lombok 1.18.36
-3. 根据lombok、mybatisPlus与业务生成对应的dto和vo
-4. 生成lombok和mybatisPlus的代码
-5. 优化web前端生成，如果是文件类型生成的代码列表可以直接下载，动态显隐列，长文本内容可以隐藏
-6. 批量生成数据
-7. 批量导入功能
+| 技术         | 版本   | 说明                   |
+| ------------ | ------ | ---------------------- |
+| Vue          | 3.5.26 | 渐进式 JavaScript 框架 |
+| Vite         | 6.4.1  | 构建工具               |
+| Element Plus | 2.13.1 | UI 组件库              |
+| Pinia        | 3.0.4  | 状态管理               |
+| Vue Router   | 4.6.4  | 路由管理               |
+| Axios        | 1.13.2 | HTTP 客户端            |
+| ECharts      | 5.6.0  | 图表库                 |
+| Vue Quill    | 1.2.0  | 富文本编辑器           |
+| VueDraggable | 4.1.0  | 拖拽排序               |
+| Splitpanes   | 4.0.4  | 面板分割               |
 
-### 1、集成mybatisPlus 3.5.9与lombok 1.18.24
+## 📂 核心目录结构
 
-```xml
-        <lombok.version>1.18.36</lombok.version>
-        <mybatis-plus.version>3.5.9</mybatis-plus.version>
+```text
+LZ-RuoYi/ 
+├── ruoyi-admin/ # 主启动模块（入口） 
+│ └── src/main/ 
+│ ├── java/ # Java 源码 
+│ └── resources/ # 配置文件 
+├── ruoyi-common/ # 通用工具模块 
+│ └── src/main/java/ 
+│ ├── annotation/ # 自定义注解 
+│ ├── config/ # 通用配置 
+│ ├── constant/ # 常量定义 
+│ ├── core/ # 核心类 
+│ ├── enums/ # 枚举类 
+│ ├── exception/ # 异常处理 
+│ ├── filter/ # 过滤器 
+│ ├── utils/ # 工具类 
+│ └── xss/ # XSS 防护 
+├── ruoyi-framework/ # 核心框架模块 
+│ └── src/main/java/ 
+│ ├── aspectj/ # AOP 切面 
+│ ├── config/ # 框架配置 
+│ ├── datasource/ # 数据源 
+│ ├── interceptor/ # 拦截器 
+│ ├── manager/ # 管理器 
+│ ├── security/ # 安全认证 
+│ └── web/ # Web 相关 
+├── ruoyi-system/ # 系统管理模块 
+│ └── src/main/ 
+│ ├── java/ # 用户、角色、菜单等 
+│ └── resources/mapper/ # MyBatis XML 
+├── ruoyi-quartz/ # 定时任务模块 
+├── ruoyi-generator/ # 代码生成模块 
+├── vh-erp/ # ERP 业务模块（自定义开发）⭐ 
+│ └── src/main/java/com/ruoyi/erp/ 
+│ ├── config/ # 配置类 
+│ ├── constant/ # 常量 
+│ ├── controller/ # 控制器层 
+│ ├── mapper/ # MyBatis-Plus Mapper 
+│ ├── model/ # 实体类 
+│ ├── service/ # 服务层 
+│ ├── task/ # 定时任务 
+│ └── graphql/ # GraphQL 客户端（Shopify） 
+├── RuoYi-Vue3/ # 前端项目（Vue 3 + Vite）⭐ 
+│ ├── src/ 
+│ │ ├── api/ # API 接口 
+│ │ │ ├── erp/ # ERP 业务接口 
+│ │ │ ├── system/ # 系统管理接口 
+│ │ │ └── monitor/ # 监控接口 
+│ │ ├── views/ # 页面组件 
+│ │ │ ├── erp/ # ERP 业务页面 
+│ │ │ │ ├── product/ # 商品管理 
+│ │ │ │ ├── variant/ # 商品变体 
+│ │ │ │ ├── tag/ # 标签管理 
+│ │ │ │ ├── ProductTag/ # 商品标签关联 
+│ │ │ │ ├── image/ # 图片管理 
+│ │ │ │ ├── media/ # 媒体管理 
+│ │ │ │ └── task/ # 任务管理 
+│ │ │ ├── system/ # 系统管理页面 
+│ │ │ └── monitor/ # 监控页面 
+│ │ ├── components/ # 公共组件 
+│ │ ├── store/ # Pinia 状态管理 
+│ │ ├── router/ # 路由配置 
+│ │ ├── utils/ # 工具函数 
+│ │ └── layout/ # 布局组件 
+│ └── vite/plugins/ # Vite 插件配置 
+├── ruoyi-ui/ # ⚠️ 已废弃（不要在此目录修改） 
+├── sql/ # 数据库脚本 
+│ ├── 20240629_init1.sql # 初始化脚本 1 
+│ ├── 20240629_init2.sql # 初始化脚本 2 
+│ ├── 20260324_erp.sql # ERP 模块表结构 
+│ └── 20260324_erp_menu.sql # ERP 模块菜单数据 
+├── doc/ # 项目文档 
+└── pom.xml # Maven 父 POM
+```
+---
+
+## 🚀 快速开始
+
+### 环境要求
+
+- **JDK**: 17+
+- **Maven**: 3.6+
+- **MySQL**: 5.7+ / 8.0+
+- **Redis**: 5.0+
+- **Node.js**: 18+
+- **npm/yarn**: 最新稳定版
+
+### 数据库初始化
+
+1. 创建数据库 `ry-vue`（或自定义名称）
+2. 按顺序执行 SQL 脚本：
+```text
+bash
+进入 sql 目录
+cd sql
+执行初始化脚本
+mysql -u root -p ry-vue < 20240629_init1.sql mysql -u root -p ry-vue < 20240629_init2.sql
+执行 ERP 模块脚本
+mysql -u root -p ry-vue < 20260324_erp.sql mysql -u root -p ry-vue < 20260324_erp_menu.sql
 ```
 
-```xml
-            <dependency>
-                <groupId>org.projectlombok</groupId>
-                <artifactId>lombok</artifactId>
-                <version>${lombok.version}</version>
-                <optional>true</optional>
-            </dependency>
+### 后端启动
 
-            <dependency>
-                <groupId>com.baomidou</groupId>
-                <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
-                <version>${mybatis-plus.version}</version>
-            </dependency>
+1. **修改配置文件**
+
+编辑 `ruoyi-admin/src/main/resources/application-dev.yml`
+
+2. **编译项目**
+
+```text
+bash
+在项目根目录执行
+mvn clean package -DskipTests
 ```
 
-### 2、在自己需要导入mybatisPlus的模块导入依赖
+3. **启动应用**
 
-```xml
-        <dependency>
-            <groupId>com.baomidou</groupId>
-            <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
-        </dependency>
+```text
+bash
+方式一：使用 Maven
+cd ruoyi-admin 
+mvn spring-boot:run
+方式二：使用启动脚本（Windows）
+.\ry.bat
+方式三：使用启动脚本（Linux/Mac）
+./ry.sh
+方式四：直接运行 JAR
+java -jar ruoyi-admin/target/ruoyi-admin.jar
 ```
 
-![YY_2026-03-19_17-40-29](assets/YY_2026-03-19_17-40-29.png)
+4. **访问后端**
 
-### 3、根据lombok、mybatisPlus与业务生成对应的dto和vo
+- 应用地址: http://localhost:8080
+- API 文档: http://localhost:8080/swagger-ui.html
 
-![image-20250227112112873](assets/image-20250227112112873.png)
+### 前端启动
 
-**实体**
+1. **安装依赖**
 
-```java
-package com.ruoyi.test.model.domain;
-
-import java.io.Serializable;
-import java.util.Map;
-import java.util.Date;
-import com.fasterxml.jackson.annotation.JsonFormat;
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableName;
-import lombok.Data;
-import com.ruoyi.common.annotation.Excel;
-import com.fasterxml.jackson.annotation.JsonInclude;
-/**
- * 位置信息对象 tb_address_info
- *
- * @author ruoyi
- * @date 2025-02-27
- */
-@TableName("tb_address_info")
-@Data
-public class AddressInfo implements Serializable
-{
-    private static final long serialVersionUID = 1L;
-
-    /** 编号 */
-    @Excel(name = "编号")
-    @TableId(value = "id", type = IdType.ASSIGN_ID)
-    private Long id;
-
-    /** 父级编号 */
-    @Excel(name = "父级编号")
-    private Long parentId;
-
-    /** 位置名称 */
-    @Excel(name = "位置名称")
-    private String name;
-
-    /** 类型 */
-    @Excel(name = "类型")
-    private String addressType;
-
-    /** 图片 */
-    @Excel(name = "图片")
-    private String imageInfo;
-
-    /** 文件 */
-    @Excel(name = "文件")
-    private String fileInfo;
-
-    /** 备注 */
-    @Excel(name = "备注")
-    private String remark;
-
-    /** 状态 */
-    @Excel(name = "状态")
-    private String status;
-
-    /** 创建人 */
-    @Excel(name = "创建人")
-    private Long userId;
-
-    /** 创建时间 */
-    @JsonFormat(pattern = "yyyy-MM-dd")
-    @Excel(name = "创建时间", width = 30, dateFormat = "yyyy-MM-dd")
-    private Date createTime;
-
-    /** 更新时间 */
-    @JsonFormat(pattern = "yyyy-MM-dd")
-    @Excel(name = "更新时间", width = 30, dateFormat = "yyyy-MM-dd")
-    private Date updateTime;
-
-    /** 请求参数 */
-    @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    @TableField(exist = false)
-    private Map<String, Object> params;
-}
-
+```text
+bash
+进入前端目录
+cd RuoYi-Vue3
+使用 npm
+npm install
+或使用 yarn
+yarn install
 ```
 
-**VO** 
+2. **修改配置**
 
-```java
-package com.ruoyi.test.model.vo.addressInfo;
+编辑 `.env.development`：
+```text
+env
+开发环境配置
+VUE_APP_BASE_API = 'http://localhost:8080'
+```
 
-import java.io.Serializable;
-import java.util.Date;
-import com.fasterxml.jackson.annotation.JsonFormat;
-import lombok.Data;
-import com.ruoyi.common.annotation.Excel;
-import org.springframework.beans.BeanUtils;
-import com.ruoyi.test.model.domain.AddressInfo;
-/**
- * 位置信息Vo对象 tb_address_info
- *
- * @author ruoyi
- * @date 2025-02-27
- */
-@Data
-public class AddressInfoVo implements Serializable
-{
-    private static final long serialVersionUID = 1L;
+3. **启动开发服务器**
 
-    /** 编号 */
-    @Excel(name = "编号")
-    private Long id;
+```text
+bash
+开发模式
+npm run dev
+或
+yarn dev
+```
+4. **访问前端**
 
-    /** 父级编号 */
-    @Excel(name = "父级编号")
-    private Long parentId;
+浏览器打开: http://localhost:80
 
-    /** 位置名称 */
-    @Excel(name = "位置名称")
-    private String name;
+默认账号: `admin`  
+默认密码: `admin123`
 
-    /** 类型 */
-    @Excel(name = "类型")
-    private String addressType;
+### 生产环境部署
 
-    /** 图片 */
-    @Excel(name = "图片")
-    private String imageInfo;
+1. **前端打包**
 
-    /** 文件 */
-    @Excel(name = "文件")
-    private String fileInfo;
+```text
+bash 
+cd RuoYi-Vue3 
+npm run build:prod
+```
 
-    /** 备注 */
-    @Excel(name = "备注")
-    private String remark;
+打包后的文件在 `dist` 目录，可部署到 Nginx 或其他 Web 服务器。
 
-    /** 状态 */
-    @Excel(name = "状态")
-    private String status;
+2. **后端打包**
 
-    /** 创建人 */
-    @Excel(name = "创建人")
-    private Long userId;
+```
+bash 
+mvn clean package -DskipTests
+```
 
-    /** 创建时间 */
-    @JsonFormat(pattern = "yyyy-MM-dd")
-    @Excel(name = "创建时间", width = 30, dateFormat = "yyyy-MM-dd")
-    private Date createTime;
+生成的 JAR 文件在 `ruoyi-admin/target/ruoyi-admin.jar`
 
-    /** 更新时间 */
-    @JsonFormat(pattern = "yyyy-MM-dd")
-    @Excel(name = "更新时间", width = 30, dateFormat = "yyyy-MM-dd")
-    private Date updateTime;
+3. **Nginx 配置示例**
 
-
- /**
- * 对象转封装类
- *
- * @param addressInfo AddressInfo实体对象
- * @return AddressInfoVo
- */
-    public static AddressInfoVo objToVo(AddressInfo addressInfo) {
-        if (addressInfo == null) {
-            return null;
-        }
-        AddressInfoVo addressInfoVo = new AddressInfoVo();
-        BeanUtils.copyProperties(addressInfo, addressInfoVo);
-        return addressInfoVo;
+```text
+nginx 
+server { 
+    listen 80; 
+    server_name your-domain.com;
+    # 前端静态文件
+    location / {
+        root /usr/share/nginx/html;
+        index index.html;
+        try_files $uri $uri/ /index.html;
     }
-}
 
-```
-
-**编辑DTO**
-
-```java
-package com.ruoyi.test.model.dto.addressInfo;
-
-import java.io.Serializable;
-import java.util.Date;
-import com.fasterxml.jackson.annotation.JsonFormat;
-import lombok.Data;
-import org.springframework.beans.BeanUtils;
-import com.ruoyi.test.model.domain.AddressInfo;
-/**
- * 位置信息Vo对象 tb_address_info
- *
- * @author ruoyi
- * @date 2025-02-27
- */
-@Data
-public class AddressInfoEdit implements Serializable
-{
-    private static final long serialVersionUID = 1L;
-
-    /** 编号 */
-    private Long id;
-
-    /** 父级编号 */
-    private Long parentId;
-
-    /** 位置名称 */
-    private String name;
-
-    /** 类型 */
-    private String addressType;
-
-    /** 图片 */
-    private String imageInfo;
-
-    /** 文件 */
-    private String fileInfo;
-
-    /** 备注 */
-    private String remark;
-
-    /** 状态 */
-    private String status;
-
-    /** 创建人 */
-    private Long userId;
-
-    /**
-     * 对象转封装类
-     *
-     * @param addressInfoEdit 编辑对象
-     * @return AddressInfo
-     */
-    public static AddressInfo editToObj(AddressInfoEdit addressInfoEdit) {
-        if (addressInfoEdit == null) {
-            return null;
-        }
-        AddressInfo addressInfo = new AddressInfo();
-        BeanUtils.copyProperties(addressInfoEdit, addressInfo);
-        return addressInfo;
+    # 后端 API 代理
+    location /prod-api/ {
+        proxy_pass http://localhost:8080/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     }
 }
 ```
 
-**插入DTO**
+
+## 🤖 AI 辅助编程指南 (Prompt Guidelines)
+
+当 AI（如 Trae, Cursor 等）阅读本仓库时，请遵循以下规则：
+
+1. **优先聚焦**：在回答前端相关问题或生成代码时，默认只读取和分析 `RuoYi-Vue3` 目录下的代码。
+2. **技术对齐**：前端代码必须使用 Vue3 的 Composition API 语法（推荐 `<script setup>`），并结合 Element Plus 组件库。严禁使用 Vue2 的 Options API。
+3. **接口请求**：前端请求统一使用封装好的 `request.js` 工具，后端统一返回 `AjaxResult` 格式。
+4. **代码生成**：若依自带的代码生成器 (`ruoyi-generator`) 可能会生成旧版 Vue2 代码，使用 AI 进行前端重构时，请直接翻译为 Vue3 语法并放置在 `RuoYi-Vue3` 相应的 `views` 目录下。
+
+---
+
+## 📋 内置功能
+
+### 系统管理（若依原生）
+
+1. 👤 **用户管理**: 系统用户配置与管理
+2. 🏢 **部门管理**: 组织机构配置，树形结构展示，支持数据权限
+3. 💼 **岗位管理**: 用户职务配置
+4. 📑 **菜单管理**: 菜单配置、操作权限、按钮权限标识
+5. 🎭 **角色管理**: 角色权限分配、数据范围划分
+6. 📚 **字典管理**: 固定数据维护
+7. ⚙️ **参数管理**: 系统动态参数配置
+8. 📢 **通知公告**: 系统消息发布
+9. 📝 **操作日志**: 正常操作与异常信息记录
+10. 🔐 **登录日志**: 登录记录与异常查询
+11. 👥 **在线用户**: 活跃用户监控
+12. ⏰ **定时任务**: 任务调度与执行结果日志
+13. 🔧 **代码生成**: 前后端代码自动生成（Java/HTML/XML/SQL）
+14. 📖 **系统接口**: API 接口文档自动生成
+15. 📊 **服务监控**: CPU、内存、磁盘、堆栈监控
+16. 💾 **缓存监控**: 缓存信息查询与统计
+17. 🎨 **在线构建器**: 表单拖拽生成 HTML
+18. 🔗 **连接池监控**: 数据库连接池状态与 SQL 分析
+
+### ERP 业务模块（vh-erp）⭐
+
+19. 🛍️ **商品管理**:
+    - 商品创建向导（两步流程）
+    - 商品信息录入（标题、类别、类型）
+    - 商品详情多选项卡（DESCRIPTION/SIZE/MATERIAL/NOTE/PACKAGE_INCLUDE）
+    - 富文本编辑器支持 HTML 编辑与预览
+    - 商品来源 URL、采购链接管理
+
+20. 🏷️ **标签管理**:
+    - 多级标签分类
+    - 标签级联选择器
+    - 标签与商品关联
+
+21. 📦 **变体管理**:
+    - 动态选项配置（采购名称/英文名称）
+    - 变体分录表格
+    - SKU 自动生成与管理
+    - 规格图拖拽上传
+    - 变体拖拽排序
+
+22. 💰 **价格与成本**:
+    - 采购价录入
+    - 包装尺寸（长/宽/高）
+    - 实重与材积重自动计算
+    - 运费自动计算
+    - 成本价 = 采购价 + 运费
+    - 汇率管理（自动同步）
+    - 建议售价（30% 利润）
+    - 实际利润与利润率计算
+
+23. 🖼️ **媒体资源管理**:
+    - 图片/视频上传与管理
+    - 服务器图片导入
+    - 图片拖拽排序
+    - 图片预览与放大
+    - 视频缩略图与播放
+    - 媒体文件搜索
+
+24. 🔄 **Shopify 集成**:
+    - GraphQL API 对接
+    - 商品同步到 Shopify
+    - 变体同步
+    - 媒体资源同步
+    - 速率限制处理
+
+25. ⚡ **定时任务**:
+    - 汇率自动更新
+    - 商品同步任务
+    - 数据清理任务
+
+---
+
+## 🔧 开发指南
+
+### 后端开发规范
+
+#### 代码分层
 
 ```java
-package com.ruoyi.test.model.dto.addressInfo;
-
-import java.io.Serializable;
-import java.util.Date;
-import com.fasterxml.jackson.annotation.JsonFormat;
-import lombok.Data;
-import org.springframework.beans.BeanUtils;
-import com.ruoyi.test.model.domain.AddressInfo;
-/**
- * 位置信息Vo对象 tb_address_info
- *
- * @author ruoyi
- * @date 2025-02-27
- */
-@Data
-public class AddressInfoInsert implements Serializable
-{
-    private static final long serialVersionUID = 1L;
-
-    /** 编号 */
-    private Long id;
-
-    /** 父级编号 */
-    private Long parentId;
-
-    /** 位置名称 */
-    private String name;
-
-    /** 类型 */
-    private String addressType;
-
-    /** 图片 */
-    private String imageInfo;
-
-    /** 文件 */
-    private String fileInfo;
-
-    /** 备注 */
-    private String remark;
-
-    /** 状态 */
-    private String status;
-
-    /** 创建人 */
-    private Long userId;
-
-    /**
-     * 对象转封装类
-     *
-     * @param addressInfoInsert 插入对象
-     * @return AddressInfoInsert
-     */
-    public static AddressInfo insertToObj(AddressInfoInsert addressInfoInsert) {
-        if (addressInfoInsert == null) {
-            return null;
-        }
-        AddressInfo addressInfo = new AddressInfo();
-        BeanUtils.copyProperties(addressInfoInsert, addressInfo);
-        return addressInfo;
+// Controller 层 - 接收请求
+@RestController
+@RequestMapping("/erp/product")
+public class ErpProductController {
+    @Autowired
+    private IErpProductService productService;
+    
+    @GetMapping("/list")
+    public TableDataInfo list(ErpProduct product) {
+        startPage();
+        List<ErpProduct> list = productService.selectList(product);
+        return getDataTable(list);
     }
 }
 
-```
-
-**查询DTO**
-
-```java
-package com.ruoyi.test.model.dto.addressInfo;
-
-import java.util.Map;
-import java.io.Serializable;
-import java.util.Date;
-import com.fasterxml.jackson.annotation.JsonFormat;
-import lombok.Data;
-import com.fasterxml.jackson.annotation.JsonInclude;
-import org.springframework.beans.BeanUtils;
-import com.fasterxml.jackson.annotation.JsonFormat;
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.ruoyi.test.model.domain.AddressInfo;
-/**
- * 位置信息Query对象 tb_address_info
- *
- * @author ruoyi
- * @date 2025-02-27
- */
-@Data
-public class AddressInfoQuery implements Serializable
-{
-    private static final long serialVersionUID = 1L;
-
-    /** 父级编号 */
-    private Long parentId;
-
-    /** 位置名称 */
-    private String name;
-
-    /** 类型 */
-    private String addressType;
-
-    /** 状态 */
-    private String status;
-
-    /** 创建人 */
-    private Long userId;
-
-    /** 创建时间 */
-    @JsonFormat(pattern = "yyyy-MM-dd")
-    private Date createTime;
-
-    /** 更新时间 */
-    @JsonFormat(pattern = "yyyy-MM-dd")
-    private Date updateTime;
-
-    /** 请求参数 */
-    @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    @TableField(exist = false)
-    private Map<String, Object> params;
-
-    /**
-     * 对象转封装类
-     *
-     * @param addressInfoQuery 查询对象
-     * @return AddressInfo
-     */
-    public static AddressInfo queryToObj(AddressInfoQuery addressInfoQuery) {
-        if (addressInfoQuery == null) {
-            return null;
-        }
-        AddressInfo addressInfo = new AddressInfo();
-        BeanUtils.copyProperties(addressInfoQuery, addressInfo);
-        return addressInfo;
-    }
-}
-
-```
-
-### 前端页面优化展示
-
-![image-20250227112620456](assets/image-20250227112620456.png)
-
-### 批量插入
-
-![image-20250227112750064](assets/image-20250227112750064.png)
-
-## 公共功能
-
-### 1.自定义缓存
-
-#### 	1.缓存注解
-
-```java
-/**
- * 自定义缓存注解，父类字段无法拿到
- * 坚持是前行的舟
- */
-@Target(ElementType.METHOD)
-@Retention(RetentionPolicy.RUNTIME)
-public @interface CustomCacheable {
-    String keyPrefix();          // 缓存 key 的前缀，你要设置的key的前缀
-
-    String keyField() default "";           // 从方法入参中提取 key 的字段路径（支持嵌套字段）
-
-    long expireTime() default 3600L; // 缓存时间（秒）
-
-    boolean paginate() default false; // 是否启用分页缓存
-
-    String pageNumberField() default ""; // 页码字段（如果 paginate 为 true，则使用该字段）
-
-    String pageSizeField() default "";  // 每页大小字段（如果 paginate 为 true，则使用该字段）
-
-    boolean useQueryParamsAsKey() default false; // 是否将整个查询对象转换为 JSON 字符串作为缓存 key 的一部分
-}
-```
-
-#### 2. 删除缓存
-
-```java
-@Target(ElementType.METHOD)
-@Retention(RetentionPolicy.RUNTIME)
-@Documented
-public @interface CustomCacheEvict {
-
-    String[] keyPrefixes();     //你定义的缓存前缀
-
-    String[] keyFields() default {}; // 支持嵌套，如 "request.userId"
-
-    boolean useQueryParamsAsKey() default false; // 如果true，加上参数JSON串模糊删除
-
-}
-```
-
-### 2.自定义排序
-
-1. 注解
-
-```java
-/**
- * 自定义排序注解
- * 首先我希望我变好，也希望你
- *
- * @Author: YY
- */
-@Target(ElementType.METHOD)
-@Retention(RetentionPolicy.RUNTIME)
-@Documented
-public @interface CustomSort {
-    /*
-       createTime-create_time,这样一一对应，对应数据库字段
-     */
-    String[] sortFields() default {};   //排序字段，就是你前端传过来的字段，一一对应
-
-    String[] sortMappingFields() default {}; //映射字段，前端只需要传过来字段名，如果多表查询设置映射字段，映射字段为查询时所需字段
-}
-```
-
-2. 查询mapper
-
-```sql
-        <choose>
-            <when test="params.sortSql != null and params.sortSql != ''">
-                ${params.sortSql}
-            </when>
-            <otherwise>
-                order by create_time desc
-            </otherwise>
-        </choose>
-```
-
-3. 使用
-
-```java
-    @CustomSort(
-            sortFields = {"usageCount", "lookCount", "downloadCount", "createTime", "updateTime", "orderNum"},
-            sortMappingFields = {
-                    "usage_count", "look_count", "download_count", "create_time", "update_time", "order_num"
-            })
+// Service 层 - 业务逻辑
+@Service
+public class ErpProductServiceImpl implements IErpProductService {
+    @Autowired
+    private ErpProductMapper productMapper;
+    
     @Override
-    public List<PictureCategoryInfo> selectPictureCategoryInfoList(PictureCategoryInfo pictureCategoryInfo) {
-        return pictureCategoryInfoMapper.selectPictureCategoryInfoList(pictureCategoryInfo);
+    @Transactional
+    public int insert(ErpProduct product) {
+        return productMapper.insert(product);
     }
-```
+}
 
-4. 前端使用，此注解当前主要使用在管理端，目前演示的是vue3，如果vue2也可以参考这个，具体实现需要自己去实现
-
-5. 在el-table加上@sort-change="customSort"自定义排序方法和ref
-
-```js
-    <el-table ref="tableRef" v-loading="loading" :data="accountInfoList" @selection-change="handleSelectionChange" @sort-change="customSort">
-```
-
-2. 在字段加上自定义排序标志
-
-```js
-      <el-table-column label="充值总金额" align="center" prop="rechargeAmount" sortable="custom"
-                       v-if="columns[6].visible" :show-overflow-tooltip="true"/>
-```
-
-5. 排序字段
-
-```js
-const isAsc = ref();
-const orderByColumn = ref('');
-```
-
-6. 新增方法
-
-```js
-//自定义排序
-function customSort({column, prop, order}) {
-  if (prop !== undefined && prop !== '' && order !== null && order !== '') {
-    orderByColumn.value = prop;
-    isAsc.value = order === "ascending";
-  } else {
-    orderByColumn.value = null;
-    isAsc.value = null;
-  }
-  queryParams.value.pageNum = 1;
-  getList();
+// Mapper 层 - 数据访问
+@Mapper
+public interface ErpProductMapper extends BaseMapper<ErpProduct> {
+    // 复杂查询在 XML 中编写
 }
 ```
 
-7. 在getList添加
-
-```js
-  if (orderByColumn.value != null && isAsc.value !== null) {
-    queryParams.value.params["orderByColumn"] = orderByColumn.value;
-    queryParams.value.params["isAsc"] = isAsc.value;
-  }
-```
-
-8. 在重置按钮更新ref
-
-```js
-/** 重置按钮操作 */
-function resetQuery() {
-  daterangeCreateTime.value = [];
-  daterangeUpdateTime.value = [];
-  orderByColumn.value = null
-  isAsc.value = null;
-  proxy.resetForm("queryRef");
-  proxy.$refs.tableRef.clearSort();
-  handleQuery();
-}
-```
-
-### 3.异常抛出工具类
+#### MyBatis-Plus 最佳实践
 
 ```java
-/**
- * 异常处理工具类
- *
- * @Author YY
- */
-public class ThrowUtils {
+// ✅ 推荐：使用 LambdaQueryWrapper
+LambdaQueryWrapper<ErpProduct> wrapper = new LambdaQueryWrapper<>();
+wrapper.eq(ErpProduct::getStatus, "active")
+       .like(ErpProduct::getProductName, keyword)
+       .orderByDesc(ErpProduct::getCreateTime);
 
-    /**
-     * 条件成立则抛异常
-     *
-     * @param condition        条件
-     * @param runtimeException 异常
-     */
-    public static void throwIf(boolean condition, RuntimeException runtimeException) {
-        if (condition) {
-            throw runtimeException;
-        }
-    }
+// ❌ 避免：字符串字段名
+QueryWrapper<ErpProduct> wrapper = new QueryWrapper<>();
+wrapper.eq("status", "active"); // 容易拼写错误
+```
 
-    /**
-     * 条件成立则抛异常
-     *
-     * @param condition 条件
-     * @param message   错误信息
-     */
-    public static void throwIf(boolean condition, String message) {
-        throwIf(condition, new ServiceException(message));
-    }
+### 前端开发规范
 
-    /**
-     * 条件成立则抛异常
-     *
-     * @param condition 条件
-     * @param errorCode 错误码
-     * @param message   错误信息
-     */
-    public static void throwIf(boolean condition, Integer errorCode, String message) {
-        throwIf(condition, new ServiceException(message, errorCode));
+#### 组件结构
+
+```vue
+<script setup name="ProductList">
+import { ref, reactive, onMounted } from 'vue'
+import { getProductList } from '@/api/erp/product'
+
+const productList = ref([])
+const queryParams = reactive({
+  pageNum: 1,
+  pageSize: 10,
+  productName: undefined
+})
+
+function getList() {
+  getProductList(queryParams).then(response => {
+    productList.value = response.rows
+  })
+}
+
+onMounted(() => {
+  getList()
+})
+</script>
+
+<template>
+  <div class="app-container">
+    <!-- 内容 -->
+  </div>
+</template>
+
+<style scoped lang="scss">
+// 样式
+</style>
+```
+
+#### API 调用
+
+```javascript
+// api/erp/product.js
+import request from '@/utils/request'
+
+export function getProductList(params) {
+  return request({
+    url: '/erp/product/list',
+    method: 'get',
+    params
+  })
+}
+
+export function addProduct(data) {
+  return request({
+    url: '/erp/product',
+    method: 'post',
+    data
+  })
+}
+```
+
+### Shopify GraphQL 集成
+
+```java
+@Configuration
+public class ShopifyGraphQlConfig {
+    
+    @Bean
+    public GraphQlClient shopifyGraphQlClient(WebClient.Builder webClientBuilder) {
+        WebClient webClient = webClientBuilder
+            .baseUrl("https://{shop}.myshopify.com/admin/api/2024-01/graphql.json")
+            .defaultHeader("X-Shopify-Access-Token", accessToken)
+            .build();
+        
+        return GraphQlClient.create(webClient);
     }
 }
 ```
 
+---
 
+## 📊 数据库设计
 
-## 平台简介
+### 核心表结构
 
-若依是一套全部开源的快速开发平台，毫无保留给个人及企业免费使用。
+- **erp_product**: 商品主表
+- **erp_product_variant**: 商品变体表
+- **erp_tag**: 标签表
+- **erp_product_tag**: 商品标签关联表
+- **erp_media**: 媒体资源表
 
-* 前端采用Vue、Element UI。
-* 后端采用Spring Boot、Spring Security、Redis & Jwt。
-* 权限认证使用Jwt，支持多终端认证系统。
-* 支持加载动态权限菜单，多方式轻松权限控制。
-* 高效率开发，使用代码生成器可以一键生成前后端代码。
-* 提供了技术栈（[Vue3](https://v3.cn.vuejs.org) [Element Plus](https://element-plus.org/zh-CN) [Vite](https://cn.vitejs.dev)）版本[RuoYi-Vue3](https://gitcode.com/yangzongzhuan/RuoYi-Vue3)，保持同步更新。
-* 提供了单应用版本[RuoYi-Vue-fast](https://gitcode.com/yangzongzhuan/RuoYi-Vue-fast)，Oracle版本[RuoYi-Vue-Oracle](https://gitcode.com/yangzongzhuan/RuoYi-Vue-Oracle)，保持同步更新。
-* 不分离版本，请移步[RuoYi](https://gitee.com/y_project/RuoYi)，微服务版本，请移步[RuoYi-Cloud](https://gitee.com/y_project/RuoYi-Cloud)
-* 阿里云折扣场：[点我进入](http://aly.ruoyi.vip)，腾讯云秒杀场：[点我进入](http://txy.ruoyi.vip)&nbsp;&nbsp;
+详细表结构请参考 `sql/20260324_erp.sql`
 
-## 内置功能
+---
 
-1.  用户管理：用户是系统操作者，该功能主要完成系统用户配置。
-2.  部门管理：配置系统组织机构（公司、部门、小组），树结构展现支持数据权限。
-3.  岗位管理：配置系统用户所属担任职务。
-4.  菜单管理：配置系统菜单，操作权限，按钮权限标识等。
-5.  角色管理：角色菜单权限分配、设置角色按机构进行数据范围权限划分。
-6.  字典管理：对系统中经常使用的一些较为固定的数据进行维护。
-7.  参数管理：对系统动态配置常用参数。
-8.  通知公告：系统通知公告信息发布维护。
-9.  操作日志：系统正常操作日志记录和查询；系统异常信息日志记录和查询。
-10. 登录日志：系统登录日志记录查询包含登录异常。
-11. 在线用户：当前系统中活跃用户状态监控。
-12. 定时任务：在线（添加、修改、删除)任务调度包含执行结果日志。
-13. 代码生成：前后端代码的生成（java、html、xml、sql）支持CRUD下载 。
-14. 系统接口：根据业务代码自动生成相关的api接口文档。
-15. 服务监控：监视当前系统CPU、内存、磁盘、堆栈等相关信息。
-16. 缓存监控：对系统的缓存信息查询，命令统计等。
-17. 在线构建器：拖动表单元素生成相应的HTML代码。
-18. 连接池监视：监视当前系统数据库连接池状态，可进行分析SQL找出系统性能瓶颈。
+## 🔒 安全说明
 
-## 在线体验
+- 使用 Spring Security + JWT 进行身份认证
+- 密码加密存储（BCrypt）
+- XSS 攻击防护
+- SQL 注入防护（参数化查询）
+- CSRF 防护
+- 数据权限控制（基于角色和部门）
 
-- admin/admin123  
-- 陆陆续续收到一些打赏，为了更好的体验已用于演示服务器升级。谢谢各位小伙伴。
+---
 
-演示地址：http://vue.ruoyi.vip  
-文档地址：http://doc.ruoyi.vip
+## 📝 常见问题
 
-## 演示图
+### Q1: 前端页面空白？
 
-<table>
-    <tr>
-        <td><img src="https://oscimg.oschina.net/oscnet/cd1f90be5f2684f4560c9519c0f2a232ee8.jpg"/></td>
-        <td><img src="https://oscimg.oschina.net/oscnet/1cbcf0e6f257c7d3a063c0e3f2ff989e4b3.jpg"/></td>
-    </tr>
-    <tr>
-        <td><img src="https://oscimg.oschina.net/oscnet/up-8074972883b5ba0622e13246738ebba237a.png"/></td>
-        <td><img src="https://oscimg.oschina.net/oscnet/up-9f88719cdfca9af2e58b352a20e23d43b12.png"/></td>
-    </tr>
-    <tr>
-        <td><img src="https://oscimg.oschina.net/oscnet/up-39bf2584ec3a529b0d5a3b70d15c9b37646.png"/></td>
-        <td><img src="https://oscimg.oschina.net/oscnet/up-936ec82d1f4872e1bc980927654b6007307.png"/></td>
-    </tr>
-	<tr>
-        <td><img src="https://oscimg.oschina.net/oscnet/up-b2d62ceb95d2dd9b3fbe157bb70d26001e9.png"/></td>
-        <td><img src="https://oscimg.oschina.net/oscnet/up-d67451d308b7a79ad6819723396f7c3d77a.png"/></td>
-    </tr>	 
-    <tr>
-        <td><img src="https://oscimg.oschina.net/oscnet/5e8c387724954459291aafd5eb52b456f53.jpg"/></td>
-        <td><img src="https://oscimg.oschina.net/oscnet/644e78da53c2e92a95dfda4f76e6d117c4b.jpg"/></td>
-    </tr>
-	<tr>
-        <td><img src="https://oscimg.oschina.net/oscnet/up-8370a0d02977eebf6dbf854c8450293c937.png"/></td>
-        <td><img src="https://oscimg.oschina.net/oscnet/up-49003ed83f60f633e7153609a53a2b644f7.png"/></td>
-    </tr>
-	<tr>
-        <td><img src="https://oscimg.oschina.net/oscnet/up-d4fe726319ece268d4746602c39cffc0621.png"/></td>
-        <td><img src="https://oscimg.oschina.net/oscnet/up-c195234bbcd30be6927f037a6755e6ab69c.png"/></td>
-    </tr>
-    <tr>
-        <td><img src="https://oscimg.oschina.net/oscnet/b6115bc8c31de52951982e509930b20684a.jpg"/></td>
-        <td><img src="https://oscimg.oschina.net/oscnet/up-5e4daac0bb59612c5038448acbcef235e3a.png"/></td>
-    </tr>
-</table>
+检查浏览器控制台是否有跨域错误，确保后端 CORS 配置正确。
 
+### Q2: 登录失败？
 
-## 若依前后端分离交流群
+1. 检查 Redis 是否正常运行
+2. 检查数据库连接配置
+3. 确认账号密码是否正确（默认 admin/admin123）
 
-QQ群： [![加入QQ群](https://img.shields.io/badge/已满-937441-blue.svg)](https://jq.qq.com/?_wv=1027&k=5bVB1og) [![加入QQ群](https://img.shields.io/badge/已满-887144332-blue.svg)](https://jq.qq.com/?_wv=1027&k=5eiA4DH) [![加入QQ群](https://img.shields.io/badge/已满-180251782-blue.svg)](https://jq.qq.com/?_wv=1027&k=5AxMKlC) [![加入QQ群](https://img.shields.io/badge/已满-104180207-blue.svg)](https://jq.qq.com/?_wv=1027&k=51G72yr) [![加入QQ群](https://img.shields.io/badge/已满-186866453-blue.svg)](https://jq.qq.com/?_wv=1027&k=VvjN2nvu) [![加入QQ群](https://img.shields.io/badge/已满-201396349-blue.svg)](https://jq.qq.com/?_wv=1027&k=5vYAqA05) [![加入QQ群](https://img.shields.io/badge/已满-101456076-blue.svg)](https://jq.qq.com/?_wv=1027&k=kOIINEb5) [![加入QQ群](https://img.shields.io/badge/已满-101539465-blue.svg)](https://jq.qq.com/?_wv=1027&k=UKtX5jhs) [![加入QQ群](https://img.shields.io/badge/已满-264312783-blue.svg)](https://jq.qq.com/?_wv=1027&k=EI9an8lJ) [![加入QQ群](https://img.shields.io/badge/已满-167385320-blue.svg)](https://jq.qq.com/?_wv=1027&k=SWCtLnMz) [![加入QQ群](https://img.shields.io/badge/已满-104748341-blue.svg)](https://jq.qq.com/?_wv=1027&k=96Dkdq0k) [![加入QQ群](https://img.shields.io/badge/已满-160110482-blue.svg)](https://jq.qq.com/?_wv=1027&k=0fsNiYZt) [![加入QQ群](https://img.shields.io/badge/已满-170801498-blue.svg)](https://jq.qq.com/?_wv=1027&k=7xw4xUG1) [![加入QQ群](https://img.shields.io/badge/已满-108482800-blue.svg)](https://jq.qq.com/?_wv=1027&k=eCx8eyoJ) [![加入QQ群](https://img.shields.io/badge/已满-101046199-blue.svg)](https://jq.qq.com/?_wv=1027&k=SpyH2875) [![加入QQ群](https://img.shields.io/badge/已满-136919097-blue.svg)](https://jq.qq.com/?_wv=1027&k=tKEt51dz) [![加入QQ群](https://img.shields.io/badge/已满-143961921-blue.svg)](http://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=0vBbSb0ztbBgVtn3kJS-Q4HUNYwip89G&authKey=8irq5PhutrZmWIvsUsklBxhj57l%2F1nOZqjzigkXZVoZE451GG4JHPOqW7AW6cf0T&noverify=0&group_code=143961921) [![加入QQ群](https://img.shields.io/badge/已满-174951577-blue.svg)](http://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=ZFAPAbp09S2ltvwrJzp7wGlbopsc0rwi&authKey=HB2cxpxP2yspk%2Bo3WKTBfktRCccVkU26cgi5B16u0KcAYrVu7sBaE7XSEqmMdFQp&noverify=0&group_code=174951577) [![加入QQ群](https://img.shields.io/badge/已满-161281055-blue.svg)](http://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=Fn2aF5IHpwsy8j6VlalNJK6qbwFLFHat&authKey=uyIT%2B97x2AXj3odyXpsSpVaPMC%2Bidw0LxG5MAtEqlrcBcWJUA%2FeS43rsF1Tg7IRJ&noverify=0&group_code=161281055) [![加入QQ群](https://img.shields.io/badge/已满-138988063-blue.svg)](http://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=XIzkm_mV2xTsUtFxo63bmicYoDBA6Ifm&authKey=dDW%2F4qsmw3x9govoZY9w%2FoWAoC4wbHqGal%2BbqLzoS6VBarU8EBptIgPKN%2FviyC8j&noverify=0&group_code=138988063) [![加入QQ群](https://img.shields.io/badge/已满-151450850-blue.svg)](http://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=DkugnCg68PevlycJSKSwjhFqfIgrWWwR&authKey=pR1Pa5lPIeGF%2FFtIk6d%2FGB5qFi0EdvyErtpQXULzo03zbhopBHLWcuqdpwY241R%2F&noverify=0&group_code=151450850) [![加入QQ群](https://img.shields.io/badge/已满-224622315-blue.svg)](http://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=F58bgRa-Dp-rsQJThiJqIYv8t4-lWfXh&authKey=UmUs4CVG5OPA1whvsa4uSespOvyd8%2FAr9olEGaWAfdLmfKQk%2FVBp2YU3u2xXXt76&noverify=0&group_code=224622315) [![加入QQ群](https://img.shields.io/badge/已满-287842588-blue.svg)](http://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=Nxb2EQ5qozWa218Wbs7zgBnjLSNk_tVT&authKey=obBKXj6SBKgrFTJZx0AqQnIYbNOvBB2kmgwWvGhzxR67RoRr84%2Bus5OadzMcdJl5&noverify=0&group_code=287842588) [![加入QQ群](https://img.shields.io/badge/187944233-blue.svg)](http://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=numtK1M_I4eVd2Gvg8qtbuL8JgX42qNh&authKey=giV9XWMaFZTY%2FqPlmWbkB9g3fi0Ev5CwEtT9Tgei0oUlFFCQLDp4ozWRiVIzubIm&noverify=0&group_code=187944233) 点击按钮入群。
+### Q3: Shopify API 调用失败？
+
+1. 检查 Access Token 是否正确
+2. 确认 Shop 域名格式
+3. 查看 API 速率限制
+
+### Q4: 图片无法显示？
+
+检查文件上传路径配置和 Nginx 静态资源配置。
+

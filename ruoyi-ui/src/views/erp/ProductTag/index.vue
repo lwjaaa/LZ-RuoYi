@@ -31,7 +31,7 @@
           icon="el-icon-plus"
           size="mini"
           @click="handleAdd"
-          v-hasPermi="['vh-erp:ProductTag:add']"
+          v-hasPermi="['erp:ProductTag:add']"
         >新增</el-button>
       </el-col>
       <el-col :span="1.5">
@@ -42,7 +42,7 @@
           size="mini"
           :disabled="single"
           @click="handleUpdate"
-          v-hasPermi="['vh-erp:ProductTag:edit']"
+          v-hasPermi="['erp:ProductTag:edit']"
         >修改</el-button>
       </el-col>
       <el-col :span="1.5">
@@ -53,7 +53,7 @@
           size="mini"
           :disabled="multiple"
           @click="handleDelete"
-          v-hasPermi="['vh-erp:ProductTag:remove']"
+          v-hasPermi="['erp:ProductTag:remove']"
         >删除</el-button>
       </el-col>
       <el-col :span="1.5">
@@ -63,7 +63,7 @@
           icon="el-icon-upload2"
           size="mini"
           @click="handleImport"
-          v-hasPermi="['vh-erp:ProductTag:import']"
+          v-hasPermi="['erp:ProductTag:import']"
         >导入</el-button>
       </el-col>
       <el-col :span="1.5">
@@ -73,7 +73,7 @@
           icon="el-icon-download"
           size="mini"
           @click="handleExport"
-          v-hasPermi="['vh-erp:ProductTag:export']"
+          v-hasPermi="['erp:ProductTag:export']"
         >导出</el-button>
       </el-col>
       <right-toolbar :showSearch.sync="showSearch" @queryTable="getList" :columns="columns"></right-toolbar>
@@ -91,14 +91,14 @@
             type="text"
             icon="el-icon-edit"
             @click="handleUpdate(scope.row)"
-            v-hasPermi="['vh-erp:ProductTag:edit']"
+            v-hasPermi="['erp:ProductTag:edit']"
           >修改</el-button>
           <el-button
             size="mini"
             type="text"
             icon="el-icon-delete"
             @click="handleDelete(scope.row)"
-            v-hasPermi="['vh-erp:ProductTag:remove']"
+            v-hasPermi="['erp:ProductTag:remove']"
           >删除</el-button>
         </template>
       </el-table-column>
@@ -191,7 +191,7 @@ export default {
       // 表单参数
       form: {},
       // 导出地址
-      exportUrl: 'vh-erp/ProductTag/export',
+      exportUrl: 'erp/ProductTag/export',
       // erp商品与标签关联导入参数
       upload: {
         // 是否显示弹出层（erp商品与标签关联导入）
@@ -205,9 +205,9 @@ export default {
         // 设置上传的请求头部
         headers: { Authorization: "Bearer " + getToken() },
         // 上传的地址
-        url: process.env.VUE_APP_BASE_API + "/vh-erp/ProductTag/importData",
+        url: process.env.VUE_APP_BASE_API + "/erp/ProductTag/importData",
         // 下载模板的地址
-        templateUrl: 'vh-erp/ProductTag/importTemplate'
+        templateUrl: 'erp/ProductTag/importTemplate'
       },
       // 表单校验
       rules: {

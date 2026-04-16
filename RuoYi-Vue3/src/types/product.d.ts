@@ -99,14 +99,21 @@ export interface Product {
 
 // 商品选项类型
 export interface ProductOption {
-  name: string;
+  /** 英文选项名称 */
+  englishName: string;
+  /** 中文选项名称 */
+  chineseName: string;
+  /** 是否折叠 */
+  collapsed: boolean;
   values: ProductOptionValue[];
 }
 
 // 商品选项值类型
 export interface ProductOptionValue {
-  /** 选项值 */
-  value: string;
+  /** 英文选项值 */
+  englishValue: string;
+  /** 中文选项值 */
+  chineseValue: string;
 }
 
 // 产品变体类型
@@ -207,17 +214,17 @@ export interface ProductVariantOption {
   /** 商品选项ID */
   optionId: string;
 
-  /** 商品选项名称 */
-  optionName: string;
+  /** 英文选项名称 */
+  englishName: string;
 
-  /** 商品选项值 */
-  name: string;
+  /** 中文选项名称 */
+  chineseName: string;
 
-  /** 采购商品选项名称 */
-  purchaseOptionName?: string;
+  /** 英文选项值 */
+  englishValue?: string;
 
-  /** 采购商品选项值 */
-  purchaseName?: string;
+  /** 中文选项值 */
+  chineseValue?: string;
 }
 
 // 标签菜单类型

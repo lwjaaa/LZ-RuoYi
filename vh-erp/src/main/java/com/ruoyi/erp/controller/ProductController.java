@@ -108,9 +108,9 @@ public class ProductController extends BaseController {
     /**
      * 批量推送任务
      */
-    @PreAuthorize("@ss.hasPermi('vh-erp:product:push')")
+    @PreAuthorize("@ss.hasPermi('erp:product:push')")
     @Log(title = "批量推送", businessType = BusinessType.OTHER)
-    @PostMapping("/vh-erp/product/push-batch")
+    @PostMapping("/erp/product/push-batch")
     public AjaxResult pushBatch(@RequestBody List<Long> productIds) {
         Long taskId = productService.pushBatchAsync(productIds);
         return success().put("taskId", taskId);
@@ -119,7 +119,7 @@ public class ProductController extends BaseController {
     /**
      * 查询推送结果
      */
-    @PreAuthorize("@ss.hasPermi('vh-erp:product:push')")
+    @PreAuthorize("@ss.hasPermi('erp:product:push')")
     @GetMapping("/push-result/{taskId}")
     public AjaxResult pushResult(@PathVariable Long taskId) {
         return success(productService.getPushResult(taskId));
@@ -128,7 +128,7 @@ public class ProductController extends BaseController {
     /**
      * 编辑/新增 选品信息
      */
-    @PreAuthorize("@ss.hasPermi('vh-erp:product:add')")
+    @PreAuthorize("@ss.hasPermi('erp:product:add')")
     @Log(title = "编辑/新增 选品信息", businessType = BusinessType.INSERT)
     @PostMapping("/selectionInfo")
     public AjaxResult saveSelectionInfo(@RequestBody ProductSelectionEdit productSelectionEdit) {
@@ -140,7 +140,7 @@ public class ProductController extends BaseController {
     /**
      * 编辑 商品其他信息16:03:02.718 16:03:02.914
      */
-    @PreAuthorize("@ss.hasPermi('vh-erp:product:edit')")
+    @PreAuthorize("@ss.hasPermi('erp:product:edit')")
     @Log(title = "编辑/新增 商品其他信息", businessType = BusinessType.UPDATE)
     @PostMapping("/baseInfo")
     public AjaxResult saveProductBaseInfo(@RequestBody ProductBaseInfoEdit productSelectionEdit) {

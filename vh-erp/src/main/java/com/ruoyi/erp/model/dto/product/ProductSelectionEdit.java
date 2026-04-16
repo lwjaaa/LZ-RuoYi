@@ -1,5 +1,6 @@
 package com.ruoyi.erp.model.dto.product;
 
+import com.alibaba.fastjson2.JSONObject;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.ruoyi.erp.model.domain.Product;
 import com.ruoyi.erp.model.domain.ProductOption;
@@ -39,6 +40,7 @@ public class ProductSelectionEdit implements Serializable
 
     /** 商品选项 */
     private String optionJson;
+    private List<ProductOption> optionList;
 
     /** 主图ID，仅用户erp后台展示 */
     private Long mainMediaId;
@@ -72,6 +74,7 @@ public class ProductSelectionEdit implements Serializable
         }
         Product product = new Product();
         BeanUtils.copyProperties(productEdit, product);
+        product.setOptionJson(JSONObject.toJSONString(productEdit.getOptionList()));
         return product;
     }
 }

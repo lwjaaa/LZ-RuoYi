@@ -17,13 +17,12 @@ public class ProductOption implements Serializable {
     @Serial
     private static final long serialVersionUID = 1L;
     /**
-     * 商品选项名称
-     */
-    private String name;
-    /**
      * 商品选项值列表
      */
     private List<ProductOptionValue> values;
 
-    // private String optionId;
+    private String englishName;
+
+    private String chineseName;
+
 }

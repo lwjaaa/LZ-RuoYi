@@ -64,7 +64,7 @@ export function importTemplateMedia() {
 // 扫描媒体
 export function scanMedia() {
   return request({
-    url: '/vh-erp/media/scan',
+    url: '/erp/media/scan',
     method: 'get'
   })
 }

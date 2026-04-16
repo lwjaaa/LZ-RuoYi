@@ -129,7 +129,7 @@ public class MediaController extends BaseController {
     /**
      * 扫描服务器指定路径返回媒体列表
      */
-    @PreAuthorize("@ss.hasPermi('vh-erp:media:list')")
+    @PreAuthorize("@ss.hasPermi('erp:media:list')")
     @GetMapping("/scan")
     public AjaxResult scanMedia(@RequestParam("dirPath") String dirPath, @RequestParam("productId") String productId) {
         List<Media> mediaList = mediaService.scanMediaToProduct(dirPath, productId);

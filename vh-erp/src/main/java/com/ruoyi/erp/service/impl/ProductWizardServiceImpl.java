@@ -308,8 +308,8 @@ public class ProductWizardServiceImpl implements IProductWizardService {
         Map<String, Set<String>> purchaseOptionMap = new HashMap<>();
         for (ProductOption productOption : optionList) {
             //productOption.getValues()转SET
-            Set<String> values = productOption.getValues().stream().map(ProductOptionValue::getValue).collect(Collectors.toSet());
-            purchaseOptionMap.put(productOption.getName(), values);
+            Set<String> values = productOption.getValues().stream().map(ProductOptionValue::getEnglishValue).collect(Collectors.toSet());
+            purchaseOptionMap.put(productOption.getEnglishName(), values);
         }
         return purchaseOptionMap;
     }

@@ -30,7 +30,7 @@ import java.util.stream.Collectors;
  * @date 2026-03-25
  */
 @RestController
-@RequestMapping("/vh-erp/tag")
+@RequestMapping("/erp/tag")
 public class TagDictController extends BaseController
 {
     @Resource
@@ -39,7 +39,7 @@ public class TagDictController extends BaseController
     /**
      * 查询erp标签列表
      */
-    @PreAuthorize("@ss.hasPermi('vh-erp:tag:list')")
+    @PreAuthorize("@ss.hasPermi('erp:tag:list')")
     @GetMapping("/list")
     public AjaxResult list(TagDictQuery tagDictQuery)
     {
@@ -52,7 +52,7 @@ public class TagDictController extends BaseController
     /**
      * 导出erp标签列表
      */
-    @PreAuthorize("@ss.hasPermi('vh-erp:tag:export')")
+    @PreAuthorize("@ss.hasPermi('erp:tag:export')")
     @Log(title = "erp标签", businessType = BusinessType.EXPORT)
     @PostMapping("/export")
     public void export(HttpServletResponse response, TagDictQuery tagDictQuery)
@@ -66,7 +66,7 @@ public class TagDictController extends BaseController
     /**
      * 获取erp标签详细信息
      */
-    @PreAuthorize("@ss.hasPermi('vh-erp:tag:query')")
+    @PreAuthorize("@ss.hasPermi('erp:tag:query')")
     @GetMapping(value = "/{tagId}")
     public AjaxResult getInfo(@PathVariable("tagId") Long tagId)
     {
@@ -77,7 +77,7 @@ public class TagDictController extends BaseController
     /**
      * 新增erp标签
      */
-    @PreAuthorize("@ss.hasPermi('vh-erp:tag:add')")
+    @PreAuthorize("@ss.hasPermi('erp:tag:add')")
     @Log(title = "erp标签", businessType = BusinessType.INSERT)
     @PostMapping
     public AjaxResult add(@RequestBody TagDictInsert tagDictInsert)
@@ -89,7 +89,7 @@ public class TagDictController extends BaseController
     /**
      * 修改erp标签
      */
-    @PreAuthorize("@ss.hasPermi('vh-erp:tag:edit')")
+    @PreAuthorize("@ss.hasPermi('erp:tag:edit')")
     @Log(title = "erp标签", businessType = BusinessType.UPDATE)
     @PutMapping
     public AjaxResult edit(@RequestBody TagDictEdit tagDictEdit)
@@ -102,7 +102,7 @@ public class TagDictController extends BaseController
     /**
      * 拖拽修改节点位置
      */
-    @PreAuthorize("@ss.hasPermi('vh-erp:tag:edit')")
+    @PreAuthorize("@ss.hasPermi('erp:tag:edit')")
     @Log(title = "标签拖拽", businessType = BusinessType.UPDATE)
     @PostMapping("/dragNode")
     public AjaxResult dragNode(@RequestBody @Valid TreeDragDTO dto) {
@@ -113,7 +113,7 @@ public class TagDictController extends BaseController
     /**
      * 删除erp标签
      */
-    @PreAuthorize("@ss.hasPermi('vh-erp:tag:remove')")
+    @PreAuthorize("@ss.hasPermi('erp:tag:remove')")
     @Log(title = "erp标签", businessType = BusinessType.DELETE)
 	@DeleteMapping("/{tagIds}")
     public AjaxResult remove(@PathVariable Long[] tagIds)
@@ -124,7 +124,7 @@ public class TagDictController extends BaseController
     /**
      * 导入erp标签数据
      */
-    @PreAuthorize("@ss.hasPermi('vh-erp:tag:import')")
+    @PreAuthorize("@ss.hasPermi('erp:tag:import')")
     @Log(title = "erp标签", businessType = BusinessType.IMPORT)
     @PostMapping("/importData")
     public AjaxResult importData(MultipartFile file, boolean updateSupport) throws Exception
@@ -149,7 +149,7 @@ public class TagDictController extends BaseController
     /**
      * 获取菜单树（带缓存）
      */
-    @PreAuthorize("@ss.hasPermi('vh-erp:tag:list')")
+    @PreAuthorize("@ss.hasPermi('erp:tag:list')")
     @GetMapping("/treelist/{type}")
     public AjaxResult getMenuList(@PathVariable("type") String type)
     {
@@ -160,7 +160,7 @@ public class TagDictController extends BaseController
     /**
      * 刷新菜单缓存
      */
-    @PreAuthorize("@ss.hasPermi('vh-erp:tag:edit')")
+    @PreAuthorize("@ss.hasPermi('erp:tag:edit')")
     @Log(title = "刷新菜单缓存", businessType = BusinessType.CLEAN)
     @DeleteMapping("/refreshCache")
     public AjaxResult refreshCache()
@@ -171,7 +171,7 @@ public class TagDictController extends BaseController
     /**
      * 置顶
      */
-    @PreAuthorize("@ss.hasPermi('vh-erp:tag:edit')")
+    @PreAuthorize("@ss.hasPermi('erp:tag:edit')")
     @Log(title = "置顶", businessType = BusinessType.UPDATE)
     @PostMapping("/top/{tagId}")
     public AjaxResult top(@PathVariable("tagId") Long tagId) {

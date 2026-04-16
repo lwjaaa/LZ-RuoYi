@@ -1,1064 +1,1112 @@
 <template>
-  <!--  <el-dialog
-    :title="title"
-    v-model="visible"
-    width="1200px"
-    append-to-body
-    :close-on-click-modal="false"
-    @close="handleClose"
-  >-->
   <div class="product-wizard-container">
-    <!-- 页面头部 -->
-    <el-page-header @back="handleBack" class="wizard-header">
-      <!-- <template #content> -->
-      <!--        <span class="page-title">{{ title }}</span>-->
-      <!-- </template> -->
-      <template #extra>
-        <div class="right-buttons">
-          <el-tooltip
-            v-if="activeStep === 1"
-            content="快捷键: Ctrl+←"
-            placement="top"
-          >
-            <el-button @click="handleSubmit('prev')" type="primary"
-              >上一步</el-button
+    <div class="product-wizard-shell">
+      <!-- 页面头部 -->
+      <el-page-header @back="handleBack" class="wizard-header">
+        <template #content>
+          <div class="header-content">
+            <div class="header-title-group">
+              <span class="page-title">商品创建工作台</span>
+              <span class="page-subtitle">
+                以标准化流程完成商品建档、资料补全与变体成本配置
+              </span>
+            </div>
+            <div class="header-status">
+              <span class="status-pill">ERP Product Studio</span>
+              <span class="status-pill status-pill--active">
+                {{
+                  activeStep === 0
+                    ? "Step 1 / 2 基础选品"
+                    : "Step 2 / 2 信息录入"
+                }}
+              </span>
+            </div>
+          </div>
+        </template>
+        <template #extra>
+          <div class="right-buttons">
+            <el-tooltip
+              v-if="activeStep === 1"
+              content="快捷键: Ctrl+←"
+              placement="top"
             >
-          </el-tooltip>
-          <el-tooltip
-            v-if="activeStep === 0"
-            content="快捷键: Ctrl+Enter"
-            placement="top"
-          >
-            <el-button
-              type="primary"
-              @click="handleSubmit('continue')"
-              :loading="loading"
+              <el-button @click="handlePrev()" class="header-action-btn">
+                上一步
+              </el-button>
+            </el-tooltip>
+            <el-tooltip
+              v-if="activeStep === 0"
+              content="快捷键: Ctrl+Enter"
+              placement="top"
             >
-              继续选品
-            </el-button>
-          </el-tooltip>
-          <el-tooltip
-            v-if="activeStep === 0"
-            content="快捷键: Ctrl+→"
-            placement="top"
-          >
-            <el-button
-              type="primary"
-              @click="handleSubmit('next')"
-              :loading="loading"
-            >
-              下一步
-            </el-button>
-          </el-tooltip>
-          <el-tooltip content="快捷键: Ctrl+S" placement="top">
-            <el-button
-              type="primary"
-              @click="handleSubmit('close')"
-              :loading="loading"
-            >
-              保存
-            </el-button>
-          </el-tooltip>
-        </div>
-      </template>
-    </el-page-header>
-    <el-steps
-      :active="activeStep"
-      finish-status="success"
-      align-center
-      class="mb-4"
-    >
-      <el-step title="选品基础信息" />
-      <el-step title="信息录入" />
-    </el-steps>
-
-    <!-- 第一步：选品基础信息 -->
-    <div v-show="activeStep === 0" class="step-content">
-      <el-form
-        ref="step1FormRef"
-        :model="step1FormData"
-        :rules="step1Rules"
-        label-width="120px"
-      >
-        <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item label="标签" prop="tagIds">
-              <el-cascader
-                v-model="step1FormData.tagIds"
-                :options="tagList"
-                :props="{
-                  value: 'tagId',
-                  label: 'tagName',
-                  children: 'children',
-                  multiple: true,
-                  expandTrigger: 'hover',
-                }"
-                placeholder="请选择标签"
-                clearable
-                style="width: 100%"
-                :loading="menuLoading"
-              />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="SPU" prop="spu">
-              <el-input
-                v-model="step1FormData.spu"
-                placeholder="自动生成或手动输入"
+              <el-button
+                type="primary"
+                @click="handleContinue()"
+                :loading="loading"
+                class="header-action-btn header-action-btn--ghost"
               >
-                <template #append>
-                  <el-button
-                    @click="generateSpu(false)"
-                    :loading="spuGenerating"
-                    :disabled="spuGenerating"
-                    >生成</el-button
-                  >
-                </template>
-              </el-input>
-            </el-form-item>
-          </el-col>
-        </el-row>
-
-        <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item label="来源 URL" prop="sourceUrl">
-              <el-input
-                ref="sourceUrlInputRef"
-                v-model="step1FormData.sourceUrl"
-                type="textarea"
-                :rows="2"
-                placeholder="请输入来源 URL"
-                @blur="handleSourceUrlBlur"
-              />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="采购链接" prop="purchaseUrl">
-              <el-input
-                v-model="step1FormData.purchaseUrl"
-                type="textarea"
-                :rows="2"
-                placeholder="请输入采购链接"
-              />
-            </el-form-item>
-          </el-col>
-        </el-row>
-
-        <!-- 采购商品选项 -->
-        <el-form-item label="采购商品选项">
-          <div class="options-container">
-            <div
-              v-for="(option, optIndex) in optionList"
-              :key="optIndex"
-              class="option-row"
-              :class="{ 'option-row-collapsed': option.collapsed }"
-              tabindex="0"
-              @keyup.enter="toggleCollapse(optIndex)"
+                继续选品
+              </el-button>
+            </el-tooltip>
+            <el-tooltip
+              v-if="activeStep === 0"
+              content="快捷键: Ctrl+→"
+              placement="top"
             >
-              <!-- 选项值列表（可收起） -->
-              <div class="option-values-container" v-show="!option.collapsed">
-                <div class="option-value-row">
-                  <div class="input-label">选项名称</div>
-                  <div class="input-combined">
-                    <el-input
-                      v-model="option.purchaseName"
-                      placeholder="采购选项名称"
-                      class="input-left"
-                      size="small"
-                      @keydown.tab.prevent="
-                        handleTabKey($event, optIndex, null, 'purchase')
-                      "
-                    />
-                    <el-input
-                      v-model="option.productName"
-                      placeholder="英文选项名称"
-                      class="input-right"
-                      size="small"
-                      @keydown.tab.prevent="
-                        handleTabKey($event, optIndex, null, 'product')
-                      "
-                    />
-                    <div class="delete-button-wrapper"></div>
-                  </div>
-                </div>
-                <div
-                  v-for="(value, valIndex) in option.values"
-                  :key="valIndex"
-                  class="option-value-row"
+              <el-button
+                type="primary"
+                @click="handleNext()"
+                :loading="loading"
+                class="header-action-btn"
+              >
+                下一步
+              </el-button>
+            </el-tooltip>
+            <el-tooltip content="快捷键: Ctrl+S" placement="top">
+              <el-button
+                type="success"
+                @click="handleSave()"
+                :loading="loading"
+                class="header-action-btn header-action-btn--strong"
+              >
+                保存
+              </el-button>
+            </el-tooltip>
+          </div>
+        </template>
+      </el-page-header>
+      <div class="wizard-progress-card">
+        <div class="wizard-progress-copy">
+          <div class="wizard-progress-copy__eyebrow">Workflow</div>
+          <div class="wizard-progress-copy__title">商品创建双阶段协作流程</div>
+          <div class="wizard-progress-copy__desc">
+            先完成选品与规格建模，再统一处理媒体、详情和变体定价，减少重复录入与信息遗漏。
+          </div>
+        </div>
+        <el-steps
+          :active="activeStep"
+          finish-status="success"
+          align-center
+          class="wizard-steps"
+        >
+          <el-step title="选品基础信息" />
+          <el-step title="信息录入" />
+        </el-steps>
+      </div>
+
+      <!-- 第一步：选品基础信息 -->
+      <div v-show="activeStep === 0" class="step-content">
+        <el-form
+          ref="step1FormRef"
+          :model="step1FormData"
+          :rules="step1Rules"
+          label-width="120px"
+          class="step-form step1-form"
+        >
+          <el-row :gutter="20">
+            <el-col :span="12">
+              <el-form-item label="标签" prop="tagIds">
+                <el-cascader
+                  v-model="step1FormData.tagIds"
+                  :options="tagList"
+                  :props="{
+                    value: 'tagId',
+                    label: 'tagName',
+                    children: 'children',
+                    multiple: true,
+                    expandTrigger: 'hover',
+                  }"
+                  placeholder="请选择标签"
+                  clearable
+                  style="width: 100%"
+                  :loading="menuLoading"
+                />
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="SPU" prop="spu">
+                <el-input
+                  v-model="step1FormData.spu"
+                  placeholder="自动生成或手动输入"
                 >
-                  <div class="input-label">选项值</div>
-                  <div class="input-combined">
-                    <el-input
-                      v-model="value.purchaseValue"
-                      placeholder="采购选项值"
-                      class="input-left"
-                      size="small"
-                      @keydown.tab.prevent="
-                        handleTabKey($event, optIndex, valIndex, 'purchase')
-                      "
-                    />
-                    <el-input
-                      v-model="value.productValue"
-                      placeholder="英文选项值"
-                      class="input-right"
-                      size="small"
-                      @keydown.tab.prevent="
-                        handleTabKey($event, optIndex, valIndex, 'product')
-                      "
-                    />
-                    <div class="delete-button-wrapper">
-                      <el-button
-                        v-if="valIndex < option.values.length - 1"
-                        type="danger"
-                        icon="Delete"
-                        circle
+                  <template #append>
+                    <el-button
+                      @click="generateSpu(false)"
+                      :loading="spuGenerating"
+                      :disabled="spuGenerating"
+                      >生成</el-button
+                    >
+                  </template>
+                </el-input>
+              </el-form-item>
+            </el-col>
+          </el-row>
+
+          <el-row :gutter="20">
+            <el-col :span="12">
+              <el-form-item label="来源 URL" prop="sourceUrl">
+                <el-input
+                  ref="sourceUrlInputRef"
+                  v-model="step1FormData.sourceUrl"
+                  type="textarea"
+                  :rows="2"
+                  placeholder="请输入来源 URL"
+                  @blur="handleSourceUrlBlur"
+                />
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="采购链接" prop="purchaseUrl">
+                <el-input
+                  v-model="step1FormData.purchaseUrl"
+                  type="textarea"
+                  :rows="2"
+                  placeholder="请输入采购链接"
+                />
+              </el-form-item>
+            </el-col>
+          </el-row>
+
+          <!-- 商品选项 -->
+          <el-form-item label="商品选项" class="form-item-block">
+            <div class="options-container">
+              <div
+                v-for="(option, optIndex) in optionList"
+                :key="optIndex"
+                class="option-row"
+                :class="{ 'option-row-collapsed': option.collapsed }"
+                tabindex="0"
+                @keyup.enter="toggleCollapse(optIndex)"
+              >
+                <!-- 选项值列表（可收起） -->
+                <div class="option-values-container" v-show="!option.collapsed">
+                  <div class="option-value-row">
+                    <div class="input-label">选项名称</div>
+                    <div class="input-combined">
+                      <el-input
+                        v-model="option.chineseName"
+                        placeholder="采购选项名称"
+                        class="input-left"
                         size="small"
-                        @click="removeOptionValue(optIndex, valIndex)"
-                        class="ml-2"
+                        @keydown.tab.prevent="
+                          handleTabKey($event, optIndex, null, 'purchase')
+                        "
                       />
+                      <el-input
+                        v-model="option.englishName"
+                        placeholder="英文选项名称"
+                        class="input-right"
+                        size="small"
+                        @keydown.tab.prevent="
+                          handleTabKey($event, optIndex, null, 'product')
+                        "
+                      />
+                      <div class="delete-button-wrapper"></div>
                     </div>
                   </div>
-                </div>
-                <div class="option-footer" v-show="!option.collapsed">
-                  <el-button
-                    type="danger"
-                    size="small"
-                    @click="removeOption(optIndex)"
+                  <div
+                    v-for="(value, valIndex) in option.values"
+                    :key="valIndex"
+                    class="option-value-row"
                   >
-                    删除
-                  </el-button>
+                    <div class="input-label">选项值</div>
+                    <div class="input-combined">
+                      <el-input
+                        v-model="value.chineseValue"
+                        placeholder="采购选项值"
+                        class="input-left"
+                        size="small"
+                        @keydown.tab.prevent="
+                          handleTabKey($event, optIndex, valIndex, 'purchase')
+                        "
+                      />
+                      <el-input
+                        v-model="value.englishValue"
+                        placeholder="英文选项值"
+                        class="input-right"
+                        size="small"
+                        @keydown.tab.prevent="
+                          handleTabKey($event, optIndex, valIndex, 'product')
+                        "
+                      />
+                      <div class="delete-button-wrapper">
+                        <el-button
+                          v-if="valIndex < option.values.length - 1"
+                          type="danger"
+                          icon="Delete"
+                          circle
+                          size="small"
+                          @click="removeOptionValue(optIndex, valIndex)"
+                          class="ml-2"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <div class="option-footer" v-show="!option.collapsed">
+                    <el-button
+                      type="danger"
+                      size="small"
+                      @click="removeOption(optIndex)"
+                    >
+                      删除
+                    </el-button>
+                    <el-tooltip content="快捷键: Enter" placement="top">
+                      <el-button
+                        type="primary"
+                        size="small"
+                        @click="toggleCollapse(optIndex)"
+                        tabindex="-1"
+                      >
+                        {{ option.collapsed ? "展开" : "完成" }}
+                      </el-button>
+                    </el-tooltip>
+                  </div>
+                </div>
+
+                <!-- 底部操作按钮 -->
+
+                <!-- 收起状态提示 -->
+                <div class="option-collapsed-hint" v-show="option.collapsed">
+                  <div class="collapsed-content">
+                    <span class="option-name-display">
+                      <strong
+                        >{{ option.chineseName || "采购选项" }} &nbsp</strong
+                      >
+                      <span v-if="option.englishName" class="en-name"
+                        >[{{ option.englishName || "商品选项" }}]</span
+                      >
+                    </span>
+                    <div class="option-values-display">
+                      <template
+                        v-for="(value, idx) in option.values"
+                        :key="idx"
+                      >
+                        <el-tag
+                          v-if="value.chineseValue || value.englishValue"
+                          size="small"
+                          class="value-tag"
+                        >
+                          {{ value.chineseValue || "-" }}&nbsp
+                          <span v-if="value.englishValue" class="en-value"
+                            >[{{ value.englishValue || "-" }}]</span
+                          >
+                        </el-tag>
+                      </template>
+                    </div>
+                  </div>
                   <el-tooltip content="快捷键: Enter" placement="top">
                     <el-button
                       type="primary"
+                      link
                       size="small"
                       @click="toggleCollapse(optIndex)"
+                      class="expand-btn"
                       tabindex="-1"
                     >
-                      {{ option.collapsed ? "展开" : "完成" }}
+                      展开
                     </el-button>
                   </el-tooltip>
                 </div>
               </div>
-
-              <!-- 底部操作按钮 -->
-
-              <!-- 收起状态提示 -->
-              <div class="option-collapsed-hint" v-show="option.collapsed">
-                <div class="collapsed-content">
-                  <span class="option-name-display">
-                    <strong>{{ option.purchaseName || "采购选项" }}</strong>
-                    <span v-if="option.productName" class="en-name"
-                      >[{{ option.productName || "商品选项" }}]</span
-                    >
-                  </span>
-                  <div class="option-values-display">
-                    <template v-for="(value, idx) in option.values" :key="idx">
-                      <el-tag
-                        v-if="value.purchaseValue || value.productValue"
-                        size="small"
-                        class="value-tag"
-                      >
-                        {{ value.purchaseValue || "-" }}
-                        <span v-if="value.productValue" class="en-value"
-                          >[{{ value.productValue || "-" }}]</span
-                        >
-                      </el-tag>
-                    </template>
-                  </div>
-                </div>
-                <el-tooltip content="快捷键: Enter" placement="top">
-                  <el-button
-                    type="primary"
-                    link
-                    size="small"
-                    @click="toggleCollapse(optIndex)"
-                    class="expand-btn"
-                    tabindex="-1"
-                  >
-                    展开
-                  </el-button>
-                </el-tooltip>
-              </div>
+              <el-tooltip content="快捷键: Ctrl+=" placement="top">
+                <el-button
+                  type="primary"
+                  icon="Plus"
+                  @click="addOption"
+                  size="small"
+                  tabindex="-1"
+                >
+                  添加选项
+                </el-button>
+              </el-tooltip>
             </div>
-            <el-tooltip content="快捷键: Ctrl+=" placement="top">
-              <el-button
-                type="primary"
-                icon="Plus"
-                @click="addOption"
-                size="small"
-                tabindex="-1"
-              >
-                添加选项
-              </el-button>
-            </el-tooltip>
-          </div>
-        </el-form-item>
+          </el-form-item>
 
-        <!-- 变体分录表格 -->
-        <el-form-item label="变体分录">
-          <el-table
-            :data="step1Variants"
-            border
-            style="width: 100%"
-            row-key="variantId"
-            @row-drop="handleRowDrop"
-          >
-            <!-- 动态生成选项列 -->
-            <template v-if="getActiveOptions().length > 0">
-              <el-table-column
-                v-for="(opt, idx) in getActiveOptions()"
-                :key="opt.purchaseName || idx"
-                :label="opt.purchaseName || '选项'"
-                width="120"
-                align="center"
-              >
-                <template #default="{ row }">
-                  <!-- <span>{{
-                    `${row.optionValueList[idx]?.purchaseName}[${row.optionValueList[idx]?.optionValue}]` ||
+          <!-- 变体分录表格 -->
+          <el-form-item label="变体分录" class="form-item-block">
+            <el-table
+              :data="step1Variants"
+              border
+              style="width: 100%"
+              row-key="variantId"
+              @row-drop="handleRowDrop"
+              class="variant-table variant-table--selection"
+            >
+              <!-- 动态生成选项列 -->
+              <template v-if="getActiveOptions().length > 0">
+                <el-table-column
+                  v-for="(opt, idx) in getActiveOptions()"
+                  :key="opt.optionId || idx"
+                  :label="opt.chineseName || '选项'"
+                  min-width="150"
+                  align="center"
+                >
+                  <template #default="{ row }">
+                    <!-- <span>{{
+                    `${row.optionValueList[idx]?.chineseName}[${row.optionValueList[idx]?.optionValue}]` ||
                     "-"
                   }}</span> -->
 
-                  <span>
-                    {{ row.optionValueList[idx]?.purchaseName || "-" }}
-                    <span v-if="row.optionValueList[idx]?.optionValue">
-                      [{{ row.optionValueList[idx]?.optionValue }}]
+                    <span>
+                      {{ row.optionValueList[idx]?.chineseValue || "-" }}
+                      <span v-if="row.optionValueList[idx]?.englishValue">
+                        [{{ row.optionValueList[idx]?.englishValue }}]
+                      </span>
                     </span>
-                  </span>
+                  </template>
+                </el-table-column>
+              </template>
+
+              <!-- 当没有选项时，显示默认规格列 -->
+              <el-table-column
+                v-else
+                label="默认规格"
+                width="120"
+                align="center"
+              >
+                <template #default>
+                  <span>-</span>
                 </template>
               </el-table-column>
-            </template>
 
-            <!-- 当没有选项时，显示默认规格列 -->
-            <el-table-column v-else label="默认规格" width="120" align="center">
-              <template #default>
-                <span>-</span>
-              </template>
-            </el-table-column>
-
-            <el-table-column
-              label="采购链接"
-              prop="purchaseUrl"
-              min-width="200"
-            >
-              <template #default="{ row }">
-                <el-input
-                  v-model="row.purchaseUrl"
-                  placeholder="继承主商品"
-                  size="small"
-                  tabindex="-1"
-                />
-              </template>
-            </el-table-column>
-            <el-table-column label="操作" width="80" fixed="right">
-              <template #default="{ row, $index }">
-                <el-button
-                  v-if="step1Variants.length > 1"
-                  type="danger"
-                  icon="Delete"
-                  circle
-                  size="small"
-                  @click="removeVariant($index)"
-                  tabindex="-1"
-                />
-              </template>
-            </el-table-column>
-          </el-table>
-        </el-form-item>
-      </el-form>
-    </div>
-
-    <!-- 第二步：信息录入 -->
-    <div v-show="activeStep === 1" class="step-content">
-      <el-form
-        ref="step2FormRef"
-        :model="step2FormData"
-        :rules="step2Rules"
-        label-width="68px"
-        class="step2-form"
-        :label-position="'left'"
-      >
-        <!-- 主商品信息 -->
-        <el-divider content-position="left">主商品信息</el-divider>
-
-        <!-- SPU 与 商品标题 同行 -->
-        <el-row :gutter="20">
-          <el-col :span="8">
-            <el-form-item label="SPU" prop="spu">
-              <el-input
-                v-model="step2FormData.spu"
-                disabled
-                placeholder="系统自动生成"
-              />
-            </el-form-item>
-          </el-col>
-
-          <el-col :span="8">
-            <el-form-item label="商品类别" prop="category">
-              <el-input
-                v-model="step2FormData.category"
-                placeholder="请输入商品类别"
-              />
-            </el-form-item>
-          </el-col>
-          <el-col :span="8">
-            <el-form-item label="商品类型" prop="productType">
-              <el-input
-                v-model="step2FormData.productType"
-                placeholder="请输入商品类型"
-              />
-            </el-form-item>
-          </el-col>
-        </el-row>
-
-        <!-- 商品类别 与 商品类型 同行 -->
-        <el-row :gutter="20">
-          <el-col :span="24">
-            <el-form-item label="商品标题" prop="productTitle">
-              <el-input
-                v-model="step2FormData.productTitle"
-                placeholder="请输入商品标题"
-              />
-            </el-form-item>
-          </el-col>
-        </el-row>
-
-        <!-- 商品详情选项卡 -->
-        <el-form-item label="商品详情" prop="detailTabs">
-          <el-tabs
-            v-model="activeDetailTab"
-            type="border-card"
-            class="detail-tabs"
-          >
-            <!-- NOTE 选项卡 -->
-            <el-tab-pane label="DESCRIPTION" name="description">
-              <el-input
-                v-model="step2FormData.description"
-                type="textarea"
-                :rows="4"
-                placeholder="请输入商品详情"
-              />
-            </el-tab-pane>
-            <!-- SIZE 选项卡 -->
-            <el-tab-pane label="SIZE" name="size">
-              <el-input
-                v-model="step2FormData.size"
-                type="textarea"
-                :rows="4"
-                placeholder="请输入SIZE"
-              />
-            </el-tab-pane>
-            <!-- MATERIAL 选项卡 -->
-            <el-tab-pane label="MATERIAL" name="material">
-              <el-input
-                v-model="step2FormData.material"
-                type="textarea"
-                :rows="4"
-                placeholder="请输入MATERIAL"
-              />
-            </el-tab-pane>
-            <!-- NOTE 选项卡 -->
-            <el-tab-pane label="NOTE" name="note">
-              <el-input
-                v-model="step2FormData.note"
-                type="textarea"
-                :rows="4"
-                placeholder="请输入NOTE"
-              />
-            </el-tab-pane>
-            <!-- PACKAGE_INCLUDE 选项卡 -->
-            <el-tab-pane label="PACKAGE_INCLUDE" name="packageInclude">
-              <el-input
-                v-model="step2FormData.packageInclude"
-                type="textarea"
-                :rows="4"
-                placeholder="请输入PACKAGE_INCLUDE"
-              />
-            </el-tab-pane>
-            <!-- 商品详情描述选项卡 -->
-            <el-tab-pane label="商品详情描述" name="bodyHtml">
-              <div class="rich-text-editor-container">
-                <div class="rich-text-editor-expanded">
-                  <div class="rich-text-editor-toolbar">
-                    <el-radio-group v-model="richTextEditor.mode" size="small">
-                      <el-radio-button value="edit">HTML 输入</el-radio-button>
-                      <el-radio-button value="preview">预览</el-radio-button>
-                    </el-radio-group>
-                  </div>
+              <el-table-column
+                label="采购链接"
+                prop="purchaseUrl"
+                min-width="200"
+              >
+                <template #default="{ row }">
                   <el-input
-                    v-if="richTextEditor.mode === 'edit'"
-                    v-model="step2FormData.bodyHtml"
-                    type="textarea"
-                    :rows="6"
-                    placeholder="请输入商品详情描述 (HTML)"
-                  />
-                  <div
-                    v-else
-                    class="rich-text-preview"
-                    v-html="
-                      step2FormData.bodyHtml ||
-                      '<span class=no-content>暂无内容</span>'
-                    "
-                  ></div>
-                </div>
-              </div>
-            </el-tab-pane>
-          </el-tabs>
-        </el-form-item>
-
-        <!-- 媒体文件列表 -->
-        <el-divider content-position="left">商品媒体文件管理</el-divider>
-        <el-form-item label="媒体文件">
-          <div class="image-manager">
-            <div class="image-toolbar mb-2">
-              <el-input
-                v-model="step2FormData.imageSearchKeyword"
-                placeholder="输入媒体文件所在目录搜索"
-                style="width: 300px"
-                clearable
-                @keyup.enter="loadServerImages"
-              />
-              <el-button
-                type="primary"
-                icon="Upload"
-                @click="loadServerImages"
-                :loading="imageLoading"
-                size="default"
-              >
-                从服务器导入
-              </el-button>
-            </div>
-            <!-- 添加拖拽排序事件 -->
-            <div
-              class="image-grid"
-              @dragover.prevent
-              @drop="handleImageDrop($event)"
-            >
-              <div
-                v-for="(media, index) in step2FormData.mediaList"
-                :key="media.mediaId || index"
-                class="image-item"
-                draggable
-                @dragstart="handleImageDragStart($event, media)"
-                @dragenter.prevent="handleImageDragEnter($event, index)"
-                @dragleave.prevent="handleImageDragLeave($event)"
-                :title="media.alt || media.filename"
-                :class="{
-                  'drag-over':
-                    dragOverIndex === index && draggedImage !== media,
-                }"
-              >
-                <!-- 图片展示 -->
-                <template v-if="isImage(media)">
-                  <el-image
-                    :src="
-                      baseUrl + (media.nasMediaUrl || media.shopifyMediaUrl)
-                    "
-                    :alt="media.alt || media.filename"
-                    class="image-thumb"
-                    :preview-src-list="imagePreviewList"
-                    :initial-index="
-                      imagePreviewList.indexOf(
-                        baseUrl + (media.nasMediaUrl || media.shopifyMediaUrl),
-                      )
-                    "
-                    lazy
-                    show-progress
-                    preview-teleported
-                    fit="cover"
+                    v-model="row.purchaseUrl"
+                    placeholder="继承主商品"
+                    size="small"
+                    tabindex="-1"
                   />
                 </template>
-                <!-- 视频展示 -->
-                <template v-else-if="isVideo(media)">
-                  <div class="video-thumbnail" @click="openVideoModal(media)">
+              </el-table-column>
+              <el-table-column label="操作" width="80" fixed="right">
+                <template #default="{ row, $index }">
+                  <el-button
+                    v-if="step1Variants.length > 1"
+                    type="danger"
+                    icon="Delete"
+                    circle
+                    size="small"
+                    @click="removeVariant($index)"
+                    tabindex="-1"
+                  />
+                </template>
+              </el-table-column>
+            </el-table>
+          </el-form-item>
+        </el-form>
+      </div>
+
+      <!-- 第二步：信息录入 -->
+      <div v-show="activeStep === 1" class="step-content">
+        <el-form
+          ref="step2FormRef"
+          :model="step2FormData"
+          :rules="step2Rules"
+          label-width="68px"
+          class="step-form step2-form"
+          :label-position="'left'"
+        >
+          <!-- 主商品信息 -->
+          <el-divider content-position="left">主商品信息</el-divider>
+
+          <!-- SPU 与 商品标题 同行 -->
+          <el-row :gutter="20">
+            <el-col :span="8">
+              <el-form-item label="SPU" prop="spu">
+                <el-input
+                  v-model="step2FormData.spu"
+                  disabled
+                  placeholder="系统自动生成"
+                />
+              </el-form-item>
+            </el-col>
+
+            <el-col :span="8">
+              <el-form-item label="商品类别" prop="category">
+                <el-input
+                  v-model="step2FormData.category"
+                  placeholder="请输入商品类别"
+                />
+              </el-form-item>
+            </el-col>
+            <el-col :span="8">
+              <el-form-item label="商品类型" prop="productType">
+                <el-input
+                  v-model="step2FormData.productType"
+                  placeholder="请输入商品类型"
+                />
+              </el-form-item>
+            </el-col>
+          </el-row>
+
+          <!-- 商品类别 与 商品类型 同行 -->
+          <el-row :gutter="20">
+            <el-col :span="24">
+              <el-form-item label="商品标题" prop="productTitle">
+                <el-input
+                  v-model="step2FormData.productTitle"
+                  placeholder="请输入商品标题"
+                />
+              </el-form-item>
+            </el-col>
+          </el-row>
+
+          <!-- 商品详情选项卡 -->
+          <el-form-item
+            label="商品详情"
+            prop="detailTabs"
+            class="form-item-block"
+          >
+            <el-tabs
+              v-model="activeDetailTab"
+              type="border-card"
+              class="detail-tabs"
+            >
+              <!-- NOTE 选项卡 -->
+              <el-tab-pane label="DESCRIPTION" name="description">
+                <el-input
+                  v-model="step2FormData.description"
+                  type="textarea"
+                  :rows="4"
+                  placeholder="请输入商品详情"
+                />
+              </el-tab-pane>
+              <!-- SIZE 选项卡 -->
+              <el-tab-pane label="SIZE" name="size">
+                <el-input
+                  v-model="step2FormData.size"
+                  type="textarea"
+                  :rows="4"
+                  placeholder="请输入SIZE"
+                />
+              </el-tab-pane>
+              <!-- MATERIAL 选项卡 -->
+              <el-tab-pane label="MATERIAL" name="material">
+                <el-input
+                  v-model="step2FormData.material"
+                  type="textarea"
+                  :rows="4"
+                  placeholder="请输入MATERIAL"
+                />
+              </el-tab-pane>
+              <!-- NOTE 选项卡 -->
+              <el-tab-pane label="NOTE" name="note">
+                <el-input
+                  v-model="step2FormData.note"
+                  type="textarea"
+                  :rows="4"
+                  placeholder="请输入NOTE"
+                />
+              </el-tab-pane>
+              <!-- PACKAGE_INCLUDE 选项卡 -->
+              <el-tab-pane label="PACKAGE_INCLUDE" name="packageInclude">
+                <el-input
+                  v-model="step2FormData.packageInclude"
+                  type="textarea"
+                  :rows="4"
+                  placeholder="请输入PACKAGE_INCLUDE"
+                />
+              </el-tab-pane>
+              <!-- 商品详情描述选项卡 -->
+              <el-tab-pane label="商品详情描述" name="bodyHtml">
+                <div class="rich-text-editor-container">
+                  <div class="rich-text-editor-expanded">
+                    <div class="rich-text-editor-toolbar">
+                      <el-radio-group
+                        v-model="richTextEditor.mode"
+                        size="small"
+                      >
+                        <el-radio-button value="edit"
+                          >HTML 输入</el-radio-button
+                        >
+                        <el-radio-button value="preview">预览</el-radio-button>
+                      </el-radio-group>
+                    </div>
+                    <el-input
+                      v-if="richTextEditor.mode === 'edit'"
+                      v-model="step2FormData.bodyHtml"
+                      type="textarea"
+                      :rows="6"
+                      placeholder="请输入商品详情描述 (HTML)"
+                    />
+                    <div
+                      v-else
+                      class="rich-text-preview"
+                      v-html="
+                        step2FormData.bodyHtml ||
+                        '<span class=no-content>暂无内容</span>'
+                      "
+                    ></div>
+                  </div>
+                </div>
+              </el-tab-pane>
+            </el-tabs>
+          </el-form-item>
+
+          <!-- 媒体文件列表 -->
+          <el-divider content-position="left">商品媒体文件管理</el-divider>
+          <el-form-item label="媒体文件" class="form-item-block">
+            <div class="image-manager">
+              <div class="image-toolbar mb-2">
+                <el-input
+                  v-model="step2FormData.imageSearchKeyword"
+                  placeholder="输入媒体文件所在目录搜索"
+                  style="width: 300px"
+                  clearable
+                  @keyup.enter="loadServerImages"
+                />
+                <el-button
+                  type="primary"
+                  icon="Upload"
+                  @click="loadServerImages"
+                  :loading="imageLoading"
+                  size="default"
+                >
+                  从服务器导入
+                </el-button>
+              </div>
+              <!-- 添加拖拽排序事件 -->
+              <div
+                class="image-grid"
+                @dragover.prevent
+                @drop="handleImageDrop($event)"
+              >
+                <div
+                  v-for="(media, index) in step2FormData.mediaList"
+                  :key="media.mediaId || index"
+                  class="image-item"
+                  draggable
+                  @dragstart="handleImageDragStart($event, media)"
+                  @dragenter.prevent="handleImageDragEnter($event, index)"
+                  @dragleave.prevent="handleImageDragLeave($event)"
+                  :title="media.alt || media.filename"
+                  :class="{
+                    'drag-over':
+                      dragOverIndex === index && draggedImage !== media,
+                  }"
+                >
+                  <!-- 图片展示 -->
+                  <template v-if="isImage(media)">
                     <el-image
-                      :src="getVideoThumbnail(media)"
+                      :src="
+                        baseUrl + (media.nasMediaUrl || media.shopifyMediaUrl)
+                      "
+                      :alt="media.alt || media.filename"
                       class="image-thumb"
+                      :preview-src-list="imagePreviewList"
+                      :initial-index="
+                        imagePreviewList.indexOf(
+                          baseUrl +
+                            (media.nasMediaUrl || media.shopifyMediaUrl),
+                        )
+                      "
+                      lazy
+                      show-progress
+                      preview-teleported
                       fit="cover"
                     />
-                    <div class="video-play-button">
-                      <el-icon><VideoPlay /></el-icon>
+                  </template>
+                  <!-- 视频展示 -->
+                  <template v-else-if="isVideo(media)">
+                    <div class="video-thumbnail" @click="openVideoModal(media)">
+                      <el-image
+                        :src="getVideoThumbnail(media)"
+                        class="image-thumb"
+                        fit="cover"
+                      />
+                      <div class="video-play-button">
+                        <el-icon><VideoPlay /></el-icon>
+                      </div>
                     </div>
+                  </template>
+                  <!-- 其他类型文件 -->
+                  <template v-else>
+                    <div class="file-placeholder">
+                      <el-icon><Document /></el-icon>
+                      <span class="file-name">{{ media.filename }}</span>
+                    </div>
+                  </template>
+                  <div class="image-overlay">
+                    <span class="media-type-badge">{{
+                      getMediaTypeLabel(media)
+                    }}</span>
                   </div>
-                </template>
-                <!-- 其他类型文件 -->
-                <template v-else>
-                  <div class="file-placeholder">
-                    <el-icon><Document /></el-icon>
-                    <span class="file-name">{{ media.filename }}</span>
-                  </div>
-                </template>
-                <div class="image-overlay">
-                  <span class="media-type-badge">{{
-                    getMediaTypeLabel(media)
-                  }}</span>
+                </div>
+                <div
+                  class="image-placeholder"
+                  v-if="step2FormData.mediaList?.length === 0"
+                >
+                  <el-icon class="placeholder-icon"><Picture /></el-icon>
+                  <span class="placeholder-text">点击"从服务器导入"</span>
                 </div>
               </div>
-              <div
-                class="image-placeholder"
-                v-if="step2FormData.mediaList?.length === 0"
-              >
-                <el-icon class="placeholder-icon"><Picture /></el-icon>
-                <span class="placeholder-text">点击"从服务器导入"</span>
-              </div>
             </div>
-          </div>
-        </el-form-item>
+          </el-form-item>
 
-        <!-- 变体详细设置 -->
-        <el-divider content-position="left">变体详细设置</el-divider>
+          <!-- 变体详细设置 -->
+          <el-divider content-position="left">变体详细设置</el-divider>
 
-        <el-row :gutter="10" class="mb8">
-          <right-toolbar
-            :showSearch="false"
-            :showrRefresh="false"
-            :search="false"
-            :columns="columns"
-          ></right-toolbar>
-        </el-row>
+          <el-row :gutter="10" class="mb8">
+            <right-toolbar
+              :showSearch="false"
+              :showrRefresh="false"
+              :search="false"
+              :columns="columns"
+            ></right-toolbar>
+          </el-row>
 
-        <el-table
-          :data="step2Variants"
-          border
-          style="width: 100%"
-          :loading="loading"
-          row-key="variantId"
-          :row-class-name="tableRowClassName"
-        >
-          <!-- 动态生成选项列 -->
-          <template v-if="columns[0].visible">
-            <template v-if="getActiveOptions().length > 0">
+          <el-table
+            :data="step2Variants"
+            border
+            style="width: 100%"
+            :loading="loading"
+            row-key="variantId"
+            :row-class-name="tableRowClassName"
+            class="variant-table variant-table--detail"
+          >
+            <!-- 动态生成选项列 -->
+            <template v-if="columns[0].visible">
+              <template v-if="getActiveOptions().length > 0">
+                <el-table-column
+                  v-for="(opt, idx) in getActiveOptions()"
+                  :key="opt.optionId || idx"
+                  :label="opt.chineseName || '选项'"
+                  width="120"
+                  align="center"
+                  fixed="left"
+                >
+                  <template #default="{ row }">
+                    <span>
+                      {{ row.optionValueList[idx]?.chineseValue || "-" }}
+                      <span v-if="row.optionValueList[idx]?.englishValue">
+                        [{{ row.optionValueList[idx]?.englishValue }}]
+                      </span>
+                    </span>
+                  </template>
+                </el-table-column>
+              </template>
+              <!-- 当没有选项时，显示默认规格列 -->
               <el-table-column
-                v-for="(opt, idx) in getActiveOptions()"
-                :key="opt.purchaseName || idx"
-                :label="opt.purchaseName || '选项'"
+                v-else
+                label="默认规格"
                 width="120"
                 align="center"
                 fixed="left"
               >
-                <template #default="{ row }">
-                  <span>
-                    {{ row.optionValueList[idx]?.purchaseName || "-" }}
-                    <span v-if="row.optionValueList[idx]?.optionValue">
-                      [{{ row.optionValueList[idx]?.optionValue }}]
-                    </span>
-                  </span>
+                <template #default>
+                  <span>-</span>
                 </template>
               </el-table-column>
             </template>
-            <!-- 当没有选项时，显示默认规格列 -->
+
             <el-table-column
-              v-else
-              label="默认规格"
-              width="120"
-              align="center"
+              label="SKU"
+              width="150"
               fixed="left"
+              v-if="columns[1].visible"
             >
-              <template #default>
-                <span>-</span>
+              <template #default="{ row }">
+                <el-input v-model="row.sku" size="small" />
               </template>
             </el-table-column>
-          </template>
+            <!-- 规格图 -->
+            <el-table-column
+              label="规格图"
+              align="center"
+              width="100"
+              fixed="left"
+            >
+              <template #default="{ row }">
+                <div
+                  class="variant-image-item"
+                  @dragover.prevent
+                  @drop="handleVariantImageDrop($event, row)"
+                  @dragstart="handleVariantImageDragStart($event, row)"
+                  @dragenter.prevent="handleVariantImageDragEnter($event, row)"
+                  @dragleave.prevent="handleVariantImageDragLeave($event)"
+                  draggable
+                  title="拖拽图片到此处或拖拽出区域删除"
+                  :class="{
+                    'drag-over':
+                      dragOverVariant === row && draggedVariantRow !== row,
+                  }"
+                >
+                  <!-- 图片展示 -->
+                  <template v-if="row.media">
+                    <el-image
+                      :src="
+                        baseUrl +
+                        (row.media.nasMediaUrl || row.media.shopifyMediaUrl)
+                      "
+                      class="variant-thumb"
+                      :alt="'Variant Image'"
+                      :preview-src-list="[
+                        baseUrl +
+                          (row.media.nasMediaUrl || row.media.shopifyMediaUrl),
+                      ]"
+                      preview-teleported
+                      fit="cover"
+                    />
+                  </template>
+                  <span v-else class="drop-hint">无规格图</span>
+                </div>
+              </template>
+            </el-table-column>
 
-          <el-table-column
-            label="SKU"
-            width="150"
-            fixed="left"
-            v-if="columns[1].visible"
-          >
-            <template #default="{ row }">
-              <el-input v-model="row.sku" size="small" />
-            </template>
-          </el-table-column>
-          <!-- 规格图 -->
-          <el-table-column
-            label="规格图"
-            align="center"
-            width="100"
-            fixed="left"
-          >
-            <template #default="{ row }">
-              <div
-                class="variant-image-item"
-                @dragover.prevent
-                @drop="handleVariantImageDrop($event, row)"
-                @dragstart="handleVariantImageDragStart($event, row)"
-                @dragenter.prevent="handleVariantImageDragEnter($event, row)"
-                @dragleave.prevent="handleVariantImageDragLeave($event)"
-                draggable
-                title="拖拽图片到此处或拖拽出区域删除"
-                :class="{
-                  'drag-over':
-                    dragOverVariant === row && draggedVariantRow !== row,
-                }"
-              >
-                <!-- 图片展示 -->
-                <template v-if="row.media">
-                  <el-image
-                    :src="
-                      baseUrl +
-                      (row.media.nasMediaUrl || row.media.shopifyMediaUrl)
-                    "
-                    class="variant-thumb"
-                    :alt="'Variant Image'"
-                    :preview-src-list="[
-                      baseUrl +
-                        (row.media.nasMediaUrl || row.media.shopifyMediaUrl),
-                    ]"
-                    preview-teleported
-                    fit="cover"
-                  />
-                </template>
-                <span v-else class="drop-hint">无规格图</span>
-              </div>
-            </template>
-          </el-table-column>
+            <el-table-column
+              label="采购价"
+              align="center"
+              width="110"
+              v-if="columns[2].visible"
+            >
+              <template #header>
+                <el-tooltip content="单位：元" placement="top">
+                  <span>采购价</span>
+                </el-tooltip>
+              </template>
+              <template #default="{ row }">
+                <el-input-number
+                  :controls="false"
+                  v-model="row.purchasePrice"
+                  :min="0"
+                  :precision="2"
+                  size="small"
+                  style="width: 80px"
+                  @change="calculateVariantCost(row)"
+                  placeholder="0.00"
+                />
+              </template>
+            </el-table-column>
+            <el-table-column
+              label="包装长度"
+              align="center"
+              width="90"
+              v-if="columns[3].visible"
+            >
+              <template #header>
+                <el-tooltip content="单位：厘米" placement="top">
+                  <span>包装长度</span>
+                </el-tooltip>
+              </template>
+              <template #default="{ row }">
+                <el-input-number
+                  :controls="false"
+                  v-model="row.pkLength"
+                  :min="0"
+                  :precision="0"
+                  size="small"
+                  style="width: 60px"
+                  @change="calculateMaterialWeight(row)"
+                />
+              </template>
+            </el-table-column>
+            <el-table-column
+              label="包装宽度"
+              align="center"
+              width="90"
+              v-if="columns[3].visible"
+            >
+              <template #header>
+                <el-tooltip content="单位：厘米" placement="top">
+                  <span>包装宽度</span>
+                </el-tooltip>
+              </template>
+              <template #default="{ row }">
+                <el-input-number
+                  :controls="false"
+                  v-model="row.pkWidth"
+                  :min="0"
+                  :precision="0"
+                  size="small"
+                  style="width: 60px"
+                  @change="calculateMaterialWeight(row)"
+                />
+              </template>
+            </el-table-column>
+            <el-table-column
+              label="包装高度"
+              align="center"
+              width="90"
+              v-if="columns[3].visible"
+            >
+              <template #header>
+                <el-tooltip content="单位：厘米" placement="top">
+                  <span>包装高度</span>
+                </el-tooltip>
+              </template>
+              <template #default="{ row }">
+                <el-input-number
+                  :controls="false"
+                  v-model="row.pkHeight"
+                  :min="0"
+                  :precision="0"
+                  size="small"
+                  style="width: 60px"
+                  @change="calculateMaterialWeight(row)"
+                />
+              </template>
+            </el-table-column>
+            <el-table-column
+              label="实重"
+              align="center"
+              width="94"
+              v-if="columns[4].visible"
+            >
+              <template #header>
+                <el-tooltip content="单位：KG" placement="top">
+                  <span>实重</span>
+                </el-tooltip>
+              </template>
+              <template #default="{ row }">
+                <el-input-number
+                  v-model="row.pkWeight"
+                  :controls="false"
+                  :min="0"
+                  :precision="3"
+                  size="small"
+                  style="width: 65px"
+                  @change="calculateFreight(row)"
+                  placeholder="0.000"
+                />
+              </template>
+            </el-table-column>
+            <el-table-column
+              label="材积重"
+              align="right"
+              width="80"
+              v-if="columns[5].visible"
+            >
+              <template #header>
+                <el-tooltip
+                  content="材积重 = (L * W * H) / 8000"
+                  placement="top"
+                >
+                  <span>材积重</span>
+                </el-tooltip>
+              </template>
+              <template #default="{ row }">
+                <span>{{ row.materialWeight || 0 }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column
+              label="实际发货"
+              align="center"
+              width="80"
+              v-if="columns[6].visible"
+            >
+              <template #default="{ row }">
+                <el-switch
+                  v-model="row.isActualShipment"
+                  :active-value="'1'"
+                  :inactive-value="'0'"
+                  @change="calculateVariantCost(row)"
+                />
+              </template>
+            </el-table-column>
+            <el-table-column
+              label="运费"
+              align="center"
+              width="110"
+              v-if="columns[7].visible"
+            >
+              <template #header>
+                <el-tooltip placement="top">
+                  <template #content>
+                    单位：元<br />输入包装尺寸和实重，自动计算运费</template
+                  >
+                  <span>运费</span>
+                </el-tooltip>
+              </template>
+              <template #default="{ row }">
+                <el-input-number
+                  :controls="false"
+                  v-model="row.freight"
+                  :min="0"
+                  :precision="2"
+                  size="small"
+                  style="width: 80px"
+                  @change="calculateVariantCost(row)"
+                  placeholder="0.00"
+                />
+              </template>
+            </el-table-column>
+            <el-table-column
+              label="成本价"
+              align="center"
+              width="110"
+              v-if="columns[8].visible"
+            >
+              <template #header>
+                <el-tooltip placement="top">
+                  <template #content>
+                    单位：元<br />成本价 = 采购价 + 运费</template
+                  >
+                  <span>成本价</span>
+                </el-tooltip>
+              </template>
+              <template #default="{ row }">
+                <el-input-number
+                  :controls="false"
+                  v-model="row.unitCostPrice"
+                  :min="0"
+                  :precision="2"
+                  size="small"
+                  style="width: 80px"
+                  @change="calculateVariantCost(row)"
+                  placeholder="0.00"
+                />
+              </template>
+            </el-table-column>
+            <!-- 美国汇率 -->
+            <el-table-column
+              label="汇率"
+              align="center"
+              width="110"
+              v-if="columns[9].visible"
+            >
+              <template #header>
+                <el-tooltip content="首次默认填充今日美国汇率" placement="top">
+                  <span>汇率</span>
+                </el-tooltip>
+              </template>
+              <template #default="{ row }">
+                <el-input-number
+                  :controls="false"
+                  v-model="row.exchangeRate"
+                  :min="0"
+                  :precision="4"
+                  size="small"
+                  style="width: 80px"
+                  placeholder="0.0000"
+                />
+              </template>
+            </el-table-column>
+            <!-- 建议售价 -->
+            <el-table-column
+              label="建议售价"
+              align="center"
+              width="110"
+              v-if="columns[10].visible"
+            >
+              <template #header>
+                <el-tooltip placement="top">
+                  <template #content> 单位：美元<br />按照30%利润计算</template>
+                  <span>建议售价</span>
+                </el-tooltip>
+              </template>
+              <template #default="{ row }">
+                <span>{{ row.suggestedPrice || "" }}</span>
+              </template>
+            </el-table-column>
+            <!-- 利润率 -->
+            <el-table-column
+              label="利润"
+              align="center"
+              width="110"
+              v-if="columns[11].visible"
+            >
+              <template #header>
+                <el-tooltip placement="top">
+                  <template #content>
+                    单位：元<br />实际利润 = 售价 * 汇率 - 成本价</template
+                  >
+                  <span>利润</span>
+                </el-tooltip>
+              </template>
+              <template #default="{ row }">
+                <span>{{ row.profit || "" }}</span>
+              </template>
+            </el-table-column>
+            <!-- 利润率 -->
+            <el-table-column
+              label="利润率"
+              align="center"
+              width="110"
+              v-if="columns[12].visible"
+            >
+              <template #header>
+                <el-tooltip content="单位：%" placement="top">
+                  <template #content>
+                    单位：%<br />实际利润率 = 售价 * 汇率 - 成本价 / (销售价格 *
+                    汇率）</template
+                  >
+                  <span>利润率</span>
+                </el-tooltip>
+              </template>
+              <template #default="{ row }">
+                <span>{{ row.profitRate || "" }}</span>
+              </template>
+            </el-table-column>
+            <!-- 销售价格 -->
+            <el-table-column
+              label="售价"
+              align="center"
+              width="110"
+              fixed="right"
+              v-if="columns[13].visible"
+            >
+              <template #header>
+                <el-tooltip placement="top">
+                  <template #content>
+                    单位：美元<br />默认按照30%利润计算</template
+                  >
+                  <span>售价</span>
+                </el-tooltip>
+              </template>
+              <template #default="{ row }">
+                <el-input-number
+                  :controls="false"
+                  v-model="row.price"
+                  :min="0"
+                  :precision="2"
+                  size="small"
+                  style="width: 80px"
+                  placeholder="0.00"
+                  @change="calculateProfitRate(row)"
+                />
+              </template>
+            </el-table-column>
+            <!-- 对比价 -->
+            <el-table-column
+              label="对比价"
+              align="center"
+              width="110"
+              fixed="right"
+              v-if="columns[14].visible"
+            >
+              <template #header>
+                <el-tooltip content="单位：美元" placement="top">
+                  <span>对比价</span>
+                </el-tooltip>
+              </template>
+              <template #default="{ row }">
+                <el-input-number
+                  :controls="false"
+                  v-model="row.comparePrice"
+                  :min="0"
+                  :precision="2"
+                  size="small"
+                  style="width: 80px"
+                  placeholder="0.00"
+                />
+              </template>
+            </el-table-column>
+          </el-table>
+        </el-form>
+      </div>
 
-          <el-table-column
-            label="采购价"
-            align="center"
-            width="110"
-            v-if="columns[2].visible"
-          >
-            <template #header>
-              <el-tooltip content="单位：元" placement="top">
-                <span>采购价</span>
-              </el-tooltip>
-            </template>
-            <template #default="{ row }">
-              <el-input-number
-                :controls="false"
-                v-model="row.purchasePrice"
-                :min="0"
-                :precision="2"
-                size="small"
-                style="width: 80px"
-                @change="calculateVariantCost(row)"
-                placeholder="0.00"
-              />
-            </template>
-          </el-table-column>
-          <el-table-column
-            label="包装长度"
-            align="center"
-            width="90"
-            v-if="columns[3].visible"
-          >
-            <template #header>
-              <el-tooltip content="单位：厘米" placement="top">
-                <span>包装长度</span>
-              </el-tooltip>
-            </template>
-            <template #default="{ row }">
-              <el-input-number
-                :controls="false"
-                v-model="row.pkLength"
-                :min="0"
-                :precision="0"
-                size="small"
-                style="width: 60px"
-                @change="calculateMaterialWeight(row)"
-              />
-            </template>
-          </el-table-column>
-          <el-table-column
-            label="包装宽度"
-            align="center"
-            width="90"
-            v-if="columns[3].visible"
-          >
-            <template #header>
-              <el-tooltip content="单位：厘米" placement="top">
-                <span>包装宽度</span>
-              </el-tooltip>
-            </template>
-            <template #default="{ row }">
-              <el-input-number
-                :controls="false"
-                v-model="row.pkWidth"
-                :min="0"
-                :precision="0"
-                size="small"
-                style="width: 60px"
-                @change="calculateMaterialWeight(row)"
-              />
-            </template>
-          </el-table-column>
-          <el-table-column
-            label="包装高度"
-            align="center"
-            width="90"
-            v-if="columns[3].visible"
-          >
-            <template #header>
-              <el-tooltip content="单位：厘米" placement="top">
-                <span>包装高度</span>
-              </el-tooltip>
-            </template>
-            <template #default="{ row }">
-              <el-input-number
-                :controls="false"
-                v-model="row.pkHeight"
-                :min="0"
-                :precision="0"
-                size="small"
-                style="width: 60px"
-                @change="calculateMaterialWeight(row)"
-              />
-            </template>
-          </el-table-column>
-          <el-table-column
-            label="实重"
-            align="center"
-            width="94"
-            v-if="columns[4].visible"
-          >
-            <template #header>
-              <el-tooltip content="单位：KG" placement="top">
-                <span>实重</span>
-              </el-tooltip>
-            </template>
-            <template #default="{ row }">
-              <el-input-number
-                v-model="row.pkWeight"
-                :controls="false"
-                :min="0"
-                :precision="3"
-                size="small"
-                style="width: 65px"
-                @change="calculateFreight(row)"
-                placeholder="0.000"
-              />
-            </template>
-          </el-table-column>
-          <el-table-column
-            label="材积重"
-            align="right"
-            width="80"
-            v-if="columns[5].visible"
-          >
-            <template #header>
-              <el-tooltip content="材积重 = (L * W * H) / 8000" placement="top">
-                <span>材积重</span>
-              </el-tooltip>
-            </template>
-            <template #default="{ row }">
-              <span>{{ row.materialWeight || 0 }}</span>
-            </template>
-          </el-table-column>
-          <el-table-column
-            label="实际发货"
-            align="center"
-            width="80"
-            v-if="columns[6].visible"
-          >
-            <template #default="{ row }">
-              <el-switch
-                v-model="row.isActualShipment"
-                :active-value="'1'"
-                :inactive-value="'0'"
-                @change="calculateVariantCost(row)"
-              />
-            </template>
-          </el-table-column>
-          <el-table-column
-            label="运费"
-            align="center"
-            width="110"
-            v-if="columns[7].visible"
-          >
-            <template #header>
-              <el-tooltip placement="top">
-                <template #content>
-                  单位：元<br />输入包装尺寸和实重，自动计算运费</template
-                >
-                <span>运费</span>
-              </el-tooltip>
-            </template>
-            <template #default="{ row }">
-              <el-input-number
-                :controls="false"
-                v-model="row.freight"
-                :min="0"
-                :precision="2"
-                size="small"
-                style="width: 80px"
-                @change="calculateVariantCost(row)"
-                placeholder="0.00"
-              />
-            </template>
-          </el-table-column>
-          <el-table-column
-            label="成本价"
-            align="center"
-            width="110"
-            v-if="columns[8].visible"
-          >
-            <template #header>
-              <el-tooltip placement="top">
-                <template #content>
-                  单位：元<br />成本价 = 采购价 + 运费</template
-                >
-                <span>成本价</span>
-              </el-tooltip>
-            </template>
-            <template #default="{ row }">
-              <el-input-number
-                :controls="false"
-                v-model="row.unitCostPrice"
-                :min="0"
-                :precision="2"
-                size="small"
-                style="width: 80px"
-                @change="calculateVariantCost(row)"
-                placeholder="0.00"
-              />
-            </template>
-          </el-table-column>
-          <!-- 美国汇率 -->
-          <el-table-column
-            label="汇率"
-            align="center"
-            width="110"
-            v-if="columns[9].visible"
-          >
-            <template #header>
-              <el-tooltip content="首次默认填充今日美国汇率" placement="top">
-                <span>汇率</span>
-              </el-tooltip>
-            </template>
-            <template #default="{ row }">
-              <el-input-number
-                :controls="false"
-                v-model="row.exchangeRate"
-                :min="0"
-                :precision="4"
-                size="small"
-                style="width: 80px"
-                placeholder="0.0000"
-              />
-            </template>
-          </el-table-column>
-          <!-- 建议售价 -->
-          <el-table-column
-            label="建议售价"
-            align="center"
-            width="110"
-            v-if="columns[10].visible"
-          >
-            <template #header>
-              <el-tooltip placement="top">
-                <template #content> 单位：美元<br />按照30%利润计算</template>
-                <span>建议售价</span>
-              </el-tooltip>
-            </template>
-            <template #default="{ row }">
-              <span>{{ row.suggestedPrice || "" }}</span>
-            </template>
-          </el-table-column>
-          <!-- 利润率 -->
-          <el-table-column
-            label="利润"
-            align="center"
-            width="110"
-            v-if="columns[11].visible"
-          >
-            <template #header>
-              <el-tooltip placement="top">
-                <template #content>
-                  单位：元<br />实际利润 = 售价 * 汇率 - 成本价</template
-                >
-                <span>利润</span>
-              </el-tooltip>
-            </template>
-            <template #default="{ row }">
-              <span>{{ row.profit || "" }}</span>
-            </template>
-          </el-table-column>
-          <!-- 利润率 -->
-          <el-table-column
-            label="利润率"
-            align="center"
-            width="110"
-            v-if="columns[12].visible"
-          >
-            <template #header>
-              <el-tooltip content="单位：%" placement="top">
-                <template #content>
-                  单位：%<br />实际利润率 = 售价 * 汇率 - 成本价 / (销售价格 *
-                  汇率）</template
-                >
-                <span>利润率</span>
-              </el-tooltip>
-            </template>
-            <template #default="{ row }">
-              <span>{{ row.profitRate || "" }}</span>
-            </template>
-          </el-table-column>
-          <!-- 销售价格 -->
-          <el-table-column
-            label="售价"
-            align="center"
-            width="110"
-            fixed="right"
-            v-if="columns[13].visible"
-          >
-            <template #header>
-              <el-tooltip placement="top">
-                <template #content>
-                  单位：美元<br />默认按照30%利润计算</template
-                >
-                <span>售价</span>
-              </el-tooltip>
-            </template>
-            <template #default="{ row }">
-              <el-input-number
-                :controls="false"
-                v-model="row.price"
-                :min="0"
-                :precision="2"
-                size="small"
-                style="width: 80px"
-                placeholder="0.00"
-                @change="calculateProfitRate(row)"
-              />
-            </template>
-          </el-table-column>
-          <!-- 对比价 -->
-          <el-table-column
-            label="对比价"
-            align="center"
-            width="110"
-            fixed="right"
-            v-if="columns[14].visible"
-          >
-            <template #header>
-              <el-tooltip content="单位：美元" placement="top">
-                <span>对比价</span>
-              </el-tooltip>
-            </template>
-            <template #default="{ row }">
-              <el-input-number
-                :controls="false"
-                v-model="row.comparePrice"
-                :min="0"
-                :precision="2"
-                size="small"
-                style="width: 80px"
-                placeholder="0.00"
-              />
-            </template>
-          </el-table-column>
-        </el-table>
-      </el-form>
+      <!-- 视频播放弹框 -->
+      <CustomVideoModal
+        v-model:visible="videoModalVisible"
+        :video="currentVideo"
+        :base-url="baseUrl"
+      />
     </div>
-
-    <!-- 视频播放弹框 -->
-    <CustomVideoModal
-      v-model:visible="videoModalVisible"
-      :video="currentVideo"
-      :base-url="baseUrl"
-    />
-
   </div>
 </template>
 
@@ -1102,8 +1150,54 @@ const baseUrl = import.meta.env.VITE_APP_BASE_API;
 // 新增：返回处理
 const emit = defineEmits(["submit", "back"]);
 
-function handleBack() {
-  emit("back");
+/**
+ * 处理返回操作逻辑
+ * 对接大厂 ERP 商品编辑规范：
+ * 1. 存在未保存变更时，弹出包含三个选项（保存并返回、不保存并返回、取消）的二次确认弹窗
+ * 2. 选择“保存并返回”时，等待后端保存成功后再回退；若失败则停留当前页并提示错误
+ * 3. 选择“不保存并返回”时，直接重置 dirty 状态并回退
+ * 4. 选择“取消”时，关闭弹窗保持现状
+ * 5. 无变更时直接回退
+ */
+async function handleBack() {
+  // 确认是否保存
+  const hasChanged =
+    activeStep.value === 0 ? hasStep1DataChanged() : hasStep2DataChanged();
+
+  if (hasChanged) {
+    try {
+      // 弹出符合企业级设计规范的二次确认弹窗
+      await ElMessageBox.confirm(
+        "您有未保存的商品信息，是否立即保存后再离开？",
+        "提示",
+        {
+          confirmButtonText: "保存并返回",
+          cancelButtonText: "不保存并返回",
+          distinguishCancelAndClose: true,
+          type: "warning",
+          closeOnClickModal: false,
+          closeOnPressEscape: false,
+        },
+      );
+      // 点击【保存并返回】
+      const success = await handleSave();
+      if (success) {
+        emit("back");
+      }
+    } catch (action) {
+      if (action === "cancel") {
+        // 点击【不保存并返回】
+        emit("back");
+      } else {
+        // 点击【取消】 (action === 'close')
+        // 保持当前页面状态不变
+        console.log("已取消返回操作，停留当前页");
+      }
+    }
+  } else {
+    // 无变更，直接返回
+    emit("back");
+  }
 }
 
 // 修改：关闭对话框改为触发返回事件
@@ -1291,17 +1385,17 @@ watch(
     if (isVisible) {
       if (activeStep.value === 0) {
         // 弹窗打开且在第一步时，挂载到 window
-        window.addEventListener("keydown", handleSetp1Keydown);
-        window.removeEventListener("keydown", handleSetp2Keydown);
+        window.addEventListener("keydown", handleStep1Keydown);
+        window.removeEventListener("keydown", handleStep2Keydown);
       } else if (activeStep.value === 1) {
         // 弹窗打开且在第二步时，挂载到 window
-        window.addEventListener("keydown", handleSetp2Keydown);
-        window.removeEventListener("keydown", handleSetp1Keydown);
+        window.addEventListener("keydown", handleStep2Keydown);
+        window.removeEventListener("keydown", handleStep1Keydown);
       }
     } else {
       // 弹窗关闭或切换到其他步骤时，移除监听器
-      window.removeEventListener("keydown", handleSetp1Keydown);
-      window.removeEventListener("keydown", handleSetp2Keydown);
+      window.removeEventListener("keydown", handleStep1Keydown);
+      window.removeEventListener("keydown", handleStep2Keydown);
     }
   },
 );
@@ -1313,25 +1407,25 @@ watch(
     if (visible.value) {
       if (step === 0) {
         // 切换到第一步，添加监听器
-        window.addEventListener("keydown", handleSetp1Keydown);
-        window.removeEventListener("keydown", handleSetp2Keydown);
+        window.addEventListener("keydown", handleStep1Keydown);
+        window.removeEventListener("keydown", handleStep2Keydown);
       } else if (step === 1) {
         // 切换到其他步骤，移除监听器
-        window.removeEventListener("keydown", handleSetp1Keydown);
-        window.addEventListener("keydown", handleSetp2Keydown);
+        window.removeEventListener("keydown", handleStep1Keydown);
+        window.addEventListener("keydown", handleStep2Keydown);
       }
     } else {
       // 弹窗关闭或切换到其他步骤时，移除监听器
-      window.removeEventListener("keydown", handleSetp1Keydown);
-      window.removeEventListener("keydown", handleSetp2Keydown);
+      window.removeEventListener("keydown", handleStep1Keydown);
+      window.removeEventListener("keydown", handleStep2Keydown);
     }
   },
 );
 
 // 组件卸载时清理监听器
 onUnmounted(() => {
-  window.removeEventListener("keydown", handleSetp1Keydown);
-  window.removeEventListener("keydown", handleSetp2Keydown);
+  window.removeEventListener("keydown", handleStep1Keydown);
+  window.removeEventListener("keydown", handleStep2Keydown);
 });
 
 // 组件挂载时加载缓存的汇率数据
@@ -1346,7 +1440,7 @@ function handleSourceUrlBlur() {
   }
 }
 // 处理第一步的键盘事件
-function handleSetp1Keydown(event) {
+function handleStep1Keydown(event) {
   // 检查是否按下了 Ctrl (或 Mac 上的 Cmd) + '+' 或 '='
   if (
     (event.ctrlKey || event.metaKey) &&
@@ -1359,8 +1453,8 @@ function handleSetp1Keydown(event) {
   // Ctrl + S: 保存并关闭
   if ((event.ctrlKey || event.metaKey) && event.key === "s") {
     event.preventDefault();
-    if (visible.value && activeStep.value === 0) {
-      handleSubmit("close");
+    if (visible.value) {
+      handleSaveStep1();
     }
   }
 
@@ -1368,7 +1462,7 @@ function handleSetp1Keydown(event) {
   if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
     event.preventDefault();
     if (visible.value && activeStep.value === 0) {
-      handleSubmit("continue");
+      handleContinue();
     }
   }
 
@@ -1376,26 +1470,26 @@ function handleSetp1Keydown(event) {
   if ((event.ctrlKey || event.metaKey) && event.key === "ArrowRight") {
     event.preventDefault();
     if (visible.value && activeStep.value === 0) {
-      handleSubmit("next");
+      handleNext();
     }
   }
 }
 
 // 处理第二步的键盘事件
-function handleSetp2Keydown(event) {
+function handleStep2Keydown(event) {
   // Ctrl + 左键: 上一步
   if ((event.ctrlKey || event.metaKey) && event.key === "ArrowLeft") {
     event.preventDefault();
     if (visible.value && activeStep.value === 1) {
-      handleSubmit("prev");
+      handlePrev();
     }
   }
 
   // Ctrl + S: 保存并关闭
   if ((event.ctrlKey || event.metaKey) && event.key === "s") {
     event.preventDefault();
-    if (visible.value && activeStep.value === 0) {
-      handleSubmit("close");
+    if (visible.value) {
+      handleSaveStep2();
     }
   }
 }
@@ -1439,49 +1533,54 @@ function flattenTagList(tagList) {
   traverse(tagList);
   return result;
 }
-
+const currentProductId = ref(null);
+const selectedTagIds = ref([]);
 // 打开编辑页面
-const open = async (selectedTagIds, productId, step = 0) => {
-  await fetchTags();
+const open = async (outsizeTagIds, productId, step = 0) => {
+  currentProductId.value = productId;
+  selectedTagIds.value = outsizeTagIds || [];
+
+  // 重置第一步表单并加载数据
+  await resetAndLoadData(step);
+
+  activeStep.value = step;
   visible.value = true;
-  console.log("selectedTagIds", selectedTagIds);
-  if (productId == null) {
-    resetForm(selectedTagIds, step);
+};
 
-    generateSpu(true);
+// 重置表单并加载数据
+const resetAndLoadData = async (step = 0) => {
+  if (step == 0) {
+    await fetchTags();
+    if (currentProductId.value == null) {
+      resetForm(step);
+      step1FormData.tagIds = selectedTagIds.value;
+      generateSpu(true);
+      // 优化1：打开弹窗时，来源 URL 自动获得焦点
+      nextTick(() => {
+        setTimeout(() => {
+          sourceUrlInputRef.value.focus();
+        }, 50); // 增加延迟以等待 Dialog 动画完成
+      });
+      step1DataSnapshot.value = null;
+      step2DataSnapshot.value = null;
+    } else {
+      resetForm(step);
 
-    // 优化1：打开弹窗时，来源 URL 自动获得焦点
-    nextTick(() => {
-      setTimeout(() => {
-        sourceUrlInputRef.value.focus();
-      }, 50); // 增加延迟以等待 Dialog 动画完成
-    });
-
-    // 保存初始数据快照
-    saveStep1DataSnapshot();
-    return;
+      // 加载商品表单数据
+      await handleLoadStep1Data();
+    }
   } else {
-    resetForm(null, step);
-
+    resetForm(step);
     // 加载商品表单数据
-    await handleLoadData(productId);
+    await handleLoadStep2Data();
   }
 };
 
 // 加载商品表单数据
-const handleLoadData = async (productId) => {
+const handleLoadStep2Data = async () => {
   // 加载商品详情
-  const response = await getProduct(productId);
+  const response = await getProduct(currentProductId.value);
   const productData = response.data;
-
-  // 填充第一步表单
-  Object.assign(step1FormData, {
-    productId: productData.productId,
-    spu: productData.spu || null,
-    sourceUrl: productData.sourceUrl || null,
-    purchaseUrl: productData.purchaseUrl || null,
-    tagIds: productData.tagIds || [],
-  });
 
   // 填充第二步表单
   Object.assign(step2FormData, productData);
@@ -1494,6 +1593,61 @@ const handleLoadData = async (productId) => {
       optionList.value = [];
     }
   }
+  console.log("采购商品选项:", optionList.value);
+
+  // 加载变体数据
+  if (
+    productData.productVariantList &&
+    productData.productVariantList.length > 0
+  ) {
+    const step2V = [];
+    productData.productVariantList.forEach(async (v, index) => {
+      const optionValueList = v.optionValues ? JSON.parse(v.optionValues) : [];
+      // 检查并填充汇率
+      const variant = {
+        ...v,
+        sku:
+          v.sku ||
+          productData.spu + "-" + (index + 1).toString().padStart(3, "0"),
+        optionValueList,
+      };
+      // 如果exchangeRate为空，自动填入缓存的汇率
+      if (!variant.exchangeRate) {
+        await fillExchangeRate(variant);
+      }
+      step2V.push(variant);
+      step2Variants.value = step2V;
+    });
+  }
+
+  // 保存初始数据快照
+  saveStep2DataSnapshot();
+  step1DataSnapshot.value = null;
+};
+
+const handleLoadStep1Data = async () => {
+  // 加载商品详情
+  const response = await getProduct(currentProductId.value);
+  const productData = response.data;
+
+  // 填充第一步表单
+  Object.assign(step1FormData, {
+    productId: productData.productId,
+    spu: productData.spu || null,
+    sourceUrl: productData.sourceUrl || null,
+    purchaseUrl: productData.purchaseUrl || null,
+    tagIds: productData.tagIds || [],
+  });
+
+  // 解析采购商品选项
+  if (productData.optionJson) {
+    try {
+      optionList.value = JSON.parse(productData.optionJson);
+    } catch (e) {
+      optionList.value = [];
+    }
+  }
+  console.log("采购商品选项:", optionList.value);
 
   // 加载变体数据
   if (
@@ -1501,10 +1655,8 @@ const handleLoadData = async (productId) => {
     productData.productVariantList.length > 0
   ) {
     const step1V = [];
-    const step2V = [];
     productData.productVariantList.forEach(async (v, index) => {
       const optionValueList = v.optionValues ? JSON.parse(v.optionValues) : [];
-
       step1V.push({
         variantId: v.variantId,
         purchaseUrl: v.purchaseUrl,
@@ -1513,31 +1665,13 @@ const handleLoadData = async (productId) => {
         position: v.position,
         remark: v.remark,
       });
-
-      // 检查并填充汇率
-      const variant = {
-        ...v,
-        sku:
-          v.sku ||
-          productData.spu + "-" + (index + 1).toString().padStart(3, "0"),
-        optionValueList: v.optionValues ? JSON.parse(v.optionValues) : [],
-      };
-
-      // 如果exchangeRate为空，自动填入缓存的汇率
-      console.log("variant", variant);
-      if (!variant.exchangeRate) {
-        await fillExchangeRate(variant);
-      }
-
-      step2V.push(variant);
       step1Variants.value = step1V;
-      step2Variants.value = step2V;
     });
   }
 
   // 保存初始数据快照
   saveStep1DataSnapshot();
-  saveStep2DataSnapshot();
+  step2DataSnapshot.value = null;
 };
 
 // 保存初始数据快照
@@ -1571,9 +1705,12 @@ function hasStep1DataChanged() {
   console.log("当前数据:", currentData);
 
   // 比较数据是否相同
-  return (
-    JSON.stringify(currentData) !== JSON.stringify(step1DataSnapshot.value)
-  );
+  const hasChanged =
+    JSON.stringify(currentData) !== JSON.stringify(step1DataSnapshot.value);
+  if (hasChanged) {
+    console.log("步骤1数据有变化");
+  }
+  return hasChanged;
 }
 // 比较数据是否发生变化
 function hasStep2DataChanged() {
@@ -1588,80 +1725,85 @@ function hasStep2DataChanged() {
   console.log("当前数据:", currentData);
 
   // 比较数据是否相同
-  return (
-    JSON.stringify(currentData) !== JSON.stringify(step2DataSnapshot.value)
-  );
+  const hasChanged =
+    JSON.stringify(currentData) !== JSON.stringify(step2DataSnapshot.value);
+  if (hasChanged) {
+    console.log("步骤2数据有变化");
+  }
+  return hasChanged;
 }
 
 // 重置表单
-function resetForm(selectedTagIds, step) {
-  activeStep.value = step;
-
+function resetForm(step) {
   // 先重置表单字段
-  step1FormRef.value?.resetFields();
-  step2FormRef.value?.resetFields();
+  if (step == 0) {
+    step1FormRef.value?.resetFields();
 
-  // 重置第一步表单数据
-  Object.assign(step1FormData, {
-    productId: null,
-    spu: "",
-    category: "",
-    productType: "",
-    sourceUrl: "",
-    purchaseUrl: "",
-    tagIds: selectedTagIds || [],
-  });
+    // 重置第一步表单数据
+    Object.assign(step1FormData, {
+      productId: null,
+      spu: "",
+      category: "",
+      productType: "",
+      sourceUrl: "",
+      purchaseUrl: "",
+      tagIds: [],
+    });
 
-  // 重置第二步表单数据
-  Object.assign(step2FormData, {
-    productId: null,
-    productTitle: "",
-    note: "",
-    packageInclude: "",
-    bodyHtml: "",
-    size: "",
-    material: "",
-    mediaList: [],
-    mainMediaId: null,
-    remark: "",
-    description: "",
-    imageSearchKeyword: "",
-  });
+    step1Variants.value = [
+      {
+        variantId: null,
+        purchaseUrl: "",
+        optionValues: "",
+        optionValueList: [],
+        position: 0,
+        remark: "",
+      },
+    ];
+  } else {
+    step2FormRef.value?.resetFields();
+    imageLoading.value = false;
+    // 重置第二步表单数据
+    Object.assign(step2FormData, {
+      productId: null,
+      productTitle: "",
+      note: "",
+      packageInclude: "",
+      bodyHtml: "",
+      size: "",
+      material: "",
+      mediaList: [],
+      mainMediaId: null,
+      remark: "",
+      description: "",
+      imageSearchKeyword: "",
+    });
+
+    step2Variants.value = [
+      {
+        variantId: null,
+        sku: "",
+        price: null,
+        compareAtPrice: null,
+        optionValues: "",
+        optionValueList: [],
+        mediaId: null,
+        position: 0,
+        pkWidth: null,
+        pkHeight: null,
+        pkLength: null,
+        materialWeight: null,
+        pkWeight: null,
+        freight: null,
+        isActualShipment: "0",
+        unitCostPrice: null,
+        remark: "",
+      },
+    ];
+  }
 
   optionList.value = [];
-  step1Variants.value = [
-    {
-      variantId: null,
-      purchaseUrl: "",
-      optionValues: "",
-      optionValueList: [],
-      position: 0,
-      remark: "",
-    },
-  ];
-  step2Variants.value = [
-    {
-      variantId: null,
-      sku: "",
-      price: null,
-      compareAtPrice: null,
-      optionValues: "",
-      optionValueList: [],
-      mediaId: null,
-      position: 0,
-      pkWidth: null,
-      pkHeight: null,
-      pkLength: null,
-      materialWeight: null,
-      pkWeight: null,
-      freight: null,
-      isActualShipment: "0",
-      unitCostPrice: null,
-      remark: "",
-    },
-  ];
-
-  loading.value = false;
+  // loading.value = false;
 }
 
 // 生成 SPU
@@ -1717,8 +1859,8 @@ function addOptionValue(optIndex) {
     optionList.value[optIndex].values = [];
   }
   optionList.value[optIndex].values.push({
-    purchaseValue: "",
-    productValue: "",
+    chineseValue: "",
+    englishValue: "",
   });
 }
 function toggleCollapse(optIndex) {
@@ -1778,12 +1920,12 @@ function focusNextInput(optIndex, valIndex, type) {
 // 添加选项
 const addOption = () => {
   optionList.value.push({
-    purchaseName: "",
-    productName: "",
+    chineseName: "",
+    englishName: "",
     values: [
       {
-        purchaseValue: "",
-        productValue: "",
+        chineseValue: "",
+        englishValue: "",
       },
     ],
     collapsed: false,
@@ -1815,11 +1957,14 @@ function removeOption(index) {
 
 // 获取当前有效的选项列表（用于生成动态表头）
 function getActiveOptions() {
-  return optionList.value.filter(
+  console.log("optionList.value", optionList.value);
+  const optionLists = optionList.value.filter(
     (opt) =>
-      (opt.purchaseName || opt.productName) &&
-      opt.values?.some((v) => v.purchaseValue || v.productValue),
+      (opt.chineseName || opt.englishName) &&
+      opt.values?.some((v) => v.chineseValue || v.englishValue),
   );
+  console.log("有效选项:", optionLists);
+  return optionLists;
 }
 
 // 生成变体（笛卡尔积）
@@ -1839,14 +1984,12 @@ function generateVariants() {
     ];
     return;
   }
-  // 计算笛卡尔积（使用 values 数组，并保留 purchaseValue 和 productValue）
+  // 计算笛卡尔积（使用 values 数组，并保留 chineseValue 和 englishValue）
   const valueArrays = activeOptions.map((opt) =>
-    opt.values
-      .filter((v) => v.purchaseValue || v.productValue)
-      .map((v) => ({
-        purchaseValue: v.purchaseValue,
-        productValue: v.productValue,
-      })),
+    opt.values.map((v) => ({
+      chineseValue: v.chineseValue,
+      englishValue: v.englishValue,
+    })),
   );
   const combinations = cartesianProduct(valueArrays);
 
@@ -1856,21 +1999,21 @@ function generateVariants() {
     const optionValueList = combo.map((val, idx) => {
       const opt = activeOptions[idx];
       return {
-        optionName: opt.productName,
-        optionValue: val.productValue,
-        purchaseOptionName: opt.purchaseName,
-        purchaseName: val.purchaseValue,
+        englishName: opt.englishName,
+        englishValue: val.englishValue,
+        chineseName: opt.chineseName,
+        chineseValue: val.chineseValue,
       };
     });
     return {
       variantId: existingVariant?.variantId,
       purchaseUrl: existingVariant?.purchaseUrl || step1FormData.purchaseUrl,
-      optionValues: JSON.stringify(optionValueList),
       optionValueList: optionValueList,
       position: existingVariant?.position || index,
       remark: existingVariant?.remark || "",
     };
   });
+  console.log("generateVariants", step1Variants.value);
 }
 
 // 笛卡尔积工具函数
@@ -2346,93 +2489,190 @@ function handleVariantImageDrop(event, row) {
   dragOverVariant.value = null;
 }
 
-// 提交表单continue、next、close
-async function handleSubmit(action) {
+// 提交表单continue、next、save
+async function handleSave() {
+  if (activeStep.value === 0) {
+    return await handleSaveStep1();
+  } else if (activeStep.value === 1) {
+    return await handleSaveStep2();
+  }
+  return false;
+}
+
+async function handleSaveStep1() {
   try {
     // 根据当前步骤只校验对应的表单
-    if (activeStep.value === 0) {
-      await step1FormRef.value?.validate();
-    } else if (activeStep.value === 1) {
-      // 第二步自定义校验：变体选项必填
-      // for (let i = 0; i < variants.value.length; i++) {
-      //   const variant = variants.value[i];
-      //   if (variant.optionValueList && variant.optionValueList.length > 0) {
-      //     for (let j = 0; j < variant.optionValueList.length; j++) {
-      //       const opt = variant.optionValueList[j];
-      //       if (!opt.purchaseName || !opt.purchaseValue) {
-      //         proxy.$modal.msgError(
-      //           `第 ${i + 1} 个变体的第 ${j + 1} 个选项名称和值不能为空`,
-      //         );
-      //         return;
-      //       }
-      //     }
-      //   }
-      // }
-      await step2FormRef.value?.validate();
-    }
+    await step1FormRef.value?.validate();
     loading.value = true;
 
-    let hasChanged = true;
-    if (activeStep.value === 0) {
-      hasChanged = hasStep1DataChanged();
-      if (hasStep1DataChanged()) {
-        // 保存第一步数据
-        const submitData = {
-          ...step1FormData,
-          optionJson: JSON.stringify(optionList.value),
-          productVariantList: step1Variants.value,
-        };
+    const hasChanged = hasStep1DataChanged();
 
-        const response = await addSelectionInfo(submitData);
-        // 重新加载商品表单数据
-        await handleLoadData(response.data);
+    // 保存productId到当前ProductId.value
+    currentProductId.value = await handleSubmitData();
+
+    emit("submit", { action: "save", hasChanged });
+
+    // 重新加载数据，并保存快照
+    await handleLoadStep1Data();
+    return true;
+  } catch (error) {
+    console.error("提交失败", error);
+    return false;
+  } finally {
+    loading.value = false;
+  }
+}
+
+async function handleSaveStep2() {
+  try {
+    // 根据当前步骤只校验对应的表单
+    await step2FormRef.value?.validate();
+    loading.value = true;
+
+    const hasChanged = hasStep2DataChanged();
+
+    await handleSubmitData();
+
+    emit("submit", { action: "save", hasChanged });
+
+    // 重新加载数据，并保存快照
+    await handleLoadStep2Data();
+    return true;
+  } catch (error) {
+    console.error("提交失败", error);
+    return false;
+  } finally {
+    loading.value = false;
+  }
+}
+
+async function handlePrev() {
+  try {
+    // 根据当前步骤只校验对应的表单
+    await step2FormRef.value?.validate();
+    loading.value = true;
+
+    const hasChanged = hasStep2DataChanged();
+    if (hasChanged) {
+      // 如果新增，直接保存。如果非新增，则弹窗确认是否保存
+      const action = await proxy.$modal.confirm(
+        "当前页面数据已修改，是否保存？",
+      );
+      if (action === "cancel") {
+        return;
       }
-    } else {
-      // 保存第二步数据
-      hasChanged = hasStep2DataChanged();
-      if (hasChanged) {
-        // 确保变体中的 optionValueList 同步更新到 optionValues 字符串（如果需要后端兼容）
-        const variantsToSubmit = step2Variants.value.map((v) => ({
-          ...v,
-          optionValues: JSON.stringify(v.optionValueList),
-        }));
 
-        const submitData = {
-          ...step2FormData,
-          productId: step1FormData.productId, // 确保productId一致
-          optionJson: JSON.stringify(optionList.value),
-          productVariantList: variantsToSubmit,
-          //mediaList: step2FormData.mediaList, // 使用 mediaList
-        };
-        await updateBaseInfo(submitData);
-      }
+      await handleSubmitData();
+
+      emit("submit", { action: "prev", hasChanged });
     }
+    // prev
+    activeStep.value = 0;
 
-    emit("submit", { action, hasChanged });
-    // if (hasChanged) {
-    //   proxy.$modal.msgSuccess("保存成功");
-    // }
-
-    if (action === "close") {
-      visible.value = false;
-    } else if (action === "continue") {
-      resetForm(step1FormData.tagIds);
-      await fetchTags();
-      generateSpu(true);
-      activeStep.value = 0;
-    } else if (action === "next") {
-      // next
-      activeStep.value = 1;
-    } else {
-      // prev
-      activeStep.value = 0;
-    }
+    // 重置表单，加载数据，保存快照
+    await resetAndLoadData(0);
   } catch (error) {
     console.error("提交失败", error);
   } finally {
     loading.value = false;
   }
 }
+
+// 提交表单continue、next、close
+async function handleContinue() {
+  try {
+    // 根据当前步骤只校验对应的表单
+    await step1FormRef.value?.validate();
+    loading.value = true;
+
+    const hasChanged = hasStep1DataChanged();
+    if (hasChanged) {
+      // 如果新增，直接保存。如果非新增，则弹窗确认是否保存
+      if (currentProductId.value) {
+        const action = await proxy.$modal.confirm(
+          "当前页面数据已修改，是否保存？",
+        );
+        if (action === "cancel") {
+          return;
+        }
+      }
+
+      await handleSubmitData();
+    }
+
+    emit("submit", { action: "continue", hasChanged });
+    // 重置表单，加载数据，保存快照
+    await resetAndLoadData(0);
+    activeStep.value = 0;
+  } catch (error) {
+    console.error("提交失败", error);
+  } finally {
+    loading.value = false;
+  }
+}
+
+const handleNext = async () => {
+  try {
+    // 根据当前步骤只校验对应的表单
+    await step1FormRef.value?.validate();
+    loading.value = true;
+
+    const hasChanged = hasStep1DataChanged();
+    if (hasChanged) {
+      // 如果新增，直接保存。如果非新增，则弹窗确认是否保存
+      if (currentProductId.value) {
+        const action = await proxy.$modal.confirm(
+          "当前页面数据已修改，是否保存？",
+        );
+        if (action === "cancel") {
+          return;
+        }
+      }
+
+      // 保存productId到当前ProductId.value
+      currentProductId.value = await handleSubmitData();
+    }
+
+    emit("submit", { action: "next", hasChanged });
+
+    // 重置表单，加载数据，保存快照
+    await resetAndLoadData(1);
+    // 切换第二步
+    activeStep.value = 1;
+  } catch (error) {
+    console.error("提交失败", error);
+  } finally {
+    loading.value = false;
+  }
+};
+
+// 处理表单提交
+const handleSubmitData = async () => {
+  if (activeStep.value === 0) {
+    // 保存第一步
+    // 确保变体中的 optionValueList 同步更新到 optionValues 字符串（如果需要后端兼容）
+    const variantsToSubmit = step1Variants.value.map((v) => ({
+      ...v,
+      optionValues: JSON.stringify(v.optionValueList),
+    }));
+    const submitData = {
+      ...step1FormData,
+      optionList: optionList.value,
+      productVariantList: variantsToSubmit,
+    };
+    console.log("handleSubmitData", submitData);
+    const response = await addSelectionInfo(submitData);
+    return response.data;
+  } else if (activeStep.value === 1) {
+    // 保存第二步
+    const submitData = {
+      ...step2FormData,
+      optionJson: JSON.stringify(optionList.value),
+    };
+    await updateBaseInfo(submitData);
+    return response.data;
+  }
+};
 
 // 关闭对话框
 /*function handleClose() {
@@ -2467,103 +2707,260 @@ defineExpose({
 
 <style scoped>
 .product-wizard-container {
-  padding: 0;
   min-height: calc(100vh - 84px);
+  padding: 24px;
+  background: radial-gradient(
+      circle at top left,
+      rgba(30, 64, 175, 0.12),
+      transparent 30%
+    ),
+    radial-gradient(
+      circle at top right,
+      rgba(34, 197, 94, 0.1),
+      transparent 24%
+    ),
+    linear-gradient(180deg, #f4f7fb 0%, #eef2f8 100%);
+}
+
+.product-wizard-shell {
   display: flex;
   flex-direction: column;
-  background: #f5f7fa;
+  gap: 18px;
+}
+
+.wizard-header,
+.wizard-progress-card,
+.step-form,
+.image-manager,
+.rich-text-editor-expanded,
+.variant-table,
+.option-row {
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
 }
 
 .wizard-header {
-  margin-bottom: 0;
-  padding: 12px 20px;
-  background: #ffffff;
-  border-bottom: 1px solid #e4e7ed;
   position: sticky;
   top: 0;
-  z-index: 100;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  z-index: 20;
+  margin-bottom: 0;
+  padding: 20px 24px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(18px);
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.header-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .page-title {
-  font-size: 16px;
+  font-size: 24px;
+  line-height: 1.2;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: #0f172a;
+}
+
+.page-subtitle {
+  font-size: 13px;
+  line-height: 1.7;
+  color: #64748b;
+}
+
+.header-status {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.26);
+  background: rgba(248, 250, 252, 0.94);
+  color: #475569;
+  font-size: 12px;
   font-weight: 600;
 }
 
-.wizard-steps {
-  margin-bottom: 0;
-  padding: 16px 20px;
-  background: #ffffff;
-  border-bottom: 1px solid #e4e7ed;
-}
-
-.step-content {
-  flex: 1;
-  overflow-y: auto;
-  padding: 16px 20px;
+.status-pill--active {
+  border-color: rgba(37, 99, 235, 0.24);
+  background: linear-gradient(135deg, #dbeafe 0%, #eff6ff 100%);
+  color: #1d4ed8;
 }
 
 .right-buttons {
   display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.header-action-btn {
+  min-width: 108px;
+  height: 40px;
+  border-radius: 12px;
+  font-weight: 600;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.header-action-btn:hover {
+  transform: translateY(-1px);
+}
+
+.header-action-btn--ghost {
+  box-shadow: 0 10px 20px rgba(37, 99, 235, 0.12);
+}
+
+.header-action-btn--strong {
+  box-shadow: 0 12px 24px rgba(34, 197, 94, 0.18);
+}
+
+.wizard-progress-card {
+  display: grid;
+  grid-template-columns: minmax(280px, 360px) 1fr;
+  gap: 24px;
+  align-items: center;
+  padding: 24px 28px;
+  border-radius: 24px;
+  background: radial-gradient(
+      circle at top right,
+      rgba(34, 197, 94, 0.22),
+      transparent 28%
+    ),
+    linear-gradient(135deg, #0f172a 0%, #1e293b 56%, #1e3a8a 100%);
+}
+
+.wizard-progress-copy {
+  display: flex;
+  flex-direction: column;
   gap: 8px;
+  color: #f8fafc;
+}
+
+.wizard-progress-copy__eyebrow {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(191, 219, 254, 0.84);
+}
+
+.wizard-progress-copy__title {
+  font-size: 22px;
+  line-height: 1.35;
+  font-weight: 700;
+}
+
+.wizard-progress-copy__desc {
+  font-size: 13px;
+  line-height: 1.7;
+  color: rgba(226, 232, 240, 0.88);
+}
+
+.wizard-steps {
+  padding: 16px 18px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.step-content {
+  flex: 1;
+}
+
+.step-form {
+  padding: 24px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.step1-form {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.98),
+    rgba(248, 250, 252, 0.94)
+  );
+}
+
+.step2-form {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.98),
+    rgba(246, 249, 252, 0.94)
+  );
+}
+
+.form-item-block {
+  padding: 18px 20px 20px;
+  margin: 12px 0 0;
+  border-radius: 20px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  border: 1px solid rgba(148, 163, 184, 0.16);
 }
 
 .mb-4 {
-  margin-bottom: 12px;
+  margin-bottom: 0;
 }
 
 .mb-2 {
-  margin-bottom: 6px;
+  margin-bottom: 8px;
+}
+
+.options-container,
+.image-manager,
+.detail-tabs,
+.rich-text-editor-container {
+  width: 100%;
 }
 
 .options-container {
-  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .option-row {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  border: 1px solid #dcdfe6;
-  border-radius: 4px;
-  background: #fafafa;
-  transition: all 0.2s;
-  margin-bottom: 8px;
+  gap: 10px;
+  margin-bottom: 0;
+  overflow: hidden;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.option-row:hover,
+.option-row:focus-within {
+  transform: translateY(-1px);
+  border-color: rgba(37, 99, 235, 0.24);
+  box-shadow: 0 20px 36px rgba(37, 99, 235, 0.08);
 }
 
 .option-row-collapsed {
-  background: #f5f7fa;
-  padding: 8px 12px;
-}
-
-.input-label {
-  width: 80px;
-  flex-shrink: 0;
-  text-align: right;
-  font-size: 14px;
-  color: #606266;
-  line-height: 32px;
-}
-
-.delete-button-wrapper {
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  margin-left: 8px;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, #f8fbff 0%, #f2f7ff 100%);
 }
 
 .option-values-container {
-  width: 100%;
   display: flex;
   flex-direction: column;
-  /* gap: 8px; */
-  padding: 12px;
-  background: #fff;
-  /* border-radius: 4px; */
-  /* border-bottom: 1px solid #e4e7ed; */
+  gap: 12px;
+  padding: 18px;
 }
 
 .option-value-row {
@@ -2573,13 +2970,14 @@ defineExpose({
   width: 100%;
 }
 
-.option-value-row .input-label {
-  width: 80px;
+.input-label {
+  width: 88px;
   flex-shrink: 0;
   text-align: right;
-  font-size: 14px;
-  color: #606266;
-  line-height: 32px;
+  font-size: 13px;
+  line-height: 40px;
+  font-weight: 600;
+  color: #475569;
 }
 
 .option-value-row .input-combined {
@@ -2595,17 +2993,17 @@ defineExpose({
 }
 
 .option-value-row .input-combined .input-left :deep(.el-input__wrapper) {
-  border-radius: 4px 0 0 4px;
+  border-radius: 12px 0 0 12px;
   border-right: none;
 }
 
 .option-value-row .input-combined .input-right :deep(.el-input__wrapper) {
-  border-radius: 0 4px 4px 0;
+  border-radius: 0 12px 12px 0;
 }
 
-.option-value-row .delete-button-wrapper {
-  width: 32px;
-  height: 32px;
+.delete-button-wrapper {
+  width: 36px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2613,51 +3011,44 @@ defineExpose({
   margin-left: 8px;
 }
 
-.option-value-row .input-combined .ml-2 {
-  margin-left: 8px !important;
-  flex-shrink: 0;
-}
-
 .option-footer {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  padding-top: 10px;
-  /* border-top: 1px solid #e4e7ed; */
+  gap: 12px;
+  padding-top: 12px;
 }
 
 .option-collapsed-hint {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: #f5f7fa;
-  border-radius: 4px;
-  gap: 12px;
+  gap: 16px;
 }
 
 .collapsed-content {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 14px;
   flex: 1;
   flex-wrap: wrap;
 }
 
 .option-name-display {
   font-size: 14px;
-  color: #303133;
+  color: #1e293b;
   white-space: nowrap;
 }
 
 .option-name-display strong {
-  font-weight: 600;
-  color: #303133;
+  font-weight: 700;
+  color: #0f172a;
 }
 
-.option-name-display .en-name {
-  color: #909399;
-  font-size: 13px;
-  margin-left: 4px;
+.option-name-display .en-name,
+.value-tag .en-value {
+  color: #64748b;
+  font-size: 12px;
 }
 
 .option-values-display {
@@ -2669,17 +3060,11 @@ defineExpose({
 }
 
 .value-tag {
-  background-color: #f4f4f5 !important;
-  border-color: #e9e9eb !important;
-  color: #606266 !important;
+  background: rgba(219, 234, 254, 0.74) !important;
+  border-color: rgba(96, 165, 250, 0.24) !important;
+  color: #1d4ed8 !important;
   font-size: 12px;
   padding: 2px 8px;
-}
-
-.value-tag .en-value {
-  color: #909399;
-  font-size: 11px;
-  margin-left: 2px;
 }
 
 .expand-btn {
@@ -2690,20 +3075,63 @@ defineExpose({
   margin-left: 8px !important;
 }
 
+.image-manager {
+  padding: 18px;
+  border-radius: 20px;
+  background: linear-gradient(
+    180deg,
+    rgba(248, 250, 252, 0.96),
+    rgba(241, 245, 249, 0.98)
+  );
+}
+
 .image-toolbar {
   display: flex;
-  gap: 10px;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
 }
 
-.image-manager {
+.image-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  gap: 16px;
+  min-height: 132px;
+  margin-top: 16px;
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px dashed rgba(148, 163, 184, 0.42);
+  background: rgba(255, 255, 255, 0.74);
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.image-grid:hover {
+  border-color: rgba(37, 99, 235, 0.3);
+  background: rgba(255, 255, 255, 0.88);
+}
+
+.image-item {
+  position: relative;
   width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+  transition: transform 0.22s ease, box-shadow 0.22s ease,
+    border-color 0.22s ease;
+  cursor: pointer;
 }
 
-/* 当拖拽经过时高亮 */
+.image-item:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 16px 28px rgba(15, 23, 42, 0.12);
+}
+
 .image-item.drag-over {
-  border-color: #409eff;
-  border-style: dashed;
+  border: 1px dashed rgba(37, 99, 235, 0.72);
+  transform: scale(1.02);
+  box-shadow: 0 18px 30px rgba(37, 99, 235, 0.18);
 }
 
 .image-thumb {
@@ -2714,21 +3142,19 @@ defineExpose({
 
 .image-overlay {
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.5);
+  inset: 0;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  align-items: flex-end;
+  justify-content: flex-start;
+  padding: 14px;
+  background: linear-gradient(
+    180deg,
+    rgba(15, 23, 42, 0.04),
+    rgba(15, 23, 42, 0.68)
+  );
   opacity: 0;
-  transition: opacity 0.3s;
+  transition: opacity 0.22s ease;
   pointer-events: none;
-}
-
-.image-overlay .el-button {
-  pointer-events: auto;
 }
 
 .image-item:hover .image-overlay {
@@ -2737,435 +3163,145 @@ defineExpose({
 
 .image-placeholder {
   width: 100%;
-  height: 100px;
+  min-height: 180px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: #909399;
+  gap: 10px;
+  border: 2px dashed rgba(148, 163, 184, 0.34);
+  border-radius: 18px;
+  background: linear-gradient(
+    180deg,
+    rgba(248, 250, 252, 0.92),
+    rgba(241, 245, 249, 0.96)
+  );
+  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+
+.image-placeholder:hover {
+  transform: translateY(-1px);
+  border-color: rgba(37, 99, 235, 0.3);
+  background: linear-gradient(
+    180deg,
+    rgba(239, 246, 255, 0.92),
+    rgba(219, 234, 254, 0.86)
+  );
+}
+
+.placeholder-icon {
+  font-size: 44px;
+  color: #94a3b8;
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.image-placeholder:hover .placeholder-icon {
+  color: #2563eb;
+  transform: scale(1.05);
+}
+
+.placeholder-text {
+  color: #64748b;
+  font-size: 14px;
 }
 
 .variant-image-item {
   position: relative;
-  width: 80px;
-  height: 60px;
-  border: 1px dashed #dcdfe6;
-  border-radius: 4px;
+  width: 88px;
+  height: 66px;
+  border: 1px dashed rgba(148, 163, 184, 0.42);
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
   cursor: pointer;
+  background: linear-gradient(
+    180deg,
+    rgba(248, 250, 252, 0.92),
+    rgba(255, 255, 255, 0.98)
+  );
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.variant-image-item:hover {
+  transform: translateY(-1px);
+  border-color: rgba(37, 99, 235, 0.3);
+  box-shadow: 0 10px 20px rgba(37, 99, 235, 0.1);
+}
+
+.variant-image-item.drag-over {
+  border-color: rgba(37, 99, 235, 0.72);
+  box-shadow: 0 12px 24px rgba(37, 99, 235, 0.14);
 }
 
 .variant-thumb {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.3s;
+  transition: transform 0.22s ease;
 }
 
 .variant-image-item:hover .variant-thumb {
-  transform: scale(1.1);
-}
-
-/* 当拖拽经过时高亮 */
-.variant-image-item.drag-over {
-  border-color: #409eff;
-  border-style: dashed;
+  transform: scale(1.06);
 }
 
 .drop-hint {
+  padding: 0 6px;
   font-size: 12px;
-  color: #909399;
+  line-height: 1.4;
+  text-align: center;
+  color: #64748b;
 }
 
-.server-image-item img {
-  width: 100%;
-  height: 80px;
-  object-fit: cover;
-}
-
-.footer-right-buttons {
-  display: flex;
-  gap: 10px;
-}
-
-/* 第二步表单美化样式 */
-.step2-form {
-  width: 100%;
-  background: #ffffff;
-  border-radius: 8px;
-  padding: 24px;
-  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.08);
-}
-
-/* 分割线样式优化 */
-.step2-form .el-divider {
-  margin: 24px 0;
-}
-
-.step2-form .el-divider__text {
-  font-size: 16px;
-  font-weight: 600;
-  color: #303133;
-  background: #ffffff;
-  padding: 0 16px;
-}
-
-/* 表单项样式优化 */
-.step2-form .el-form-item {
-  margin-bottom: 20px;
-  transition: all 0.3s ease;
-}
-
-.step2-form .el-form-item:hover {
-  transform: translateY(-1px);
-}
-
-/* 输入框样式优化 */
-.step2-form .el-input__wrapper {
-  border-radius: 6px;
-  transition: all 0.3s ease;
-}
-
-.step2-form .el-input__wrapper:hover {
-  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.1);
-}
-
-.step2-form .el-input__wrapper.is-focus {
-  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
-}
-
-/* 文本域样式优化 */
-.step2-form .el-textarea__inner {
-  border-radius: 6px;
-  resize: vertical;
-  min-height: 80px;
-  transition: all 0.3s ease;
-}
-
-.step2-form .el-textarea__inner:focus {
-  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
-}
-
-/* 按钮样式优化 */
-.step2-form .el-button {
-  border-radius: 6px;
-  transition: all 0.3s ease;
-}
-
-.step2-form .el-button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.3);
-}
-
-/* 表格样式优化 */
-.step2-form .el-table {
-  border-radius: 8px;
+.detail-tabs {
+  border-radius: 18px;
   overflow: hidden;
-  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.08);
-  margin-top: 16px;
-}
-
-.step2-form .el-table th {
-  background: #f8f9fa;
-  font-weight: 600;
-  color: #303133;
-}
-
-.step2-form .el-table tr {
-  transition: background-color 0.3s ease;
-}
-
-.step2-form .el-table tr:hover {
-  background-color: #f5f7fa !important;
-}
-
-/* 图片管理区域优化 */
-.image-manager {
-  background: #f8f9fa;
-  border-radius: 8px;
-  padding: 20px;
-  transition: all 0.3s ease;
-}
-
-.image-manager:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.image-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-  min-height: 100px;
-  padding: 10px;
-  border: 1px dashed #dcdfe6;
-  border-radius: 4px;
-  margin-top: 16px;
-}
-
-.image-placeholder {
-  width: 100%;
-  height: 200px;
-  border: 2px dashed #dcdfe6;
-  border-radius: 8px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  background: #fafafa;
-  transition: all 0.3s ease;
-}
-
-.image-placeholder:hover {
-  border-color: #409eff;
-  background: #ecf5ff;
-}
-
-.placeholder-icon {
-  font-size: 48px;
-  color: #c0c4cc;
-  margin-bottom: 16px;
-  transition: all 0.3s ease;
-}
-
-.image-placeholder:hover .placeholder-icon {
-  color: #409eff;
-  transform: scale(1.1);
-}
-
-/* 变体图片拖拽区域 */
-.variant-image-drop {
-  width: 80px;
-  height: 80px;
-  border: 2px dashed #dcdfe6;
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.3s ease;
-  background: #fafafa;
-}
-
-.variant-image-drop:hover {
-  border-color: #409eff;
-  background: #ecf5ff;
-}
-
-.variant-thumb {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: 4px;
-  transition: all 0.3s ease;
-}
-
-.variant-image-drop:hover .variant-thumb {
-  transform: scale(1.05);
-}
-
-/* 可展开文本域样式优化 */
-.expandable-textarea {
-  width: 100%;
-}
-
-.textarea-collapse {
-  width: 100%;
-  padding: 16px;
-  border: 2px dashed #dcdfe6;
-  border-radius: 6px;
-  background: #f8f9fa;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  transition: all 0.3s ease;
-}
-
-.textarea-collapse:hover {
-  border-color: #409eff;
-  background: #ecf5ff;
-  transform: translateY(-2px);
-  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.1);
-}
-
-.placeholder-text {
-  color: #909399;
-  font-size: 14px;
-  transition: all 0.3s ease;
-}
-
-.textarea-collapse:hover .placeholder-text {
-  color: #409eff;
-}
-
-/* 富文本编辑器样式优化 */
-.rich-text-editor-container {
-  width: 100%;
-}
-
-.rich-text-editor-collapse {
-  width: 100%;
-  padding: 32px;
-  border: 2px dashed #dcdfe6;
-  border-radius: 8px;
-  background: #f8f9fa;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  transition: all 0.3s ease;
-  margin-bottom: 16px;
-}
-
-.rich-text-editor-collapse:hover {
-  border-color: #409eff;
-  background: #ecf5ff;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.15);
 }
 
 .rich-text-editor-expanded {
-  width: 100%;
-  border: 1px solid #dcdfe6;
-  border-radius: 8px;
+  border-radius: 18px;
+  background: #ffffff;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .rich-text-editor-expanded:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-color: rgba(37, 99, 235, 0.22);
+  box-shadow: 0 16px 28px rgba(15, 23, 42, 0.08);
 }
 
 .rich-text-editor-toolbar {
-  padding: 12px 16px;
-  background: #f8f9fa;
-  border-bottom: 1px solid #e4e7ed;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  padding: 14px 16px;
+  background: linear-gradient(
+    180deg,
+    rgba(248, 250, 252, 0.96),
+    rgba(241, 245, 249, 0.96)
+  );
+  border-bottom: 1px solid rgba(148, 163, 184, 0.16);
 }
 
 .rich-text-preview {
+  min-height: 220px;
   padding: 20px;
-  min-height: 200px;
   background: #ffffff;
-  border-top: 1px solid #e4e7ed;
-  transition: all 0.3s ease;
-}
-
-.rich-text-preview:hover {
-  background: #fafafa;
+  color: #334155;
 }
 
 .rich-text-preview .no-content {
-  color: #909399;
-  text-align: center;
+  display: inline-flex;
+  width: 100%;
+  justify-content: center;
   padding: 40px 0;
+  color: #94a3b8;
   font-style: italic;
 }
 
-/* 响应式设计 */
-@media (max-width: 768px) {
-  .step2-form {
-    padding: 16px;
-  }
-
-  .el-row {
-    flex-direction: column;
-  }
-
-  .el-col {
-    width: 100% !important;
-    margin-bottom: 16px;
-  }
-
-  .image-item {
-    width: 100px;
-    height: 100px;
-  }
-
-  .image-placeholder {
-    height: 150px;
-  }
-
-  .rich-text-editor-collapse {
-    padding: 24px;
-  }
-
-  .rich-text-preview {
-    min-height: 150px;
-  }
-}
-
-/* 商品详情选项卡样式 */
-.detail-tabs {
-  width: 100%;
-}
-
-.detail-tabs .el-tabs__header {
-  margin-bottom: 0;
-}
-
-.detail-tabs .el-tabs__content {
-  padding: 16px;
-  background: #ffffff;
-  border: 1px solid #dcdfe6;
-  border-top: none;
-  border-radius: 0 0 8px 8px;
-}
-
-.detail-tabs .el-tab-pane {
-  min-height: 120px;
-}
-
-.detail-tabs .el-textarea__inner {
-  border-radius: 4px;
-  resize: vertical;
-}
-
-/* 媒体类型样式 */
-.image-item {
-  position: relative;
-  width: 120px;
-  height: 120px;
-  border-radius: 6px;
+.variant-table {
+  margin-top: 12px;
+  border-radius: 20px;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease;
-  cursor: pointer;
-}
-
-.image-item.drag-over {
-  border: 2px dashed #409eff;
-  transform: scale(1.05);
-  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.3);
-}
-
-.image-item video {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.video-indicator {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 40px;
-  height: 40px;
-  background: rgba(0, 0, 0, 0.6);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  font-size: 20px;
-  pointer-events: none;
+  background: #ffffff;
 }
 
 .file-placeholder {
@@ -3175,15 +3311,19 @@ defineExpose({
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: #f5f7fa;
-  color: #909399;
+  gap: 8px;
+  padding: 10px;
+  background: linear-gradient(
+    180deg,
+    rgba(248, 250, 252, 0.96),
+    rgba(241, 245, 249, 0.96)
+  );
+  color: #64748b;
   font-size: 12px;
-  padding: 8px;
 }
 
 .file-placeholder .el-icon {
-  font-size: 32px;
-  margin-bottom: 8px;
+  font-size: 30px;
 }
 
 .file-name {
@@ -3196,21 +3336,22 @@ defineExpose({
 
 .media-type-badge {
   position: absolute;
-  top: 4px;
-  left: 4px;
-  padding: 2px 6px;
-  background: rgba(64, 158, 255, 0.9);
-  color: #fff;
-  font-size: 10px;
-  border-radius: 3px;
-  pointer-events: none;
+  top: 10px;
+  left: 10px;
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.72);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 600;
+  backdrop-filter: blur(10px);
 }
 
-/* 视频缩略图样式 */
 .video-thumbnail {
   position: relative;
-  cursor: pointer;
-  transition: transform 0.2s ease;
   width: 100%;
   height: 100%;
   min-height: 120px;
@@ -3219,33 +3360,296 @@ defineExpose({
   justify-content: center;
 }
 
-.video-thumbnail:hover {
-  transform: scale(1.05);
-}
-
 .video-play-button {
   position: absolute;
   top: 50%;
   left: 50%;
-  transform: translate(-50%, -50%);
-  width: 40px;
-  height: 40px;
-  background-color: rgba(0, 0, 0, 0.6);
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
-  font-size: 20px;
-  transition: all 0.2s ease;
+  color: #ffffff;
+  background: rgba(15, 23, 42, 0.64);
+  transform: translate(-50%, -50%);
+  transition: transform 0.2s ease, background-color 0.2s ease;
 }
 
 .video-thumbnail:hover .video-play-button {
-  background-color: rgba(0, 0, 0, 0.8);
-  transform: translate(-50%, -50%) scale(1.1);
+  background: rgba(15, 23, 42, 0.82);
+  transform: translate(-50%, -50%) scale(1.06);
+}
+
+.footer-right-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+:deep(.el-page-header__content) {
+  width: 100%;
+}
+
+:deep(.el-page-header__left) {
+  align-items: flex-start;
+}
+
+:deep(.wizard-progress-card .el-step__title) {
+  color: rgba(226, 232, 240, 0.88);
+  font-weight: 600;
+}
+
+:deep(.wizard-progress-card .is-process .el-step__title),
+:deep(.wizard-progress-card .is-finish .el-step__title) {
+  color: #ffffff;
+}
+
+:deep(.wizard-progress-card .el-step__icon) {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.24);
+  color: #ffffff;
+}
+
+:deep(.wizard-progress-card .is-process .el-step__icon),
+:deep(.wizard-progress-card .is-finish .el-step__icon) {
+  background: linear-gradient(135deg, #2563eb, #22c55e);
+  border-color: transparent;
+}
+
+:deep(.step-form .el-form-item) {
+  margin-bottom: 20px;
+}
+
+:deep(.step-form .el-divider) {
+  margin: 22px 0 14px;
+}
+
+:deep(.step-form .el-divider__text) {
+  padding: 0 14px;
+  font-size: 17px;
+  font-weight: 700;
+  color: #0f172a;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+:deep(.step-form .el-form-item__label) {
+  padding-right: 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+}
+
+:deep(.step-form .el-input__wrapper),
+:deep(.step-form .el-textarea__inner),
+:deep(.step-form .el-select__wrapper),
+:deep(.step-form .el-cascader .el-input__wrapper),
+:deep(.step-form .el-input-number .el-input__wrapper) {
+  border-radius: 12px;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+:deep(.step-form .el-input__wrapper:hover),
+:deep(.step-form .el-textarea__inner:hover),
+:deep(.step-form .el-select__wrapper:hover),
+:deep(.step-form .el-cascader .el-input__wrapper:hover),
+:deep(.step-form .el-input-number .el-input__wrapper:hover) {
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.08);
+}
+
+:deep(.step-form .el-input__wrapper.is-focus),
+:deep(.step-form .el-textarea__inner:focus),
+:deep(.step-form .el-select__wrapper.is-focused),
+:deep(.step-form .el-cascader .is-focus .el-input__wrapper),
+:deep(.step-form .el-input-number .el-input__wrapper.is-focus) {
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+}
+
+:deep(.step-form .el-textarea__inner) {
+  min-height: 92px;
+  resize: vertical;
+}
+
+:deep(.step-form .el-button) {
+  border-radius: 12px;
+  font-weight: 600;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+:deep(.step-form .el-button:hover) {
+  transform: translateY(-1px);
+}
+
+:deep(.step-form .el-button--primary) {
+  box-shadow: 0 10px 18px rgba(37, 99, 235, 0.16);
+}
+
+:deep(.step-form .el-button--success) {
+  box-shadow: 0 10px 18px rgba(34, 197, 94, 0.16);
+}
+
+:deep(.detail-tabs .el-tabs__header) {
+  margin-bottom: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(248, 250, 252, 0.92),
+    rgba(241, 245, 249, 0.92)
+  );
+}
+
+:deep(.detail-tabs .el-tabs__nav-wrap) {
+  padding: 0 10px;
+}
+
+:deep(.detail-tabs .el-tabs__item) {
+  height: 46px;
+  padding: 0 16px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+:deep(.detail-tabs .el-tabs__item.is-active) {
+  color: #1d4ed8;
+}
+
+:deep(.detail-tabs .el-tabs__content) {
+  padding: 18px;
+  background: #ffffff;
+}
+
+:deep(.variant-table .el-table__header-wrapper th) {
+  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  color: #334155;
+  font-weight: 700;
+}
+
+:deep(.variant-table .el-table__row td) {
+  transition: background-color 0.2s ease;
+}
+
+:deep(.variant-table .el-table__row:hover td) {
+  background: rgba(239, 246, 255, 0.72) !important;
+}
+
+:deep(.variant-table .el-input-number) {
+  width: 100% !important;
+}
+
+:deep(.variant-table .el-switch) {
+  --el-switch-on-color: #22c55e;
 }
 
 :deep(.el-table .set-row) {
-  --el-table-tr-bg-color: var(--el-color-primary-light-9) !important;
+  --el-table-tr-bg-color: rgba(219, 234, 254, 0.8) !important;
+}
+
+@media (max-width: 1200px) {
+  .wizard-progress-card {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .product-wizard-container {
+    padding: 14px;
+  }
+
+  .wizard-header,
+  .wizard-progress-card,
+  .step-form,
+  .image-manager,
+  .variant-table,
+  .option-row {
+    border-radius: 18px;
+  }
+
+  .wizard-header {
+    padding: 16px;
+  }
+
+  .page-title {
+    font-size: 20px;
+  }
+
+  .right-buttons {
+    width: 100%;
+  }
+
+  .header-action-btn {
+    flex: 1 1 calc(50% - 10px);
+    min-width: 0;
+  }
+
+  .wizard-progress-card {
+    padding: 18px;
+  }
+
+  .step-form {
+    padding: 16px;
+  }
+
+  .form-item-block {
+    padding: 14px;
+  }
+
+  .option-value-row,
+  .option-footer,
+  .option-collapsed-hint {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .input-label {
+    width: 100%;
+    text-align: left;
+    line-height: 1.5;
+  }
+
+  .delete-button-wrapper {
+    width: 100%;
+    margin-left: 0;
+    justify-content: flex-end;
+  }
+
+  .image-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  :deep(.step-form .el-form-item__content) {
+    min-width: 0;
+  }
+}
+
+@media (max-width: 576px) {
+  .header-action-btn {
+    flex-basis: 100%;
+  }
+
+  .status-pill {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .image-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wizard-header,
+  .wizard-progress-card,
+  .step-form,
+  .image-manager,
+  .variant-table,
+  .option-row,
+  .image-item,
+  .variant-image-item,
+  .header-action-btn,
+  .video-play-button,
+  :deep(.step-form .el-button),
+  :deep(.step-form .el-input__wrapper),
+  :deep(.step-form .el-textarea__inner) {
+    transition: none !important;
+    animation: none !important;
+  }
 }
 </style>

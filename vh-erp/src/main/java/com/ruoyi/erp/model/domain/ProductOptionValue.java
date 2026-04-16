@@ -17,7 +17,12 @@ public class ProductOptionValue implements Serializable {
     private static final long serialVersionUID = 1L;
 
     /**
-     * 选项值
+     * 英文选项值
      */
-    private String value;
+    private String englishValue;
+
+    /**
+     * 中文选项值
+     */
+    private String chineseValue;
 }

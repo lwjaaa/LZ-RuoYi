@@ -3,7 +3,7 @@ import request from '@/utils/request'
 // 查询erp图片列表
 export function listImage(query) {
   return request({
-    url: '/vh-erp/image/list',
+    url: '/erp/image/list',
     method: 'get',
     params: query
   })
@@ -12,7 +12,7 @@ export function listImage(query) {
 // 查询erp图片详细
 export function getImage(imageId) {
   return request({
-    url: '/vh-erp/image/' + imageId,
+    url: '/erp/image/' + imageId,
     method: 'get'
   })
 }
@@ -20,7 +20,7 @@ export function getImage(imageId) {
 // 新增erp图片
 export function addImage(data) {
   return request({
-    url: '/vh-erp/image',
+    url: '/erp/image',
     method: 'post',
     data: data
   })
@@ -29,7 +29,7 @@ export function addImage(data) {
 // 修改erp图片
 export function updateImage(data) {
   return request({
-    url: '/vh-erp/image',
+    url: '/erp/image',
     method: 'put',
     data: data
   })
@@ -38,7 +38,7 @@ export function updateImage(data) {
 // 删除erp图片
 export function delImage(imageId) {
   return request({
-    url: '/vh-erp/image/' + imageId,
+    url: '/erp/image/' + imageId,
     method: 'delete'
   })
 }
@@ -46,7 +46,7 @@ export function delImage(imageId) {
 // 导入erp图片
 export function importImage(data) {
   return request({
-    url: '/vh-erp/image/importData',
+    url: '/erp/image/importData',
     method: 'post',
     data: data
   })
@@ -55,7 +55,7 @@ export function importImage(data) {
 // 下载erp图片导入模板
 export function importTemplateImage() {
   return request({
-    url: '/vh-erp/image/importTemplate',
+    url: '/erp/image/importTemplate',
     method: 'post',
     responseType: 'blob'
   })

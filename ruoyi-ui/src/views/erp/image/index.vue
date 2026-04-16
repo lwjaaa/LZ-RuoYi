@@ -47,7 +47,7 @@
           icon="el-icon-plus"
           size="mini"
           @click="handleAdd"
-          v-hasPermi="['vh-erp:image:add']"
+          v-hasPermi="['erp:image:add']"
         >新增</el-button>
       </el-col>
       <el-col :span="1.5">
@@ -58,7 +58,7 @@
           size="mini"
           :disabled="single"
           @click="handleUpdate"
-          v-hasPermi="['vh-erp:image:edit']"
+          v-hasPermi="['erp:image:edit']"
         >修改</el-button>
       </el-col>
       <el-col :span="1.5">
@@ -69,7 +69,7 @@
           size="mini"
           :disabled="multiple"
           @click="handleDelete"
-          v-hasPermi="['vh-erp:image:remove']"
+          v-hasPermi="['erp:image:remove']"
         >删除</el-button>
       </el-col>
       <el-col :span="1.5">
@@ -79,7 +79,7 @@
           icon="el-icon-upload2"
           size="mini"
           @click="handleImport"
-          v-hasPermi="['vh-erp:image:import']"
+          v-hasPermi="['erp:image:import']"
         >导入</el-button>
       </el-col>
       <el-col :span="1.5">
@@ -89,7 +89,7 @@
           icon="el-icon-download"
           size="mini"
           @click="handleExport"
-          v-hasPermi="['vh-erp:image:export']"
+          v-hasPermi="['erp:image:export']"
         >导出</el-button>
       </el-col>
       <right-toolbar :showSearch.sync="showSearch" @queryTable="getList" :columns="columns"></right-toolbar>
@@ -113,14 +113,14 @@
             type="text"
             icon="el-icon-edit"
             @click="handleUpdate(scope.row)"
-            v-hasPermi="['vh-erp:image:edit']"
+            v-hasPermi="['erp:image:edit']"
           >修改</el-button>
           <el-button
             size="mini"
             type="text"
             icon="el-icon-delete"
             @click="handleDelete(scope.row)"
-            v-hasPermi="['vh-erp:image:remove']"
+            v-hasPermi="['erp:image:remove']"
           >删除</el-button>
         </template>
       </el-table-column>
@@ -246,7 +246,7 @@ export default {
       // 表单参数
       form: {},
       // 导出地址
-      exportUrl: 'vh-erp/image/export',
+      exportUrl: 'erp/image/export',
       // erp图片导入参数
       upload: {
         // 是否显示弹出层（erp图片导入）
@@ -260,9 +260,9 @@ export default {
         // 设置上传的请求头部
         headers: { Authorization: "Bearer " + getToken() },
         // 上传的地址
-        url: process.env.VUE_APP_BASE_API + "/vh-erp/image/importData",
+        url: process.env.VUE_APP_BASE_API + "/erp/image/importData",
         // 下载模板的地址
-        templateUrl: 'vh-erp/image/importTemplate'
+        templateUrl: 'erp/image/importTemplate'
       },
       // 表单校验
       rules: {

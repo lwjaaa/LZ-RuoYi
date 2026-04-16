@@ -119,7 +119,7 @@ public class ProductVariant implements Serializable
     @Excel(name = "实际利润率")
     private BigDecimal profitRate;
     /** 利润 */
-    @Excel(name = "利润 （美分）")
+    @Excel(name = "利润 （分）")
     private BigDecimal profit;
 
     /** 创建者 */

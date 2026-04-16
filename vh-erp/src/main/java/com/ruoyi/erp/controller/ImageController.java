@@ -28,7 +28,7 @@ import java.util.stream.Collectors;
  * @date 2026-03-24
  */
 @RestController
-@RequestMapping("/vh-erp/image")
+@RequestMapping("/erp/image")
 public class ImageController extends BaseController
 {
     @Resource
@@ -37,7 +37,7 @@ public class ImageController extends BaseController
     /**
      * 查询erp图片列表
      */
-    @PreAuthorize("@ss.hasPermi('vh-erp:image:list')")
+    @PreAuthorize("@ss.hasPermi('erp:image:list')")
     @GetMapping("/list")
     public TableDataInfo list(ImageQuery imageQuery)
     {
@@ -53,7 +53,7 @@ public class ImageController extends BaseController
     /**
      * 导出erp图片列表
      */
-    @PreAuthorize("@ss.hasPermi('vh-erp:image:export')")
+    @PreAuthorize("@ss.hasPermi('erp:image:export')")
     @Log(title = "erp图片", businessType = BusinessType.EXPORT)
     @PostMapping("/export")
     public void export(HttpServletResponse response, ImageQuery imageQuery)
@@ -67,7 +67,7 @@ public class ImageController extends BaseController
     /**
      * 获取erp图片详细信息
      */
-    @PreAuthorize("@ss.hasPermi('vh-erp:image:query')")
+    @PreAuthorize("@ss.hasPermi('erp:image:query')")
     @GetMapping(value = "/{imageId}")
     public AjaxResult getInfo(@PathVariable("imageId") Long imageId)
     {
@@ -78,7 +78,7 @@ public class ImageController extends BaseController
     /**
      * 新增erp图片
      */
-    @PreAuthorize("@ss.hasPermi('vh-erp:image:add')")
+    @PreAuthorize("@ss.hasPermi('erp:image:add')")
     @Log(title = "erp图片", businessType = BusinessType.INSERT)
     @PostMapping
     public AjaxResult add(@RequestBody ImageInsert imageInsert)
@@ -90,7 +90,7 @@ public class ImageController extends BaseController
     /**
      * 修改erp图片
      */
-    @PreAuthorize("@ss.hasPermi('vh-erp:image:edit')")
+    @PreAuthorize("@ss.hasPermi('erp:image:edit')")
     @Log(title = "erp图片", businessType = BusinessType.UPDATE)
     @PutMapping
     public AjaxResult edit(@RequestBody ImageEdit imageEdit)
@@ -102,7 +102,7 @@ public class ImageController extends BaseController
     /**
      * 删除erp图片
      */
-    @PreAuthorize("@ss.hasPermi('vh-erp:image:remove')")
+    @PreAuthorize("@ss.hasPermi('erp:image:remove')")
     @Log(title = "erp图片", businessType = BusinessType.DELETE)
 	@DeleteMapping("/{imageIds}")
     public AjaxResult remove(@PathVariable Long[] imageIds)
@@ -113,7 +113,7 @@ public class ImageController extends BaseController
     /**
      * 导入erp图片数据
      */
-    @PreAuthorize("@ss.hasPermi('vh-erp:image:import')")
+    @PreAuthorize("@ss.hasPermi('erp:image:import')")
     @Log(title = "erp图片", businessType = BusinessType.IMPORT)
     @PostMapping("/importData")
     public AjaxResult importData(MultipartFile file, boolean updateSupport) throws Exception

@@ -1,0 +1,99 @@
+# ==========================================
+# CHANGELOG
+# v1.0.0 (2026-04-15)
+# - Initial creation for RuoYi (Spring Boot + Vue3) framework to optimize Trae AI indexing.
+# - Added exclusions for Maven/Node build artifacts, IDE caches, and common logs.
+# - Added specific exclusions for RuoYi modules (ruoyi-admin, ruoyi-common, ruoyi-ui, etc.).
+# - Excluded local sensitive configurations (application-*.yml) to prevent secret leaks and hallucinations.
+# ==========================================
+
+# ==========================================
+# 1. 通用排除项 (General Exclusions)
+# ==========================================
+# 操作系统隐藏文件与缓存
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*~
+*.bak
+*.tmp
+tmp/
+temp/
+
+# IDE 缓存与配置 (IDEA, VSCode, Eclipse 等)
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+.settings/
+.project
+.classpath
+.lingma/
+
+# 日志与构建监控产物
+*.log
+logs/
+hs_err_pid*
+replay_pid*
+
+# ==========================================
+# 2. 后端 Spring Boot 模块 (Backend Spring Boot)
+# ==========================================
+# 编译输出目录 (Build Artifacts)
+# 排除所有的 target 编译结果目录，杜绝 AI 索引重复的 .class 文件
+target/
+!ruoyi-*/target/classes/  # 取消特定保留，通常后端直接全忽略
+ruoyi-admin/target/
+ruoyi-common/target/
+ruoyi-framework/target/
+ruoyi-system/target/
+ruoyi-quartz/target/
+ruoyi-generator/target/
+
+# 打包产物
+*.jar
+*.war
+*.ear
+*.class
+
+# 本地敏感配置与密钥 (Sensitive Local Configs)
+# 排除带有具体敏感配置的环境文件（如数据库密码、Redis密钥、JWT Token等），保留 application.yml 做结构参考
+ruoyi-admin/src/main/resources/application-dev.yml
+ruoyi-admin/src/main/resources/application-prod.yml
+
+# ==========================================
+# 3. 前端 Vue3 模块 (Frontend Vue3)
+# ==========================================
+# 依赖包 (Dependencies)
+# 必须排除 node_modules，否则会导致海量无用索引
+RuoYi-Vue3/node_modules/
+
+# 构建产物 (Build Outputs)
+# 排除 Webpack/Vite 编译打包后的生产环境文件
+RuoYi-Vue3/dist/
+RuoYi-Vue3/build/
+dist/
+
+# 包管理缓存与日志 (Package Manager Caches & Logs)
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-store/
+.npm/
+
+# [ruoyi-generator] 代码生成器产物
+# 排除生成的临时 ZIP 压缩包或自动生成的代码草稿，避免污染当前业务逻辑上下文
+ruoyi-generator/src/main/resources/vm/*.zip
+*.zip
+
+# 数据库脚本或大文件 (Database Scripts & Large Files)
+# 若依自带的 SQL 初始化文件仅供执行，不需要长期保留在 AI 上下文中进行语义分析
+sql/
+*.sql
+*.pdf
+
+# vue2版本已弃用
+ruoyi-ui/
