@@ -120,6 +120,7 @@
                   clearable
                   style="width: 100%"
                   :loading="menuLoading"
+                  @blur="generateSpu(true)"
                 />
               </el-form-item>
             </el-col>
@@ -1110,7 +1111,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import {
   ref,
   reactive,
@@ -1120,6 +1121,8 @@ import {
   onUnmounted,
   getCurrentInstance,
   nextTick,
+  type Ref,
+  type ComputedRef,
 } from "vue";
 import {
   Picture,
@@ -1128,7 +1131,12 @@ import {
   VideoPlay,
   Document,
 } from "@element-plus/icons-vue";
-import { ElMessageBox } from "element-plus";
+import {
+  ElMessageBox,
+  type FormInstance,
+  type FormRules,
+  type UploadUserFile,
+} from "element-plus";
 import CustomVideoModal from "./CustomVideoModal.vue";
 import {
   addSelectionInfo,
@@ -1139,7 +1147,16 @@ import { getProduct } from "@/api/erp/product";
 import { treeList } from "@/api/erp/tag";
 import { scanMedia } from "@/api/erp/media";
 import { useExchangeRateStore } from "@/store/modules/exchangeRate";
-const { proxy } = getCurrentInstance();
+import type {
+  Product,
+  ProductOption,
+  ProductOptionValue,
+  ProductVariant,
+  TagDictMenu,
+  Media,
+} from "@/types/erp";
+
+const { proxy } = getCurrentInstance() as any;
 
 // 汇率状态管理
 const exchangeRateStore = useExchangeRateStore();
@@ -1211,23 +1228,49 @@ const components = {
 };
 
 // 状态
-const visible = ref(false);
+const visible = ref<boolean>(false);
 
-const activeStep = ref(0);
-const loading = ref(false);
-const step1FormRef = ref();
-const step2FormRef = ref();
-const sourceUrlInputRef = ref(); // 来源 URL 输入框引用
+const activeStep = ref<number>(0);
+const loading = ref<boolean>(false);
+const step1FormRef = ref<FormInstance>();
+const step2FormRef = ref<FormInstance>();
+const sourceUrlInputRef = ref<HTMLInputElement>(); // 来源 URL 输入框引用
 
 // 拖拽相关状态
-const draggedVariantRow = ref(null); // 存储拖拽的变体行数据
-const dragOverVariant = ref(null); // 存储当前拖拽经过的变体
+const draggedVariantRow = ref<ProductVariant | null>(null); // 存储拖拽的变体行数据
+const dragOverVariant = ref<ProductVariant | null>(null); // 存储当前拖拽经过的变体
 
 // 表单数据
 
+interface Step1FormData {
+  productId: number | undefined;
+  spu: string;
+  sourceUrl: string;
+  purchaseUrl: string;
+  tagIds: number[];
+}
+
+interface Step2FormData {
+  productId: number | undefined;
+  spu: string;
+  productTitle: string;
+  category: string;
+  productType: string;
+  description: string;
+  size: string;
+  material: string;
+  note: string;
+  packageInclude: string;
+  bodyHtml: string;
+  mediaList: Media[];
+  mainMediaId: number | undefined;
+  remark: string;
+  imageSearchKeyword: string;
+}
+
 /** 第一步表单数据 */
-const step1FormData = reactive({
-  productId: null,
+const step1FormData = reactive<Step1FormData>({
+  productId: undefined,
   spu: "",
   sourceUrl: "",
   purchaseUrl: "",
@@ -1235,8 +1278,9 @@ const step1FormData = reactive({
 });
 
 /** 第二步表单数据 */
-const step2FormData = reactive({
-  productId: null,
+const step2FormData = reactive<Step2FormData>({
+  productId: undefined,
+  spu: "",
   productTitle: "",
   category: "",
   productType: "",
@@ -1247,23 +1291,31 @@ const step2FormData = reactive({
   packageInclude: "",
   bodyHtml: "",
   mediaList: [],
-  mainMediaId: null,
+  mainMediaId: undefined,
   remark: "",
   imageSearchKeyword: "",
 });
 
 // 计算属性：所有图片的 URL 列表（不包含视频）
-const imagePreviewList = computed(() => {
+const imagePreviewList = computed<string[]>(() => {
   return step2FormData.mediaList
     .filter((item) => isImage(item))
     .map((item) => baseUrl + (item.nasMediaUrl || item.shopifyMediaUrl));
 });
 
 // 采购商品选项
-/** @type {ProductOption[]} */
-const optionList = ref([]);
+const optionList = ref<ProductOption[]>([]);
 
-const step1Variants = ref([
+interface Step1Variant {
+  variantId: number | null;
+  purchaseUrl?: string;
+  optionValues?: string;
+  optionValueList: ProductVariant["optionValueList"];
+  position: number;
+  remark: string;
+}
+
+const step1Variants = ref<Step1Variant[]>([
   {
     variantId: null,
     purchaseUrl: "",
@@ -1275,41 +1327,51 @@ const step1Variants = ref([
 ]);
 
 // 变体列表
-/** @type {ProductVariant[]} */
-const step2Variants = ref([
+const step2Variants = ref<ProductVariant[]>([
   {
-    variantId: null,
+    variantId: 0,
+    productId: 0,
     sku: "",
-    price: null,
-    compareAtPrice: null,
+    price: 0,
+    compareAtPrice: undefined,
     optionValues: "",
     optionValueList: [],
-    mediaId: null,
+    mediaId: undefined,
     position: 0,
-    pkWidth: null,
-    pkHeight: null,
-    pkLength: null,
-    materialWeight: null,
-    pkWeight: null,
-    freight: null,
+    pkWidth: undefined,
+    pkHeight: undefined,
+    pkLength: undefined,
+    materialWeight: undefined,
+    pkWeight: undefined,
+    freight: undefined,
     isActualShipment: "0",
-    unitCostPrice: null,
+    unitCostPrice: undefined,
     remark: "",
   },
 ]);
 
 // 标签列表
-/** @type {TagDictMenu[]} */
-const tagList = ref([]);
+const tagList = ref<TagDictMenu[]>([]);
+
+interface Step1DataSnapshot {
+  step1FormData: Step1FormData;
+  optionList: ProductOption[];
+  step1Variants: Step1Variant[];
+}
+
+interface Step2DataSnapshot {
+  step2FormData: Step2FormData;
+  step2Variants: ProductVariant[];
+}
 
 // 初始数据快照，用于检测数据变更
-const step1DataSnapshot = ref(null);
-const step2DataSnapshot = ref(null);
+const step1DataSnapshot = ref<Step1DataSnapshot | null>(null);
+const step2DataSnapshot = ref<Step2DataSnapshot | null>(null);
 
 // SPU 生成相关
 // 获取 MENU 类型的标签 ID
 // 获取 MENU 类型的标签 ID（支持级联多选）
-const getMenuTag = (tagIds) => {
+const getMenuTag = (tagIds: number[] | number[][]): TagDictMenu[] | null => {
   if (!tagIds || tagIds.length === 0) {
     return null;
   }
@@ -1333,32 +1395,37 @@ const getMenuTag = (tagIds) => {
 };
 
 // 第一步校验规则
-const step1Rules = {
+const step1Rules: FormRules = {
   spu: [{ required: true, message: "SPU 不能为空", trigger: "blur" }],
 
   tagIds: [{ required: true, message: "标签不能为空", trigger: "change" }],
 };
 
 // 第二步校验规则
-const step2Rules = {};
+const step2Rules: FormRules = {};
 
 // 图片加载状态
-const imageLoading = ref(false);
-const draggedImage = ref(null);
-const dragOverIndex = ref(-1); // 拖拽悬停索引，用于排序提示
+const imageLoading = ref<boolean>(false);
+const draggedImage = ref<Media | null>(null);
+const dragOverIndex = ref<number>(-1); // 拖拽悬停索引，用于排序提示
 
 // 富文本编辑器状态
-const richTextEditor = reactive({
+interface RichTextEditorState {
+  expanded: boolean;
+  mode: "edit" | "preview";
+}
+
+const richTextEditor = reactive<RichTextEditorState>({
   expanded: false,
   mode: "edit", // 'edit' | 'preview'
 });
 
 // 视频播放相关状态
-const videoModalVisible = ref(false);
-const currentVideo = ref(null);
+const videoModalVisible = ref<boolean>(false);
+const currentVideo = ref<Media | null>(null);
 
 // 商品详情选项卡当前激活项，description 排在第一位
-const activeDetailTab = ref("description");
+const activeDetailTab = ref<string>("description");
 
 // 监听采购链接 变化，同步到变体的采购链接
 // 如果采购链接 有值，变体采购链接等于旧值, 则同步
@@ -1440,7 +1507,7 @@ function handleSourceUrlBlur() {
   }
 }
 // 处理第一步的键盘事件
-function handleStep1Keydown(event) {
+function handleStep1Keydown(event: KeyboardEvent): void {
   // 检查是否按下了 Ctrl (或 Mac 上的 Cmd) + '+' 或 '='
   if (
     (event.ctrlKey || event.metaKey) &&
@@ -1476,7 +1543,7 @@ function handleStep1Keydown(event) {
 }
 
 // 处理第二步的键盘事件
-function handleStep2Keydown(event) {
+function handleStep2Keydown(event: KeyboardEvent): void {
   // Ctrl + 左键: 上一步
   if ((event.ctrlKey || event.metaKey) && event.key === "ArrowLeft") {
     event.preventDefault();
@@ -1494,12 +1561,11 @@ function handleStep2Keydown(event) {
   }
 }
 
-const menuLoading = ref(false);
+const menuLoading = ref<boolean>(false);
 // 扁平化的标签列表（缓存）
-/** @type {TagDictMenu[]} */
-const menuTagList = ref([]);
+const menuTagList = ref<TagDictMenu[]>([]);
 // 加载标签列表
-async function fetchTags() {
+async function fetchTags(): Promise<void> {
   try {
     menuLoading.value = true;
     const response = await treeList("ALL");
@@ -1514,9 +1580,9 @@ async function fetchTags() {
   }
 }
 
-function flattenTagList(tagList) {
-  const result = [];
-  function traverse(list) {
+function flattenTagList(tagList: TagDictMenu[]): TagDictMenu[] {
+  const result: TagDictMenu[] = [];
+  function traverse(list: TagDictMenu[]): void {
     for (const tag of list) {
       // 判断是否是叶子节点（没有 children 或 children 为空）
       const isLeaf = !tag.children || tag.children.length === 0;
@@ -1533,10 +1599,14 @@ function flattenTagList(tagList) {
   traverse(tagList);
   return result;
 }
-const currentProductId = ref(null);
-const selectedTagIds = ref([]);
+const currentProductId = ref<number | null>(null);
+const selectedTagIds = ref<number[]>([]);
 // 打开编辑页面
-const open = async (outsizeTagIds, productId, step = 0) => {
+const open = async (
+  outsizeTagIds: number[] | null,
+  productId: number | null,
+  step: number = 0,
+): Promise<void> => {
   currentProductId.value = productId;
   selectedTagIds.value = outsizeTagIds || [];
 
@@ -1558,7 +1628,7 @@ const resetAndLoadData = async (step = 0) => {
       // 优化1：打开弹窗时，来源 URL 自动获得焦点
       nextTick(() => {
         setTimeout(() => {
-          sourceUrlInputRef.value.focus();
+          sourceUrlInputRef.value?.focus();
         }, 50); // 增加延迟以等待 Dialog 动画完成
       });
       step1DataSnapshot.value = null;
@@ -1577,8 +1647,9 @@ const resetAndLoadData = async (step = 0) => {
 };
 
 // 加载商品表单数据
-const handleLoadStep2Data = async () => {
+const handleLoadStep2Data = async (): Promise<void> => {
   // 加载商品详情
+  if (!currentProductId.value) return;
   const response = await getProduct(currentProductId.value);
   const productData = response.data;
 
@@ -1600,24 +1671,22 @@ const handleLoadStep2Data = async () => {
     productData.productVariantList &&
     productData.productVariantList.length > 0
   ) {
-    const step2V = [];
-    productData.productVariantList.forEach(async (v, index) => {
+    const step2V: ProductVariant[] = [];
+    for (const v of productData.productVariantList) {
       const optionValueList = v.optionValues ? JSON.parse(v.optionValues) : [];
-      // 检查并填充汇率
-      const variant = {
+      const variant: ProductVariant = {
         ...v,
         sku:
           v.sku ||
-          productData.spu + "-" + (index + 1).toString().padStart(3, "0"),
+          productData.spu + "-" + (productData.productVariantList.indexOf(v) + 1).toString().padStart(3, "0"),
         optionValueList,
       };
-      // 如果exchangeRate为空，自动填入缓存的汇率
       if (!variant.exchangeRate) {
         await fillExchangeRate(variant);
       }
       step2V.push(variant);
-      step2Variants.value = step2V;
-    });
+    }
+    step2Variants.value = step2V;
   }
 
   // 保存初始数据快照
@@ -1625,8 +1694,9 @@ const handleLoadStep2Data = async () => {
   step1DataSnapshot.value = null;
 };
 
-const handleLoadStep1Data = async () => {
+const handleLoadStep1Data = async (): Promise<void> => {
   // 加载商品详情
+  if (!currentProductId.value) return;
   const response = await getProduct(currentProductId.value);
   const productData = response.data;
 
@@ -1643,18 +1713,21 @@ const handleLoadStep1Data = async () => {
   if (productData.optionJson) {
     try {
       optionList.value = JSON.parse(productData.optionJson);
+      // 默认收起
+      optionList.value.forEach((option) => {
+        option.collapsed = true;
+      });
     } catch (e) {
       optionList.value = [];
     }
   }
-  console.log("采购商品选项:", optionList.value);
 
   // 加载变体数据
   if (
     productData.productVariantList &&
     productData.productVariantList.length > 0
   ) {
-    const step1V = [];
+    const step1V: Step1Variant[] = [];
     productData.productVariantList.forEach(async (v, index) => {
       const optionValueList = v.optionValues ? JSON.parse(v.optionValues) : [];
       step1V.push({
@@ -1663,7 +1736,7 @@ const handleLoadStep1Data = async () => {
         optionValues: v.optionValues,
         optionValueList,
         position: v.position,
-        remark: v.remark,
+        remark: v.remark || "",
       });
       step1Variants.value = step1V;
     });
@@ -1765,7 +1838,7 @@ function resetForm(step) {
     imageLoading.value = false;
     // 重置第二步表单数据
     Object.assign(step2FormData, {
-      productId: null,
+      productId: undefined,
       productTitle: "",
       note: "",
       packageInclude: "",
@@ -1773,7 +1846,7 @@ function resetForm(step) {
       size: "",
       material: "",
       mediaList: [],
-      mainMediaId: null,
+      mainMediaId: undefined,
       remark: "",
       description: "",
       imageSearchKeyword: "",
@@ -1781,22 +1854,23 @@ function resetForm(step) {
 
     step2Variants.value = [
       {
-        variantId: null,
+        variantId: 0,
+        productId: 0,
         sku: "",
-        price: null,
-        compareAtPrice: null,
+        price: 0,
+        compareAtPrice: undefined,
         optionValues: "",
         optionValueList: [],
-        mediaId: null,
+        mediaId: undefined,
         position: 0,
-        pkWidth: null,
-        pkHeight: null,
-        pkLength: null,
-        materialWeight: null,
-        pkWeight: null,
-        freight: null,
+        pkWidth: undefined,
+        pkHeight: undefined,
+        pkLength: undefined,
+        materialWeight: undefined,
+        pkWeight: undefined,
+        freight: undefined,
         isActualShipment: "0",
-        unitCostPrice: null,
+        unitCostPrice: undefined,
         remark: "",
       },
     ];
@@ -1830,7 +1904,7 @@ const generateSpu = async (auto) => {
     }
 
     const selectedMenuTag = selectedMenuTags[0];
-    if (selectedMenuTag.spuPrefix == null) {
+    if (!selectedMenuTag || selectedMenuTag.spuPrefix == null) {
       if (!auto)
         proxy.$modal.msgError("当前选中的标签没有配置 SPU 前缀，无法生成 SPU");
       return;
@@ -1863,13 +1937,13 @@ function addOptionValue(optIndex) {
     englishValue: "",
   });
 }
-function toggleCollapse(optIndex) {
+function toggleCollapse(optIndex: number): void {
   optionList.value[optIndex].collapsed = !optionList.value[optIndex].collapsed;
   if (optionList.value[optIndex].collapsed) {
     generateVariants();
     // 收起后，确保焦点保持在当前选项行上
     nextTick(() => {
-      const optionRows = document.querySelectorAll(".option-row");
+      const optionRows = document.querySelectorAll<HTMLElement>(".option-row");
       if (optionRows[optIndex]) {
         optionRows[optIndex].focus();
       }
@@ -1901,15 +1975,20 @@ function handleTabKey(event, optIndex, valIndex, type) {
 }
 
 // 聚焦到指定输入框
-function focusNextInput(optIndex, valIndex, type) {
+function focusNextInput(
+  optIndex: number,
+  valIndex: number,
+  type: string,
+): void {
   setTimeout(() => {
-    const inputs = document.querySelectorAll(
+    const inputs = document.querySelectorAll<HTMLElement>(
       `.option-row:nth-child(${optIndex + 1}) .option-value-row`,
     );
     if (inputs[valIndex]) {
       const inputClass =
         type === "purchase" ? ".input-left input" : ".input-right input";
-      const targetInput = inputs[valIndex].querySelector(inputClass);
+      const targetInput =
+        inputs[valIndex].querySelector<HTMLInputElement>(inputClass);
       if (targetInput) {
         targetInput.focus();
       }
@@ -1918,7 +1997,7 @@ function focusNextInput(optIndex, valIndex, type) {
 }
 
 // 添加选项
-const addOption = () => {
+const addOption = (): void => {
   optionList.value.push({
     chineseName: "",
     englishName: "",
@@ -1935,9 +2014,11 @@ const addOption = () => {
   nextTick(() => {
     // 使用 setTimeout 确保 DOM 完全渲染
     setTimeout(() => {
-      const optionRows = document.querySelectorAll(".option-row");
+      const optionRows = document.querySelectorAll<HTMLElement>(".option-row");
       if (optionRows.length > 0) {
-        const allInputs = optionRows[optionRows.length - 1].querySelectorAll(
+        const allInputs = optionRows[
+          optionRows.length - 1
+        ].querySelectorAll<HTMLInputElement>(
           ".option-value-row .input-left input",
         );
         if (allInputs.length > 0) {
@@ -1957,18 +2038,16 @@ function removeOption(index) {
 
 // 获取当前有效的选项列表（用于生成动态表头）
 function getActiveOptions() {
-  console.log("optionList.value", optionList.value);
   const optionLists = optionList.value.filter(
     (opt) =>
       (opt.chineseName || opt.englishName) &&
       opt.values?.some((v) => v.chineseValue || v.englishValue),
   );
-  console.log("有效选项:", optionLists);
   return optionLists;
 }
 
 // 生成变体（笛卡尔积）
-function generateVariants() {
+function generateVariants(): void {
   // 过滤有实际值的选项
   const activeOptions = getActiveOptions();
 
@@ -1980,16 +2059,19 @@ function generateVariants() {
         optionValues: "",
         optionValueList: [],
         position: 0,
+        remark: "",
       },
     ];
     return;
   }
   // 计算笛卡尔积（使用 values 数组，并保留 chineseValue 和 englishValue）
   const valueArrays = activeOptions.map((opt) =>
-    opt.values.map((v) => ({
-      chineseValue: v.chineseValue,
-      englishValue: v.englishValue,
-    })),
+    opt.values
+      .filter((v) => v.chineseValue || v.englishValue)
+      .map((v) => ({
+        chineseValue: v.chineseValue,
+        englishValue: v.englishValue,
+      })),
   );
   const combinations = cartesianProduct(valueArrays);
 
@@ -2013,7 +2095,6 @@ function generateVariants() {
       remark: existingVariant?.remark || "",
     };
   });
-  console.log("generateVariants", step1Variants.value);
 }
 
 // 笛卡尔积工具函数
@@ -2044,8 +2125,13 @@ function removeVariant(index) {
 }
 
 // 变体行拖拽排序
-function handleRowDrop({ row, $index }, targetIndex) {
-  const sourceIndex = s.value.findIndex((v) => v.position === row.position);
+function handleRowDrop(
+  { row, $index }: { row: ProductVariant; $index: number },
+  targetIndex: number,
+): void {
+  const sourceIndex = step2Variants.value.findIndex(
+    (v) => v.position === row.position,
+  );
   if (sourceIndex !== -1 && sourceIndex !== targetIndex) {
     const item = step2Variants.value.splice(sourceIndex, 1)[0];
     step2Variants.value.splice(targetIndex, 0, item);
@@ -2137,7 +2223,6 @@ async function calculateMaterialWeight(row) {
 // 计算运费
 async function calculateFreight(row) {
   try {
-    console.log("计算运费:", row);
     if (
       row.isActualShipment === "0" &&
       row.pkWeight > 0 &&
@@ -2215,11 +2300,12 @@ function removeImage(index) {
 }
 
 // 变体图片拖拽开始
-function handleVariantImageDragStart(event, row) {
-  event.dataTransfer.effectAllowed = "move";
-  if (row.media) {
-    // 保存被拖拽的媒体对象
-    event.dataTransfer.setData("variant-media", JSON.stringify(row.media));
+function handleVariantImageDragStart(
+  event: DragEvent,
+  row: ProductVariant,
+): void {
+  event.dataTransfer!.effectAllowed = "move";
+  if (row.mediaId) {
     // 保存当前行数据到全局变量，用于删除操作
     draggedVariantRow.value = row;
   }
@@ -2228,19 +2314,22 @@ function handleVariantImageDragStart(event, row) {
 }
 
 // 变体图片拖拽进入
-function handleVariantImageDragEnter(event, row) {
+function handleVariantImageDragEnter(
+  event: DragEvent,
+  row: ProductVariant,
+): void {
   event.preventDefault();
   dragOverVariant.value = row;
 }
 
 // 变体图片拖拽离开
-function handleVariantImageDragLeave(event) {
+function handleVariantImageDragLeave(event: DragEvent): void {
   event.preventDefault();
   dragOverVariant.value = null;
 }
 
 // 变体图片拖拽结束
-function handleVariantImageDragEnd(event) {
+function handleVariantImageDragEnd(event: DragEvent): void {
   // 检查是否拖拽出了变体图片区域
   const variantImageItems = document.querySelectorAll(".variant-image-item");
   let isInside = false;
@@ -2271,13 +2360,14 @@ function handleVariantImageDragEnd(event) {
       })
         .then(() => {
           // 找到对应的行并删除图片
-          console.log(draggedVariantRow.value);
-          step2Variants.value.forEach((row) => {
-            if (row.variantId === draggedVariantRow.value.variantId) {
-              row.media = null;
-              row.mediaId = null;
-            }
-          });
+          const draggedId = draggedVariantRow.value?.variantId;
+          if (draggedId !== undefined) {
+            step2Variants.value.forEach((row) => {
+              if (row.variantId === draggedId) {
+                row.mediaId = undefined;
+              }
+            });
+          }
         })
         .catch(() => {
           // 取消删除
@@ -2304,7 +2394,7 @@ function handleVariantImageDragEnd(event) {
 }
 
 // 判断是否为图片
-function isImage(media) {
+function isImage(media: Media | null | undefined): boolean {
   if (!media) return false;
   const contentType = media.mediaContentType || "";
   return (
@@ -2345,7 +2435,6 @@ function openVideoModal(media) {
 
 // 图片拖拽开始
 function handleImageDragStart(event, media) {
-  console.log("handleImageDragStart", media);
   draggedImage.value = media;
   event.dataTransfer.effectAllowed = "move";
   event.dataTransfer.setData("media-id", media.mediaId);
@@ -2359,14 +2448,12 @@ function handleImageDragStart(event, media) {
 
 // 图片拖拽进入
 function handleImageDragEnter(event, index) {
-  console.log("handleImageDragEnter", index);
   event.preventDefault();
   dragOverIndex.value = index;
 }
 
 // 图片拖拽离开
 function handleImageDragLeave(event) {
-  console.log("handleImageDragLeave");
   event.preventDefault();
 
   // 检查鼠标是否真的离开了图片项，还是只是进入了子元素
@@ -2408,9 +2495,12 @@ function handleImageDragEnd(event) {
       })
         .then(() => {
           // 找到对应的图片并删除
-          const index = step2FormData.mediaList.indexOf(draggedImage.value);
-          if (index > -1) {
-            step2FormData.mediaList.splice(index, 1);
+          const draggedImg = draggedImage.value;
+          if (draggedImg) {
+            const index = step2FormData.mediaList.indexOf(draggedImg);
+            if (index > -1) {
+              step2FormData.mediaList.splice(index, 1);
+            }
           }
         })
         .catch(() => {
@@ -2438,8 +2528,7 @@ function handleImageDragEnd(event) {
 }
 
 // 图片拖拽放下（排序）
-function handleImageDrop(event) {
-  console.log("handleImageDrop");
+function handleImageDrop(event: DragEvent): void {
   event.preventDefault();
 
   // 处理内部拖拽排序
@@ -2459,17 +2548,15 @@ function handleImageDrop(event) {
 }
 
 // 图片拖拽到变体
-function handleVariantImageDrop(event, row) {
-  console.log("handleVariantImageDrop", row);
+function handleVariantImageDrop(event: DragEvent, row: ProductVariant): void {
   event.preventDefault();
 
   // 优先从dataTransfer获取数据（从变体图片拖拽）
   try {
-    const mediaData = event.dataTransfer.getData("variant-media");
+    const mediaData = event.dataTransfer!.getData("variant-media");
     if (mediaData) {
-      const media = JSON.parse(mediaData);
+      const media: Media = JSON.parse(mediaData);
       if (media) {
-        row.media = media;
         row.mediaId = media.mediaId;
         return;
       }
@@ -2480,7 +2567,6 @@ function handleVariantImageDrop(event, row) {
 
   // 从draggedImage获取数据（从图片列表拖拽）
   if (draggedImage.value) {
-    row.media = draggedImage.value;
     row.mediaId = draggedImage.value.mediaId;
     draggedImage.value = null;
   }
@@ -2647,7 +2733,7 @@ const handleNext = async () => {
 };
 
 // 处理表单提交
-const handleSubmitData = async () => {
+const handleSubmitData = async (): Promise<number> => {
   if (activeStep.value === 0) {
     // 保存第一步
     // 确保变体中的 optionValueList 同步更新到 optionValues 字符串（如果需要后端兼容）
@@ -2666,12 +2752,16 @@ const handleSubmitData = async () => {
   } else if (activeStep.value === 1) {
     // 保存第二步
     const submitData = {
-      ...step2FormData,
-      optionJson: JSON.stringify(optionList.value),
+      productId: step2FormData.productId!,
+      productTitle: step2FormData.productTitle,
+      bodyHtml: step2FormData.bodyHtml,
+      mediaList: step2FormData.mediaList,
+      productVariantList: step2Variants.value,
     };
     await updateBaseInfo(submitData);
-    return response.data;
+    return step2FormData.productId!;
   }
+  return 0;
 };
 
 // 关闭对话框

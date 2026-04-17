@@ -402,60 +402,82 @@
   </div>
 </template>
 
-<script setup>
-import { ref, reactive } from "vue";
+<script setup lang="ts">
+import { ref, reactive, toRefs, onMounted, getCurrentInstance } from "vue";
 import { listProduct, getProduct, delProduct } from "@/api/erp/product";
 import { getToken } from "@/utils/auth";
+import { parseTime } from "@/utils/ruoyi";
 import { UploadFilled } from "@element-plus/icons-vue";
-import ProductCreationWizard from "./ProductCreationWizard.vue";
+import type { Product, PageQuery } from "@/types/erp";
 
-// Props
-const props = defineProps({
-  selectedTags: {
-    type: Array,
-    default: () => [],
-  },
-});
+interface ProductQuery extends PageQuery {
+  productTitle?: string | null;
+  spu?: string | null;
+  category?: string | null;
+  productType?: string | null;
+  status?: string | null;
+  mainMediaId?: number | null;
+  syncStatus?: string | null;
+  lastSyncTime?: string | null;
+  params?: Record<string, unknown>;
+}
 
-const { proxy } = getCurrentInstance();
+interface ColumnConfig {
+  key: number;
+  label: string;
+  visible: boolean;
+}
+
+interface UploadConfig {
+  open: boolean;
+  title: string;
+  isUploading: boolean;
+  updateSupport: number;
+  headers: { Authorization: string };
+  url: string;
+  templateUrl: string;
+}
+
+interface SelectedTag {
+  tagId: number;
+  tagName: string;
+  tagCode?: string;
+  tagType?: string;
+}
+
+const props = defineProps<{
+  selectedTags?: SelectedTag[];
+}>();
+
+const { proxy } = getCurrentInstance() as any;
 const { erp_product_sync_status, erp_product_status } = proxy.useDict(
   "erp_product_sync_status",
   "erp_product_status",
 );
 
-const productList = ref([]);
-const loading = ref(true);
-const showSearch = ref(true);
-const ids = ref([]);
-const single = ref(true);
-const multiple = ref(true);
-const total = ref(0);
-const daterangeLastSyncTime = ref([]);
-const daterangeCreateTime = ref([]);
+const productList = ref<Product[]>([]);
+const loading = ref<boolean>(true);
+const showSearch = ref<boolean>(true);
+const ids = ref<number[]>([]);
+const single = ref<boolean>(true);
+const multiple = ref<boolean>(true);
+const total = ref<number>(0);
+const daterangeLastSyncTime = ref<string[]>([]);
+const daterangeCreateTime = ref<string[]>([]);
 
-// 向导相关
-const creationWizardModal = ref(null);
+const creationWizardModal = ref<any>(null);
 
 const data = reactive({
-  // 导出地址
   exportUrl: "erp/product/export",
-  // erp 商品导入参数
   upload: {
-    // 是否显示弹出层（erp 商品导入）
     open: false,
-    // 弹出层标题（erp 商品导入）
     title: "",
-    // 是否禁用上传
     isUploading: false,
-    // 是否更新已经存在的 erp 商品数据
     updateSupport: 0,
-    // 设置上传的请求头部
     headers: { Authorization: "Bearer " + getToken() },
-    // 上传的地址
     url: import.meta.env.VITE_APP_BASE_API + "/erp/product/importData",
-    // 下载模板的地址
     templateUrl: "erp/product/importTemplate",
-  },
+  } as UploadConfig,
   queryParams: {
     pageNum: 1,
     pageSize: 10,
@@ -467,8 +489,7 @@ const data = reactive({
     mainMediaId: null,
     syncStatus: null,
     lastSyncTime: null,
-  },
-  //表格展示列
+  } as ProductQuery,
   columns: [
     { key: 0, label: "SPU", visible: true },
     { key: 1, label: "商品标题", visible: true },
@@ -481,11 +502,7 @@ const data = reactive({
     { key: 8, label: "采购商品选项", visible: true },
     { key: 9, label: "创建时间", visible: true },
     { key: 10, label: "发布状态", visible: true },
-    {
-      key: 11,
-      label: "同步状态",
-      visible: true,
-    },
+    { key: 11, label: "同步状态", visible: true },
     { key: 12, label: "同步时间", visible: true },
     { key: 13, label: "备注", visible: true },
     { key: 14, label: "DESCRIPTION", visible: true },
@@ -493,86 +510,84 @@ const data = reactive({
     { key: 16, label: "MATERIAL", visible: true },
     { key: 17, label: "NOTE", visible: true },
     { key: 18, label: "PACKAGEINCLUDE", visible: true },
-  ],
+  ] as ColumnConfig[],
 });
 
 const { queryParams, columns, exportUrl, upload } = toRefs(data);
-const uploadRef = ref();
+const uploadRef = ref<any>();
 
-/** 查询 erp 商品列表 */
-function getList() {
+function getList(): void {
   loading.value = true;
   queryParams.value.params = {};
-  if (null != daterangeLastSyncTime && "" != daterangeLastSyncTime) {
+  if (
+    null != daterangeLastSyncTime.value &&
+    daterangeLastSyncTime.value.length > 0
+  ) {
     queryParams.value.params["beginLastSyncTime"] =
       daterangeLastSyncTime.value[0];
     queryParams.value.params["endLastSyncTime"] =
       daterangeLastSyncTime.value[1];
   }
-  if (null != daterangeCreateTime && "" != daterangeCreateTime) {
+  if (
+    null != daterangeCreateTime.value &&
+    daterangeCreateTime.value.length > 0
+  ) {
     queryParams.value.params["beginCreateTime"] = daterangeCreateTime.value[0];
     queryParams.value.params["endCreateTime"] = daterangeCreateTime.value[1];
   }
-  listProduct(queryParams.value).then((response) => {
+  listProduct(queryParams.value as ProductQuery).then((response: any) => {
     productList.value = response.rows;
     total.value = response.total;
     loading.value = false;
   });
 }
 
-/** 搜索按钮操作 */
-function handleQuery() {
+function handleQuery(): void {
   queryParams.value.pageNum = 1;
   getList();
 }
 
-/** 重置按钮操作 */
-function resetQuery() {
+function resetQuery(): void {
   daterangeLastSyncTime.value = [];
   daterangeCreateTime.value = [];
   proxy.resetForm("queryRef");
   handleQuery();
 }
 
-// 多选框选中数据
-function handleSelectionChange(selection) {
+function handleSelectionChange(selection: Product[]): void {
   ids.value = selection.map((item) => item.productId);
   single.value = selection.length != 1;
   multiple.value = !selection.length;
 }
 
-/** 新增按钮操作 - 打开向导 */
-function handleAdd() {
+function handleAdd(): void {
   const selectedTagIds = props.selectedTags?.map((tag) => tag.tagId) || [];
-  // creationWizardModal.value.open(selectedTagIds, null);
-  // 改成新的页面打开
-  proxy.$tab.openPage(
-      '新增选品',
-      '/erp/product/creation-wizard/create',
-      { tagIds: JSON.stringify(selectedTagIds) }
-  );
-
+  proxy.$tab.openPage("新增选品", "/erp/product/creation-wizard/create", {
+    tagIds: JSON.stringify(selectedTagIds),
+  });
 }
 
-/** 修改按钮操作 - 打开向导 */
-function handleUpdate(row) {
-  const _productId = row.productId || ids.value;
+function handleUpdate(row: Product): void {
+  const _productId = row.productId || ids.value[0];
   console.log("编辑 erp 商品，productId:", _productId, "row", row);
-  // creationWizardModal.value.open(null, _productId, 1);
   proxy.$tab.openPage(
-      '编辑商品',
-      '/erp/product/creation-wizard/edit/' + _productId,
-      { step: 1 }
+    "编辑商品",
+    "/erp/product/creation-wizard/edit/" + _productId,
+    { step: 1 },
   );
 }
 
-/** 向导提交处理 */
-function handleWizardSubmit({ action, hasChanged }) {
+function handleWizardSubmit({
+  action,
+  hasChanged,
+}: {
+  action: string;
+  hasChanged: boolean;
+}): void {
   console.log("向导提交处理", action, hasChanged);
   if (action === "cancel") {
     console.log("用户取消操作");
   } else {
-    // 加载数据
     if (hasChanged) {
       getList();
       proxy.$modal.msgSuccess("保存成功");
@@ -580,13 +595,12 @@ function handleWizardSubmit({ action, hasChanged }) {
   }
 }
 
-/** 删除按钮操作 */
-function handleDelete(row) {
+function handleDelete(row: Product): void {
   const _productIds = row.productId || ids.value;
   proxy.$modal
     .confirm('是否确认删除 erp 商品编号为"' + _productIds + '"的数据项？')
     .then(function () {
-      return delProduct(_productIds);
+      return delProduct(_productIds as number);
     })
     .then(() => {
       getList();
@@ -595,8 +609,7 @@ function handleDelete(row) {
     .catch(() => {});
 }
 
-/** 导出按钮操作 */
-function handleExport() {
+function handleExport(): void {
   proxy.download(
     exportUrl.value,
     {
@@ -606,14 +619,12 @@ function handleExport() {
   );
 }
 
-/** 导入按钮操作 */
-function handleImport() {
+function handleImport(): void {
   upload.value.title = "erp 商品导入";
   upload.value.open = true;
 }
 
-/** 下载模板操作 */
-function importTemplate() {
+function importTemplate(): void {
   proxy.download(
     upload.value.templateUrl,
     {},
@@ -621,13 +632,11 @@ function importTemplate() {
   );
 }
 
-// 文件上传中处理
-function handleFileUploadProgress(event, file, fileList) {
+function handleFileUploadProgress(event: any, file: any, fileList: any): void {
   upload.value.isUploading = true;
 }
 
-// 文件上传成功处理
-function handleFileSuccess(response, file, fileList) {
+function handleFileSuccess(response: any, file: any, fileList: any): void {
   upload.value.open = false;
   upload.value.isUploading = false;
   uploadRef.value.clearFiles();
@@ -641,17 +650,14 @@ function handleFileSuccess(response, file, fileList) {
   getList();
 }
 
-// 提交上传文件
-function submitFileForm() {
+function submitFileForm(): void {
   uploadRef.value.submit();
 }
 
-// Lifecycle
 onMounted(() => {
   getList();
 });
 
-// Expose methods for parent component
 defineExpose({
   refresh: getList,
 });

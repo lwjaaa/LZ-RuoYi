@@ -71,9 +71,10 @@
   </div>
 </template>
 
-<script setup>
-import { ref, onMounted, nextTick, watch } from "vue";
+<script setup lang="ts">
+import { ref, onMounted, nextTick, watch, getCurrentInstance } from "vue";
 import { ElIcon, ElMessage, ElMessageBox } from "element-plus";
+import type { FormInstance, FormRules } from "element-plus";
 import {
   FolderOpened,
   Ticket,
@@ -92,41 +93,45 @@ import {
   top,
 } from "@/api/erp/tag";
 import TagDialog from "@/components/erp/TagDialog.vue";
+import type { TagDictMenu, DragNodeData } from "@/types/erp";
 
-const { proxy } = getCurrentInstance();
+const { proxy } = getCurrentInstance() as any;
 
-// Props
-const props = defineProps({
-  selectedTags: {
-    type: Array,
-    default: () => [],
-  },
-});
+interface TagSelection {
+  tagId: number;
+  tagName: string;
+  tagCode?: string;
+  tagType?: string;
+  parentId?: number;
+  sortOrder?: number;
+}
 
-// Emits
-const emit = defineEmits(["selection-change"]);
+const props = defineProps<{
+  selectedTags?: TagSelection[];
+}>();
 
-// Refs
-const tree = ref(null);
-const tagModal = ref(null);
+const emit = defineEmits<{
+  (e: "selection-change", tags: TagSelection[]): void;
+}>();
 
-// Reactive data
-const tagList = ref([]);
-const hoveredNode = ref(null);
-const selectedTagIds = ref([]);
+const tree = ref<any>(null);
+const tagModal = ref<any>(null);
+
+const tagList = ref<TagDictMenu[]>([]);
+const hoveredNode = ref<number | null>(null);
+const selectedTagIds = ref<number[]>([]);
 
 const treeProps = {
   children: "children",
   label: "tagName",
 };
 
-// Methods
-const loadTags = async () => {
+const loadTags = async (): Promise<void> => {
   const response = await treeList("ALL");
   tagList.value = response.data;
 };
 
-const normalizeTag = (node) => {
+const normalizeTag = (node: any): TagSelection => {
   const data = (node && node.data) || node || {};
   return {
     tagId: data.tagId,
@@ -138,24 +143,24 @@ const normalizeTag = (node) => {
   };
 };
 
-const updateSelection = () => {
+const updateSelection = (): void => {
   const checkedNodes = tree.value.getCheckedNodes();
-  const normalized = checkedNodes.map((node) => normalizeTag(node));
-  selectedTagIds.value = normalized.map((node) => node.tagId);
+  const normalized = checkedNodes.map((node: any) => normalizeTag(node));
+  selectedTagIds.value = normalized.map((node: TagSelection) => node.tagId);
   emit("selection-change", normalized);
 };
 
-const handleCheck = (checkedNodes, options) => {
+const handleCheck = (): void => {
   updateSelection();
 };
 
-const clearSelection = () => {
+const clearSelection = (): void => {
   tree.value.setCheckedKeys([]);
   selectedTagIds.value = [];
   emit("selection-change", []);
 };
 
-const handleMoreCommand = (data, command) => {
+const handleMoreCommand = (data: TagDictMenu, command: string): void => {
   if (command === "edit") {
     openEditDialog(data);
   } else if (command === "delete") {
@@ -165,23 +170,23 @@ const handleMoreCommand = (data, command) => {
   }
 };
 
-const openAddDialog = (options = null) => {
+const openAddDialog = (options: { parentId?: number } | null = null): void => {
   tagModal.value.open(options);
 };
 
-const openAddDialogFor = (data) => {
+const openAddDialogFor = (data: TagDictMenu): void => {
   tagModal.value.open({ parentId: data.tagId });
 };
 
-const openEditDialog = (data) => {
+const openEditDialog = (data: TagDictMenu): void => {
   tagModal.value.open(data);
 };
 
-const handleDialogSuccess = () => {
+const handleDialogSuccess = (): void => {
   loadTags();
 };
 
-const deleteTag = (data) => {
+const deleteTag = (data: TagDictMenu): void => {
   ElMessageBox.confirm("确定删除该标签吗？", "提示", {
     confirmButtonText: "确定",
     cancelButtonText: "取消",
@@ -194,7 +199,7 @@ const deleteTag = (data) => {
   });
 };
 
-const pinToTop = (data) => {
+const pinToTop = (data: TagDictMenu): void => {
   top(data.tagId)
     .then(() => {
       proxy.$modal.msgSuccess("置顶成功");
@@ -205,7 +210,7 @@ const pinToTop = (data) => {
     });
 };
 
-const allowDrop = (draggingNode, dropNode, type) => {
+const allowDrop = (draggingNode: any, dropNode: any, type: string): boolean => {
   if (!draggingNode || !draggingNode.data || !dropNode || !dropNode.data) {
     return false;
   }
@@ -219,17 +224,20 @@ const allowDrop = (draggingNode, dropNode, type) => {
   }
 };
 
-const handleNodeDrop = (draggingNode, dropNode, dropType) => {
+const handleNodeDrop = (
+  draggingNode: any,
+  dropNode: any,
+  dropType: string,
+): void => {
   if (!draggingNode || !draggingNode.data || !dropNode || !dropNode.data) {
     return;
   }
 
   const draggingData = draggingNode.data;
   const dropData = dropNode.data;
-  const TreeDragDTO = {
-    dragId: draggingData.tagId,
-    targetId: dropData.tagId,
-    dropType: dropType,
+  const TreeDragDTO: DragNodeData = {
+    tagId: draggingData.tagId,
+    targetParentId: dropData.tagId,
   };
 
   dragNode(TreeDragDTO)
@@ -334,9 +342,7 @@ watch(
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
-  transition:
-    opacity 0.2s ease,
-    visibility 0.2s ease;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
 }
 
 .hover-buttons.visible {

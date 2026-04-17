@@ -1,23 +1,40 @@
 import { defineStore } from "pinia";
 import { getUsdRate } from "@/api/erp/exchange-rate";
+import type { ExchangeRate } from "@/types/erp";
 
-// 定义汇率状态管理
+interface ExchangeRateState {
+  rate: number | null;
+  rateDate: string | null;
+  isLoading: boolean;
+}
+
+interface CachedRateData {
+  rate: number | null;
+  rateDate: string | null;
+}
+
 export const useExchangeRateStore = defineStore("exchangeRate", {
-  state: () => ({
+  state: (): ExchangeRateState => ({
     rate: null,
     rateDate: null,
     isLoading: false,
   }),
 
+  getters: {
+    isRateUpToDate: (state): boolean => {
+      if (!state.rateDate) return false;
+      const today = new Date().toISOString().split("T")[0];
+      return state.rateDate === today;
+    },
+  },
+
   actions: {
-    // 获取汇率数据
-    async fetchUsdRate() {
+    async fetchUsdRate(): Promise<ExchangeRate> {
       this.isLoading = true;
       try {
         const response = await getUsdRate();
         this.rate = response.data.rate;
         this.rateDate = response.data.rateDate;
-        // 缓存到本地存储
         this.cacheRate();
         return response.data;
       } catch (error) {
@@ -28,12 +45,11 @@ export const useExchangeRateStore = defineStore("exchangeRate", {
       }
     },
 
-    // 从本地存储加载汇率
-    loadCachedRate() {
+    loadCachedRate(): void {
       try {
         const cached = localStorage.getItem("exchangeRate");
         if (cached) {
-          const data = JSON.parse(cached);
+          const data: CachedRateData = JSON.parse(cached);
           this.rate = data.rate;
           this.rateDate = data.rateDate;
         }
@@ -42,23 +58,19 @@ export const useExchangeRateStore = defineStore("exchangeRate", {
       }
     },
 
-    // 缓存汇率到本地存储
-    cacheRate() {
+    cacheRate(): void {
       try {
-        localStorage.setItem(
-          "exchangeRate",
-          JSON.stringify({
-            rate: this.rate,
-            rateDate: this.rateDate,
-          }),
-        );
+        const data: CachedRateData = {
+          rate: this.rate,
+          rateDate: this.rateDate,
+        };
+        localStorage.setItem("exchangeRate", JSON.stringify(data));
       } catch (error) {
         console.error("缓存汇率失败:", error);
       }
     },
 
-    // 检查并更新汇率
-    async checkAndUpdateRate() {
+    async checkAndUpdateRate(): Promise<number | null> {
       console.log("检查汇率");
       const today = new Date().toISOString().split("T")[0];
       if (this.rateDate !== today) {

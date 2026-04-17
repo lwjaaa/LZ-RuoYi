@@ -52,79 +52,80 @@
 ## 📂 核心目录结构
 
 ```text
-LZ-RuoYi/ 
-├── ruoyi-admin/ # 主启动模块（入口） 
-│ └── src/main/ 
-│ ├── java/ # Java 源码 
-│ └── resources/ # 配置文件 
-├── ruoyi-common/ # 通用工具模块 
-│ └── src/main/java/ 
-│ ├── annotation/ # 自定义注解 
-│ ├── config/ # 通用配置 
-│ ├── constant/ # 常量定义 
-│ ├── core/ # 核心类 
-│ ├── enums/ # 枚举类 
-│ ├── exception/ # 异常处理 
-│ ├── filter/ # 过滤器 
-│ ├── utils/ # 工具类 
-│ └── xss/ # XSS 防护 
-├── ruoyi-framework/ # 核心框架模块 
-│ └── src/main/java/ 
-│ ├── aspectj/ # AOP 切面 
-│ ├── config/ # 框架配置 
-│ ├── datasource/ # 数据源 
-│ ├── interceptor/ # 拦截器 
-│ ├── manager/ # 管理器 
-│ ├── security/ # 安全认证 
-│ └── web/ # Web 相关 
-├── ruoyi-system/ # 系统管理模块 
-│ └── src/main/ 
-│ ├── java/ # 用户、角色、菜单等 
-│ └── resources/mapper/ # MyBatis XML 
-├── ruoyi-quartz/ # 定时任务模块 
-├── ruoyi-generator/ # 代码生成模块 
-├── vh-erp/ # ERP 业务模块（自定义开发）⭐ 
-│ └── src/main/java/com/ruoyi/erp/ 
-│ ├── config/ # 配置类 
-│ ├── constant/ # 常量 
-│ ├── controller/ # 控制器层 
-│ ├── mapper/ # MyBatis-Plus Mapper 
-│ ├── model/ # 实体类 
-│ ├── service/ # 服务层 
-│ ├── task/ # 定时任务 
-│ └── graphql/ # GraphQL 客户端（Shopify） 
-├── RuoYi-Vue3/ # 前端项目（Vue 3 + Vite）⭐ 
-│ ├── src/ 
-│ │ ├── api/ # API 接口 
-│ │ │ ├── erp/ # ERP 业务接口 
-│ │ │ ├── system/ # 系统管理接口 
-│ │ │ └── monitor/ # 监控接口 
-│ │ ├── views/ # 页面组件 
-│ │ │ ├── erp/ # ERP 业务页面 
-│ │ │ │ ├── product/ # 商品管理 
-│ │ │ │ ├── variant/ # 商品变体 
-│ │ │ │ ├── tag/ # 标签管理 
-│ │ │ │ ├── ProductTag/ # 商品标签关联 
-│ │ │ │ ├── image/ # 图片管理 
-│ │ │ │ ├── media/ # 媒体管理 
-│ │ │ │ └── task/ # 任务管理 
-│ │ │ ├── system/ # 系统管理页面 
-│ │ │ └── monitor/ # 监控页面 
-│ │ ├── components/ # 公共组件 
-│ │ ├── store/ # Pinia 状态管理 
-│ │ ├── router/ # 路由配置 
-│ │ ├── utils/ # 工具函数 
-│ │ └── layout/ # 布局组件 
-│ └── vite/plugins/ # Vite 插件配置 
-├── ruoyi-ui/ # ⚠️ 已废弃（不要在此目录修改） 
-├── sql/ # 数据库脚本 
-│ ├── 20240629_init1.sql # 初始化脚本 1 
-│ ├── 20240629_init2.sql # 初始化脚本 2 
-│ ├── 20260324_erp.sql # ERP 模块表结构 
-│ └── 20260324_erp_menu.sql # ERP 模块菜单数据 
-├── doc/ # 项目文档 
+LZ-RuoYi/
+├── ruoyi-admin/ # 主启动模块（入口）
+│ └── src/main/
+│ ├── java/ # Java 源码
+│ └── resources/ # 配置文件
+├── ruoyi-common/ # 通用工具模块
+│ └── src/main/java/
+│ ├── annotation/ # 自定义注解
+│ ├── config/ # 通用配置
+│ ├── constant/ # 常量定义
+│ ├── core/ # 核心类
+│ ├── enums/ # 枚举类
+│ ├── exception/ # 异常处理
+│ ├── filter/ # 过滤器
+│ ├── utils/ # 工具类
+│ └── xss/ # XSS 防护
+├── ruoyi-framework/ # 核心框架模块
+│ └── src/main/java/
+│ ├── aspectj/ # AOP 切面
+│ ├── config/ # 框架配置
+│ ├── datasource/ # 数据源
+│ ├── interceptor/ # 拦截器
+│ ├── manager/ # 管理器
+│ ├── security/ # 安全认证
+│ └── web/ # Web 相关
+├── ruoyi-system/ # 系统管理模块
+│ └── src/main/
+│ ├── java/ # 用户、角色、菜单等
+│ └── resources/mapper/ # MyBatis XML
+├── ruoyi-quartz/ # 定时任务模块
+├── ruoyi-generator/ # 代码生成模块
+├── vh-erp/ # ERP 业务模块（自定义开发）⭐
+│ └── src/main/java/com/ruoyi/erp/
+│ ├── config/ # 配置类
+│ ├── constant/ # 常量
+│ ├── controller/ # 控制器层
+│ ├── mapper/ # MyBatis-Plus Mapper
+│ ├── model/ # 实体类
+│ ├── service/ # 服务层
+│ ├── task/ # 定时任务
+│ └── graphql/ # GraphQL 客户端（Shopify）
+├── RuoYi-Vue3/ # 前端项目（Vue 3 + Vite）⭐
+│ ├── src/
+│ │ ├── api/ # API 接口
+│ │ │ ├── erp/ # ERP 业务接口
+│ │ │ ├── system/ # 系统管理接口
+│ │ │ └── monitor/ # 监控接口
+│ │ ├── views/ # 页面组件
+│ │ │ ├── erp/ # ERP 业务页面
+│ │ │ │ ├── product/ # 商品管理
+│ │ │ │ ├── variant/ # 商品变体
+│ │ │ │ ├── tag/ # 标签管理
+│ │ │ │ ├── ProductTag/ # 商品标签关联
+│ │ │ │ ├── image/ # 图片管理
+│ │ │ │ ├── media/ # 媒体管理
+│ │ │ │ └── task/ # 任务管理
+│ │ │ ├── system/ # 系统管理页面
+│ │ │ └── monitor/ # 监控页面
+│ │ ├── components/ # 公共组件
+│ │ ├── store/ # Pinia 状态管理
+│ │ ├── router/ # 路由配置
+│ │ ├── utils/ # 工具函数
+│ │ └── layout/ # 布局组件
+│ └── vite/plugins/ # Vite 插件配置
+├── ruoyi-ui/ # ⚠️ 已废弃（不要在此目录修改）
+├── sql/ # 数据库脚本
+│ ├── 20240629_init1.sql # 初始化脚本 1
+│ ├── 20240629_init2.sql # 初始化脚本 2
+│ ├── 20260324_erp.sql # ERP 模块表结构
+│ └── 20260324_erp_menu.sql # ERP 模块菜单数据
+├── doc/ # 项目文档
 └── pom.xml # Maven 父 POM
 ```
+
 ---
 
 ## 🚀 快速开始
@@ -142,6 +143,7 @@ LZ-RuoYi/
 
 1. 创建数据库 `ry-vue`（或自定义名称）
 2. 按顺序执行 SQL 脚本：
+
 ```text
 bash
 进入 sql 目录
@@ -171,7 +173,7 @@ mvn clean package -DskipTests
 ```text
 bash
 方式一：使用 Maven
-cd ruoyi-admin 
+cd ruoyi-admin
 mvn spring-boot:run
 方式二：使用启动脚本（Windows）
 .\ry.bat
@@ -203,6 +205,7 @@ yarn install
 2. **修改配置**
 
 编辑 `.env.development`：
+
 ```text
 env
 开发环境配置
@@ -218,6 +221,7 @@ npm run dev
 或
 yarn dev
 ```
+
 4. **访问前端**
 
 浏览器打开: http://localhost:80
@@ -230,8 +234,8 @@ yarn dev
 1. **前端打包**
 
 ```text
-bash 
-cd RuoYi-Vue3 
+bash
+cd RuoYi-Vue3
 npm run build:prod
 ```
 
@@ -240,7 +244,7 @@ npm run build:prod
 2. **后端打包**
 
 ```
-bash 
+bash
 mvn clean package -DskipTests
 ```
 
@@ -249,9 +253,9 @@ mvn clean package -DskipTests
 3. **Nginx 配置示例**
 
 ```text
-nginx 
-server { 
-    listen 80; 
+nginx
+server {
+    listen 80;
     server_name your-domain.com;
     # 前端静态文件
     location / {
@@ -270,19 +274,9 @@ server {
 }
 ```
 
-
-## 🤖 AI 辅助编程指南 (Prompt Guidelines)
-
-当 AI（如 Trae, Cursor 等）阅读本仓库时，请遵循以下规则：
-
-1. **优先聚焦**：在回答前端相关问题或生成代码时，默认只读取和分析 `RuoYi-Vue3` 目录下的代码。
-2. **技术对齐**：前端代码必须使用 Vue3 的 Composition API 语法（推荐 `<script setup>`），并结合 Element Plus 组件库。严禁使用 Vue2 的 Options API。
-3. **接口请求**：前端请求统一使用封装好的 `request.js` 工具，后端统一返回 `AjaxResult` 格式。
-4. **代码生成**：若依自带的代码生成器 (`ruoyi-generator`) 可能会生成旧版 Vue2 代码，使用 AI 进行前端重构时，请直接翻译为 Vue3 语法并放置在 `RuoYi-Vue3` 相应的 `views` 目录下。
-
 ---
 
-## 📋 内置功能
+## 📋 功能清单
 
 ### 系统管理（若依原生）
 
@@ -371,7 +365,7 @@ server {
 public class ErpProductController {
     @Autowired
     private IErpProductService productService;
-    
+
     @GetMapping("/list")
     public TableDataInfo list(ErpProduct product) {
         startPage();
@@ -385,7 +379,7 @@ public class ErpProductController {
 public class ErpProductServiceImpl implements IErpProductService {
     @Autowired
     private ErpProductMapper productMapper;
-    
+
     @Override
     @Transactional
     public int insert(ErpProduct product) {
@@ -420,25 +414,25 @@ wrapper.eq("status", "active"); // 容易拼写错误
 
 ```vue
 <script setup name="ProductList">
-import { ref, reactive, onMounted } from 'vue'
-import { getProductList } from '@/api/erp/product'
+import { ref, reactive, onMounted } from "vue";
+import { getProductList } from "@/api/erp/product";
 
-const productList = ref([])
+const productList = ref([]);
 const queryParams = reactive({
   pageNum: 1,
   pageSize: 10,
-  productName: undefined
-})
+  productName: undefined,
+});
 
 function getList() {
-  getProductList(queryParams).then(response => {
-    productList.value = response.rows
-  })
+  getProductList(queryParams).then((response) => {
+    productList.value = response.rows;
+  });
 }
 
 onMounted(() => {
-  getList()
-})
+  getList();
+});
 </script>
 
 <template>
@@ -456,22 +450,22 @@ onMounted(() => {
 
 ```javascript
 // api/erp/product.js
-import request from '@/utils/request'
+import request from "@/utils/request";
 
 export function getProductList(params) {
   return request({
-    url: '/erp/product/list',
-    method: 'get',
-    params
-  })
+    url: "/erp/product/list",
+    method: "get",
+    params,
+  });
 }
 
 export function addProduct(data) {
   return request({
-    url: '/erp/product',
-    method: 'post',
-    data
-  })
+    url: "/erp/product",
+    method: "post",
+    data,
+  });
 }
 ```
 
@@ -480,14 +474,14 @@ export function addProduct(data) {
 ```java
 @Configuration
 public class ShopifyGraphQlConfig {
-    
+
     @Bean
     public GraphQlClient shopifyGraphQlClient(WebClient.Builder webClientBuilder) {
         WebClient webClient = webClientBuilder
             .baseUrl("https://{shop}.myshopify.com/admin/api/2024-01/graphql.json")
             .defaultHeader("X-Shopify-Access-Token", accessToken)
             .build();
-        
+
         return GraphQlClient.create(webClient);
     }
 }
@@ -541,4 +535,3 @@ public class ShopifyGraphQlConfig {
 ### Q4: 图片无法显示？
 
 检查文件上传路径配置和 Nginx 静态资源配置。
-

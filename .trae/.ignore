@@ -11,15 +11,13 @@
 # 1. 通用排除项 (General Exclusions)
 # ==========================================
 # 操作系统隐藏文件与缓存
-.DS_Store
-Thumbs.db
 desktop.ini
-*.swp
 *~
 *.bak
 *.tmp
-tmp/
-temp/
+
+# vue2版本已弃用
+ruoyi-ui/
 
 # IDE 缓存与配置 (IDEA, VSCode, Eclipse 等)
 .idea/
@@ -44,7 +42,6 @@ replay_pid*
 # 编译输出目录 (Build Artifacts)
 # 排除所有的 target 编译结果目录，杜绝 AI 索引重复的 .class 文件
 target/
-!ruoyi-*/target/classes/  # 取消特定保留，通常后端直接全忽略
 ruoyi-admin/target/
 ruoyi-common/target/
 ruoyi-framework/target/
@@ -94,6 +91,3 @@ ruoyi-generator/src/main/resources/vm/*.zip
 sql/
 *.sql
 *.pdf
-
-# vue2版本已弃用
-ruoyi-ui/

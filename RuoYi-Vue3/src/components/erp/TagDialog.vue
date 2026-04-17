@@ -87,45 +87,68 @@
   </el-dialog>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, reactive, watch, onMounted } from "vue";
+import type { FormInstance, FormRules } from "element-plus";
 
 import { treeList, addTag, updateTag } from "@/api/erp/tag";
 import { ElMessage } from "element-plus";
 import { useDict } from "@/utils/dict";
+import type { TagDictMenu } from "@/types/erp";
 
-const emit = defineEmits(["success"]);
+interface TagFormData {
+  tagId: number | null;
+  tagName: string | null;
+  tagCode: string | null;
+  tagType: string;
+  sortOrder: number | null;
+  parentId: number | null;
+  menuLevel: number | null;
+  spuPrefix: string | null;
+  currentMaxSeq: number;
+  remark: string | null;
+}
 
-// 使用字典
-const { erp_tag_type: erpTagTypeOptions } = useDict("erp_tag_type");
+const emit = defineEmits<{
+  (e: "success"): void;
+}>();
 
-// 响应式数据
-const title = ref("");
-const form = reactive({});
-const rules = reactive({
+const { erp_tag_type: erpTagTypeOptions } = useDict("erp_tag_type") as any;
+
+const title = ref<string>("");
+const form = reactive<TagFormData>({
+  tagId: null,
+  tagName: null,
+  tagCode: null,
+  tagType: "MENU",
+  sortOrder: null,
+  parentId: null,
+  menuLevel: null,
+  spuPrefix: null,
+  currentMaxSeq: 0,
+  remark: null,
+});
+const rules = reactive<FormRules<TagFormData>>({
   tagName: [{ required: true, message: "标签名称不能为空", trigger: "blur" }],
   tagCode: [{ required: true, message: "标签编码不能为空", trigger: "blur" }],
   tagType: [{ required: true, message: "标签类型不能为空", trigger: "change" }],
 });
-const tagOptions = ref([]);
-const menuLoading = ref(false);
-const visible = ref(false);
+const tagOptions = ref<TagDictMenu[]>([]);
+const menuLoading = ref<boolean>(false);
+const visible = ref<boolean>(false);
 
-// 表单引用
-const formRef = ref(null);
+const formRef = ref<FormInstance | null>(null);
 
-// 监听器
 watch(
   () => form.tagType,
-  (newType) => {
+  (newType: string) => {
     if (newType === "MENU") {
       fetchTags();
     }
   },
 );
 
-// 方法
-const open = (data) => {
+const open = (data?: Partial<TagDictMenu> & { parentId?: number }): void => {
   fetchTags();
   visible.value = true;
   if (data && data.tagId) {
@@ -140,7 +163,7 @@ const open = (data) => {
   }
 };
 
-const fetchTags = async () => {
+const fetchTags = async (): Promise<void> => {
   try {
     menuLoading.value = true;
     const response = await treeList("MENU");
@@ -151,7 +174,7 @@ const fetchTags = async () => {
   }
 };
 
-const resetForm = () => {
+const resetForm = (): void => {
   Object.assign(form, {
     tagId: null,
     tagName: null,
@@ -166,27 +189,25 @@ const resetForm = () => {
   });
 };
 
-const handleSubmit = async () => {
-  formRef.value.validate(async (valid) => {
-    if (valid) {
-      const apiCall = form.tagId ? updateTag(form) : addTag(form);
-      try {
-        await apiCall;
-        emit("success");
-        visible.value = false;
-      } catch (error) {
-        ElMessage.error(form.tagId ? "修改失败" : "新增失败");
-      }
+const handleSubmit = async (): Promise<void> => {
+  const valid = await formRef.value?.validate();
+  if (valid) {
+    const apiCall = form.tagId ? updateTag(form as unknown as TagDictMenu) : addTag(form as unknown as TagDictMenu);
+    try {
+      await apiCall;
+      emit("success");
+      visible.value = false;
+    } catch (error) {
+      ElMessage.error(form.tagId ? "修改失败" : "新增失败");
     }
-  });
+  }
 };
 
-const handleCancel = () => {
+const handleCancel = (): void => {
   visible.value = false;
   resetForm();
 };
 
-// 暴露方法给父组件
 defineExpose({
   open,
 });

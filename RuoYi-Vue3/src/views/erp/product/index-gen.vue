@@ -807,7 +807,7 @@ function handleImport() {
 /** 下载模板操作 */
 function importTemplate() {
   proxy.download(upload.value.templateUrl, {
-  }, `product_template_${new Date().getTime()]]}.xlsx`)
+  }, `product_template_${new Date().getTime()}.xlsx`)
 }
 // 文件上传中处理
 function handleFileUploadProgress(event, file, fileList) {
@@ -818,7 +818,7 @@ function handleFileSuccess(response, file, fileList) {
   upload.value.open = false;
   upload.value.isUploading = false;
   uploadRef.value.clearFiles();
-  proxy.#[[$alert("<div style='overflow: auto;overflow-x: hidden;max-height: 70vh;padding: 10px 20px 0;'>" + response.msg + "</div>", "导入结果", { dangerouslyUseHTMLString: true });
+  proxy.$alert("<div style='overflow: auto;overflow-x: hidden;max-height: 70vh;padding: 10px 20px 0;'>" + response.msg + "</div>", "导入结果", { dangerouslyUseHTMLString: true });
   getList();
 }
 // 提交上传文件

@@ -1,7 +1,13 @@
 import request from '@/utils/request'
+import type { ApiResponse, Task, PageQuery } from '@/types/erp'
 
-// 查询Shopify 任务配置列表
-export function listTask(query) {
+export interface TaskQuery extends PageQuery {
+  taskName?: string
+  taskGroup?: string
+  status?: string
+}
+
+export function listTask(query: TaskQuery): Promise<ApiResponse<Task[]>> {
   return request({
     url: '/erp/task/list',
     method: 'get',
@@ -9,16 +15,14 @@ export function listTask(query) {
   })
 }
 
-// 查询Shopify 任务配置详细
-export function getTask(taskId) {
+export function getTask(taskId: number): Promise<ApiResponse<Task>> {
   return request({
     url: '/erp/task/' + taskId,
     method: 'get'
   })
 }
 
-// 新增Shopify 任务配置
-export function addTask(data) {
+export function addTask(data: Task): Promise<ApiResponse<number>> {
   return request({
     url: '/erp/task',
     method: 'post',
@@ -26,8 +30,7 @@ export function addTask(data) {
   })
 }
 
-// 修改Shopify 任务配置
-export function updateTask(data) {
+export function updateTask(data: Task): Promise<ApiResponse<void>> {
   return request({
     url: '/erp/task',
     method: 'put',
@@ -35,16 +38,14 @@ export function updateTask(data) {
   })
 }
 
-// 删除Shopify 任务配置
-export function delTask(taskId) {
+export function delTask(taskId: number): Promise<ApiResponse<void>> {
   return request({
     url: '/erp/task/' + taskId,
     method: 'delete'
   })
 }
 
-// 导入Shopify 任务配置
-export function importTask(data) {
+export function importTask(data: FormData): Promise<ApiResponse<void>> {
   return request({
     url: '/erp/task/importData',
     method: 'post',
@@ -52,8 +53,7 @@ export function importTask(data) {
   })
 }
 
-// 下载Shopify 任务配置导入模板
-export function importTemplateTask() {
+export function importTemplateTask(): Promise<Blob> {
   return request({
     url: '/erp/task/importTemplate',
     method: 'post',

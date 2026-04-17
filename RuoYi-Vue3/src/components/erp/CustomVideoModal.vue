@@ -47,7 +47,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, watch, onMounted, onUnmounted, nextTick } from "vue";
 import VuePlyr from "vue-plyr";
 import "vue-plyr/dist/vue-plyr.css";
@@ -60,7 +60,7 @@ const props = defineProps({
     default: false,
   },
   video: {
-    type: Object,
+    type: Object as () => Record<string, any> | null | undefined,
     default: null,
   },
   baseUrl: {
@@ -73,8 +73,8 @@ const props = defineProps({
 const emit = defineEmits(["update:visible"]);
 
 // 响应式状态
-const modalRef = ref(null);
-const videoPlayerRef = ref(null);
+const modalRef = ref<HTMLElement | null>(null);
+const videoPlayerRef = ref<any>(null);
 
 // 弹窗位置和尺寸
 const modalWidth = ref("800px");
@@ -96,7 +96,7 @@ const startLeft = ref(0);
 const startTop = ref(0);
 const dragPosition = ref({ x: 0, y: 0 });
 const resizeDimensions = ref({ width: 0, height: 0 });
-let animationFrameId = null;
+let animationFrameId: number | null = null;
 
 // 监听visible变化
 watch(
@@ -219,7 +219,7 @@ function updateDragPosition() {
     modalRef.value.style.transform = "none";
 
     animationFrameId = requestAnimationFrame(updateDragPosition);
-  } else {
+  } else if (animationFrameId !== null) {
     cancelAnimationFrame(animationFrameId);
     animationFrameId = null;
   }
@@ -301,7 +301,7 @@ function updateResizeDimensions() {
     }
 
     animationFrameId = requestAnimationFrame(updateResizeDimensions);
-  } else {
+  } else if (animationFrameId !== null) {
     cancelAnimationFrame(animationFrameId);
     animationFrameId = null;
   }
