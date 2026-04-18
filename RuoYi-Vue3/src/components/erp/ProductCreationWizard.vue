@@ -551,27 +551,165 @@
 
           <!-- 媒体文件列表 -->
           <el-divider content-position="left">商品媒体文件管理</el-divider>
-          <el-form-item label="媒体文件" class="form-item-block">
-            <div class="image-manager">
-              <div class="image-toolbar mb-2">
-                <el-input
-                  v-model="step2FormData.imageSearchKeyword"
-                  placeholder="输入媒体文件所在目录搜索"
-                  style="width: 300px"
-                  clearable
-                  @keyup.enter="loadServerImages"
-                />
-                <el-button
-                  type="primary"
-                  icon="Upload"
-                  @click="loadServerImages"
-                  :loading="imageLoading"
-                  size="default"
-                >
-                  从服务器导入
-                </el-button>
+          <el-form-item class="form-item-block media-form-item">
+            <!-- 悬浮媒体面板 -->
+            <div
+              v-if="isMediaFloating"
+              class="media-floating-panel"
+              ref="mediaFloatingPanelRef"
+              :style="{
+                width: mediaPanelWidth + 'px',
+                height: mediaPanelHeight + 'px',
+                left: mediaPanelLeft + 'px',
+                top: mediaPanelTop + 'px',
+              }"
+            >
+              <div
+                class="floating-panel-header"
+                @mousedown="startDragMediaPanel"
+              >
+                <span class="floating-panel-title">媒体文件</span>
+                <div class="floating-panel-toolbar">
+                  <el-input
+                    v-model="step2FormData.imageSearchKeyword"
+                    placeholder="输入媒体文件所在目录搜索"
+                    style="width: 180px"
+                    size="small"
+                    clearable
+                    @keyup.enter="loadServerImages"
+                  />
+                  <el-button
+                    type="primary"
+                    icon="Upload"
+                    @click="loadServerImages"
+                    :loading="imageLoading"
+                    size="small"
+                  >
+                    导入
+                  </el-button>
+                  <el-button
+                    type="danger"
+                    size="small"
+                    circle
+                    icon="Close"
+                    @click="toggleMediaFloating"
+                    title="收起悬浮面板"
+                  />
+                </div>
               </div>
-              <!-- 添加拖拽排序事件 -->
+              <div class="floating-panel-content">
+                <div
+                  class="image-grid image-grid--floating"
+                  @dragover.prevent
+                  @drop="handleImageDrop($event)"
+                >
+                  <div
+                    v-for="(media, index) in step2FormData.mediaList"
+                    :key="'float-' + (media.mediaId || index)"
+                    class="image-item"
+                    draggable
+                    @dragstart="handleImageDragStart($event, media)"
+                    @dragenter.prevent="handleImageDragEnter($event, index)"
+                    @dragleave.prevent="handleImageDragLeave($event)"
+                    :title="media.alt || media.filename"
+                    :class="{
+                      'drag-over':
+                        dragOverIndex === index && draggedImage !== media,
+                    }"
+                  >
+                    <template v-if="isImage(media)">
+                      <el-image
+                        :src="
+                          baseUrl + (media.nasMediaUrl || media.shopifyMediaUrl)
+                        "
+                        :alt="media.alt || media.filename"
+                        class="image-thumb"
+                        :preview-src-list="imagePreviewList"
+                        :initial-index="
+                          imagePreviewList.indexOf(
+                            baseUrl +
+                              (media.nasMediaUrl || media.shopifyMediaUrl),
+                          )
+                        "
+                        lazy
+                        show-progress
+                        preview-teleported
+                        fit="cover"
+                      />
+                    </template>
+                    <template v-else-if="isVideo(media)">
+                      <div
+                        class="video-thumbnail"
+                        @click="openVideoModal(media)"
+                      >
+                        <el-image
+                          :src="getVideoThumbnail(media)"
+                          class="image-thumb"
+                          fit="cover"
+                        />
+                        <div class="video-play-button">
+                          <el-icon><VideoPlay /></el-icon>
+                        </div>
+                      </div>
+                    </template>
+                    <template v-else>
+                      <div class="file-placeholder">
+                        <el-icon><Document /></el-icon>
+                        <span class="file-name">{{ media.filename }}</span>
+                      </div>
+                    </template>
+                    <div class="image-overlay">
+                      <span class="media-type-badge">{{
+                        getMediaTypeLabel(media)
+                      }}</span>
+                    </div>
+                  </div>
+                  <div
+                    class="image-placeholder"
+                    v-if="step2FormData.mediaList?.length === 0"
+                  >
+                    <el-icon class="placeholder-icon"><Picture /></el-icon>
+                    <span class="placeholder-text">点击"导入"加载媒体</span>
+                  </div>
+                </div>
+              </div>
+              <div
+                class="floating-panel-resize"
+                @mousedown="startResizeMediaPanel"
+              ></div>
+            </div>
+            <!-- 内嵌媒体面板 -->
+            <div v-else class="media-embedded-panel">
+              <div class="media-header">
+                <span class="media-title">媒体文件</span>
+                <div class="media-toolbar">
+                  <el-input
+                    v-model="step2FormData.imageSearchKeyword"
+                    placeholder="输入媒体文件所在目录搜索"
+                    style="width: 240px"
+                    clearable
+                    @keyup.enter="loadServerImages"
+                  />
+                  <el-button
+                    type="primary"
+                    icon="Upload"
+                    @click="loadServerImages"
+                    :loading="imageLoading"
+                    size="default"
+                  >
+                    从服务器导入
+                  </el-button>
+                  <el-button
+                    type="default"
+                    icon="Rank"
+                    @click="toggleMediaFloating"
+                    size="default"
+                    title="悬浮媒体面板"
+                  >
+                    悬浮
+                  </el-button>
+                </div>
+              </div>
               <div
                 class="image-grid"
                 @dragover.prevent
@@ -1130,6 +1268,8 @@ import {
   Edit,
   VideoPlay,
   Document,
+  Close,
+  Rank,
 } from "@element-plus/icons-vue";
 import {
   ElMessageBox,
@@ -1407,7 +1547,121 @@ const step2Rules: FormRules = {};
 // 图片加载状态
 const imageLoading = ref<boolean>(false);
 const draggedImage = ref<Media | null>(null);
-const dragOverIndex = ref<number>(-1); // 拖拽悬停索引，用于排序提示
+const dragOverIndex = ref<number>(-1);
+
+// 悬浮媒体面板状态
+const isMediaFloating = ref<boolean>(false);
+const mediaPanelWidth = ref<number>(520);
+const mediaPanelHeight = ref<number>(420);
+const mediaPanelLeft = ref<number>(100);
+const mediaPanelTop = ref<number>(100);
+const mediaFloatingPanelRef = ref<HTMLElement | null>(null);
+let isDraggingMediaPanel = false;
+let isResizingMediaPanel = false;
+let mediaDragStartX = 0;
+let mediaDragStartY = 0;
+let mediaPanelStartLeft = 0;
+let mediaPanelStartTop = 0;
+
+const toggleMediaFloating = () => {
+  isMediaFloating.value = !isMediaFloating.value;
+  if (isMediaFloating.value) {
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    mediaPanelLeft.value = Math.max(
+      20,
+      Math.min(
+        viewportWidth - mediaPanelWidth.value - 20,
+        viewportWidth / 2 - mediaPanelWidth.value / 2,
+      ),
+    );
+    mediaPanelTop.value = Math.max(
+      20,
+      Math.min(
+        viewportHeight - mediaPanelHeight.value - 20,
+        viewportHeight / 2 - mediaPanelHeight.value / 2,
+      ),
+    );
+  }
+};
+
+const startDragMediaPanel = (e: MouseEvent) => {
+  if (!mediaFloatingPanelRef.value) return;
+  e.preventDefault();
+  isDraggingMediaPanel = true;
+  mediaDragStartX = e.clientX;
+  mediaDragStartY = e.clientY;
+  mediaPanelStartLeft = mediaPanelLeft.value;
+  mediaPanelStartTop = mediaPanelTop.value;
+  document.body.style.userSelect = "none";
+  document.body.style.cursor = "move";
+  document.addEventListener("mousemove", onDragMediaPanel);
+  document.addEventListener("mouseup", stopDragMediaPanel);
+};
+
+const onDragMediaPanel = (e: MouseEvent) => {
+  if (!isDraggingMediaPanel) return;
+  const deltaX = e.clientX - mediaDragStartX;
+  const deltaY = e.clientY - mediaDragStartY;
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
+  mediaPanelLeft.value = Math.max(
+    0,
+    Math.min(
+      viewportWidth - mediaPanelWidth.value,
+      mediaPanelStartLeft + deltaX,
+    ),
+  );
+  mediaPanelTop.value = Math.max(
+    0,
+    Math.min(
+      viewportHeight - mediaPanelHeight.value,
+      mediaPanelStartTop + deltaY,
+    ),
+  );
+};
+
+const stopDragMediaPanel = () => {
+  isDraggingMediaPanel = false;
+  document.body.style.userSelect = "";
+  document.body.style.cursor = "";
+  document.removeEventListener("mousemove", onDragMediaPanel);
+  document.removeEventListener("mouseup", stopDragMediaPanel);
+};
+
+const startResizeMediaPanel = (e: MouseEvent) => {
+  e.preventDefault();
+  e.stopPropagation();
+  isResizingMediaPanel = true;
+  const startX = e.clientX;
+  const startY = e.clientY;
+  const startW = mediaPanelWidth.value;
+  const startH = mediaPanelHeight.value;
+  document.body.style.userSelect = "none";
+  document.body.style.cursor = "se-resize";
+  const onResize = (ev: MouseEvent) => {
+    if (!isResizingMediaPanel) return;
+    const deltaX = ev.clientX - startX;
+    const deltaY = ev.clientY - startY;
+    mediaPanelWidth.value = Math.max(
+      360,
+      Math.min(window.innerWidth - mediaPanelLeft.value - 20, startW + deltaX),
+    );
+    mediaPanelHeight.value = Math.max(
+      280,
+      Math.min(window.innerHeight - mediaPanelTop.value - 20, startH + deltaY),
+    );
+  };
+  const stopResize = () => {
+    isResizingMediaPanel = false;
+    document.body.style.userSelect = "";
+    document.body.style.cursor = "";
+    document.removeEventListener("mousemove", onResize);
+    document.removeEventListener("mouseup", stopResize);
+  };
+  document.addEventListener("mousemove", onResize);
+  document.addEventListener("mouseup", stopResize);
+};
 
 // 富文本编辑器状态
 interface RichTextEditorState {
@@ -1678,7 +1932,11 @@ const handleLoadStep2Data = async (): Promise<void> => {
         ...v,
         sku:
           v.sku ||
-          productData.spu + "-" + (productData.productVariantList.indexOf(v) + 1).toString().padStart(3, "0"),
+          productData.spu +
+            "-" +
+            (productData.productVariantList.indexOf(v) + 1)
+              .toString()
+              .padStart(3, "0"),
         optionValueList,
       };
       if (!variant.exchangeRate) {
@@ -2442,8 +2700,14 @@ function handleImageDragStart(event, media) {
     "media-index",
     step2FormData.mediaList.indexOf(media),
   );
-  // 添加全局dragend事件监听器
+  event.dataTransfer.setData("media-json", JSON.stringify(media));
   document.addEventListener("dragend", handleImageDragEnd);
+
+  // 延迟添加拖拽样式以确保dataTransfer正常工作
+  setTimeout(() => {
+    const target = event.target as HTMLElement;
+    target?.classList?.add("dragging");
+  }, 0);
 }
 
 // 图片拖拽进入
@@ -2455,19 +2719,14 @@ function handleImageDragEnter(event, index) {
 // 图片拖拽离开
 function handleImageDragLeave(event) {
   event.preventDefault();
-
-  // 检查鼠标是否真的离开了图片项，还是只是进入了子元素
-  // const target = event.currentTarget;
-  // const relatedTarget = event.relatedTarget;
-  // // 如果relatedTarget是target的子元素，则不重置dragOverIndex
-  // if (
-  //   !relatedTarget ||
-  //   (target !== relatedTarget && !target.contains(relatedTarget))
 }
 
 // 图片拖拽结束
 function handleImageDragEnd(event) {
-  // 检查是否拖拽出了图片列表区域
+  // 移除拖拽样式
+  const draggingEl = document.querySelector(".image-item.dragging");
+  draggingEl?.classList.remove("dragging");
+
   const imageGrid = document.querySelector(".image-grid");
   let isInside = false;
 
@@ -2485,7 +2744,6 @@ function handleImageDragEnd(event) {
     }
   }
 
-  // 如果拖拽出了区域，显示删除确认对话框
   if (!isInside && draggedImage.value) {
     try {
       ElMessageBox.confirm("确定要删除这张图片吗？", "删除确认", {
@@ -2494,7 +2752,6 @@ function handleImageDragEnd(event) {
         type: "warning",
       })
         .then(() => {
-          // 找到对应的图片并删除
           const draggedImg = draggedImage.value;
           if (draggedImg) {
             const index = step2FormData.mediaList.indexOf(draggedImg);
@@ -2503,27 +2760,21 @@ function handleImageDragEnd(event) {
             }
           }
         })
-        .catch(() => {
-          // 取消删除
-        })
+        .catch(() => {})
         .finally(() => {
-          // 清空拖拽状态
           draggedImage.value = null;
           dragOverIndex.value = -1;
         });
     } catch (error) {
       console.error("处理图片拖拽删除时出错:", error);
-      // 清空拖拽状态
       draggedImage.value = null;
       dragOverIndex.value = -1;
     }
   } else {
-    // 清空拖拽状态
     draggedImage.value = null;
     dragOverIndex.value = -1;
   }
 
-  // 移除全局事件监听器
   document.removeEventListener("dragend", handleImageDragEnd);
 }
 
@@ -2531,13 +2782,11 @@ function handleImageDragEnd(event) {
 function handleImageDrop(event: DragEvent): void {
   event.preventDefault();
 
-  // 处理内部拖拽排序
   if (draggedImage.value) {
     const fromIndex = step2FormData.mediaList.indexOf(draggedImage.value);
     const toIndex = dragOverIndex.value;
 
     if (fromIndex >= 0 && toIndex >= 0 && fromIndex !== toIndex) {
-      // 重新排序
       const item = step2FormData.mediaList.splice(fromIndex, 1)[0];
       step2FormData.mediaList.splice(toIndex, 0, item);
     }
@@ -3182,22 +3431,210 @@ defineExpose({
   gap: 12px;
 }
 
+.media-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  background: linear-gradient(
+    135deg,
+    rgba(99, 102, 241, 0.08) 0%,
+    rgba(59, 130, 246, 0.05) 100%
+  );
+  border-radius: 14px;
+  border: 1px solid rgba(99, 102, 241, 0.12);
+  margin-bottom: 16px;
+}
+
+.media-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1e1b4b;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.media-title::before {
+  content: "";
+  display: inline-block;
+  width: 4px;
+  height: 18px;
+  background: linear-gradient(180deg, #6366f1, #3b82f6);
+  border-radius: 2px;
+}
+
+.media-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.media-toolbar .el-input {
+  --el-input-border-color: rgba(99, 102, 241, 0.3);
+  --el-input-hover-border-color: rgba(99, 102, 241, 0.5);
+  --el-input-focus-border-color: #6366f1;
+}
+
+.media-form-item .el-form-item__content {
+  display: block !important;
+}
+
+.media-embedded-panel {
+  padding: 20px;
+  border-radius: 20px;
+  background: linear-gradient(
+    180deg,
+    #ffffff 0%,
+    rgba(248, 250, 252, 0.8) 100%
+  );
+  border: 1px solid rgba(99, 102, 241, 0.1);
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.04);
+}
+
+.media-floating-panel {
+  position: fixed;
+  z-index: 9999;
+  background: #fff;
+  border-radius: 20px;
+  box-shadow: 0 25px 60px rgba(15, 23, 42, 0.25),
+    0 12px 28px rgba(15, 23, 42, 0.15), 0 0 0 1px rgba(99, 102, 241, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: box-shadow 0.25s ease, transform 0.2s ease;
+}
+
+.media-floating-panel:hover {
+  box-shadow: 0 30px 70px rgba(15, 23, 42, 0.3),
+    0 16px 35px rgba(15, 23, 42, 0.2), 0 0 0 1px rgba(99, 102, 241, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.floating-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+  color: #fff;
+  cursor: move;
+  user-select: none;
+  flex-shrink: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.floating-panel-title {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.floating-panel-title::before {
+  content: "";
+  display: inline-block;
+  width: 3px;
+  height: 14px;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 2px;
+}
+
+.floating-panel-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.floating-panel-toolbar .el-input {
+  --el-input-bg-color: rgba(255, 255, 255, 0.15);
+  --el-input-border-color: rgba(255, 255, 255, 0.3);
+  --el-input-text-color: #fff;
+  --el-input-placeholder-color: rgba(255, 255, 255, 0.6);
+}
+
+.floating-panel-toolbar .el-button--primary {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.floating-panel-toolbar .el-button--primary:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.floating-panel-header .el-button.is-circle {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.floating-panel-header .el-button.is-circle:hover {
+  background: rgba(239, 68, 68, 0.9);
+  border-color: rgba(239, 68, 68, 0.9);
+}
+
+.floating-panel-content {
+  flex: 1;
+  overflow: auto;
+  padding: 16px;
+  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+}
+
+.floating-panel-resize {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 28px;
+  height: 28px;
+  cursor: se-resize;
+  background: linear-gradient(
+    135deg,
+    transparent 40%,
+    rgba(99, 102, 241, 0.7) 40%,
+    rgba(99, 102, 241, 0.7) 60%,
+    transparent 60%
+  );
+  border-radius: 0 0 20px 0;
+  transition: background 0.2s ease;
+}
+
+.floating-panel-resize:hover {
+  background: linear-gradient(
+    135deg,
+    transparent 35%,
+    #6366f1 35%,
+    #6366f1 65%,
+    transparent 65%
+  );
+}
+
 .image-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
-  gap: 16px;
-  min-height: 132px;
-  margin-top: 16px;
-  padding: 16px;
-  border-radius: 18px;
-  border: 1px dashed rgba(148, 163, 184, 0.42);
-  background: rgba(255, 255, 255, 0.74);
-  transition: border-color 0.2s ease, background 0.2s ease;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 18px;
+  min-height: 140px;
+  padding: 20px;
+  border-radius: 20px;
+  border: 2px dashed rgba(99, 102, 241, 0.2);
+  background: rgba(255, 255, 255, 0.6);
+  transition: border-color 0.25s ease, background 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+.image-grid--floating {
+  margin-top: 0;
+  min-height: 100px;
+  padding: 12px;
+  border-radius: 16px;
 }
 
 .image-grid:hover {
-  border-color: rgba(37, 99, 235, 0.3);
-  background: rgba(255, 255, 255, 0.88);
+  border-color: rgba(99, 102, 241, 0.4);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: inset 0 2px 8px rgba(99, 102, 241, 0.05);
 }
 
 .image-item {
@@ -3207,27 +3644,45 @@ defineExpose({
   border-radius: 18px;
   overflow: hidden;
   border: 1px solid rgba(148, 163, 184, 0.18);
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
-  transition: transform 0.22s ease, box-shadow 0.22s ease,
-    border-color 0.22s ease;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.2s ease, border-color 0.2s ease, opacity 0.2s ease;
   cursor: pointer;
+  background: #fff;
 }
 
 .image-item:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 16px 28px rgba(15, 23, 42, 0.12);
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
+  border-color: rgba(99, 102, 241, 0.4);
+}
+
+.image-item.dragging {
+  opacity: 0.5;
+  transform: scale(0.95);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.1);
 }
 
 .image-item.drag-over {
-  border: 1px dashed rgba(37, 99, 235, 0.72);
-  transform: scale(1.02);
-  box-shadow: 0 18px 30px rgba(37, 99, 235, 0.18);
+  border: 2px dashed #6366f1;
+  transform: scale(1.05);
+  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.25);
+  background: rgba(99, 102, 241, 0.05);
+}
+
+.image-item:active {
+  transform: scale(0.98);
 }
 
 .image-thumb {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.image-item:hover .image-thumb {
+  transform: scale(1.08);
 }
 
 .image-overlay {
@@ -3235,20 +3690,34 @@ defineExpose({
   inset: 0;
   display: flex;
   align-items: flex-end;
-  justify-content: flex-start;
-  padding: 14px;
+  justify-content: space-between;
+  padding: 12px;
   background: linear-gradient(
     180deg,
-    rgba(15, 23, 42, 0.04),
-    rgba(15, 23, 42, 0.68)
+    rgba(15, 23, 42, 0.02) 50%,
+    rgba(15, 23, 42, 0.75) 100%
   );
   opacity: 0;
-  transition: opacity 0.22s ease;
+  transition: opacity 0.25s ease;
   pointer-events: none;
 }
 
 .image-item:hover .image-overlay {
   opacity: 1;
+}
+
+.media-type-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  background: rgba(99, 102, 241, 0.9);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  backdrop-filter: blur(4px);
 }
 
 .image-placeholder {
@@ -3258,41 +3727,45 @@ defineExpose({
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  border: 2px dashed rgba(148, 163, 184, 0.34);
-  border-radius: 18px;
+  gap: 14px;
+  border: 2px dashed rgba(99, 102, 241, 0.25);
+  border-radius: 20px;
   background: linear-gradient(
     180deg,
-    rgba(248, 250, 252, 0.92),
-    rgba(241, 245, 249, 0.96)
+    rgba(248, 250, 252, 0.9) 0%,
+    rgba(241, 245, 249, 0.95) 100%
   );
-  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease,
+    box-shadow 0.2s ease;
+  cursor: pointer;
 }
 
 .image-placeholder:hover {
-  transform: translateY(-1px);
-  border-color: rgba(37, 99, 235, 0.3);
+  transform: translateY(-2px);
+  border-color: rgba(99, 102, 241, 0.5);
   background: linear-gradient(
     180deg,
-    rgba(239, 246, 255, 0.92),
-    rgba(219, 234, 254, 0.86)
+    rgba(238, 242, 255, 0.95) 0%,
+    rgba(224, 231, 255, 0.9) 100%
   );
+  box-shadow: 0 8px 20px rgba(99, 102, 241, 0.1);
 }
 
 .placeholder-icon {
-  font-size: 44px;
+  font-size: 48px;
   color: #94a3b8;
   transition: color 0.2s ease, transform 0.2s ease;
 }
 
 .image-placeholder:hover .placeholder-icon {
-  color: #2563eb;
-  transform: scale(1.05);
+  color: #6366f1;
+  transform: scale(1.1);
 }
 
 .placeholder-text {
   color: #64748b;
   font-size: 14px;
+  font-weight: 500;
 }
 
 .variant-image-item {
