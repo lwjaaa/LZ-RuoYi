@@ -36,6 +36,11 @@ dist/
 nbdist/
 .nb-gradle/
 
+### 前端插件 ###
+Purchase-x/node_modules/
+ruoyi-ui/node_modules/
+RuoYi-Vue3/node_modules/
+
 ######################################################################
 # Others
 *.log

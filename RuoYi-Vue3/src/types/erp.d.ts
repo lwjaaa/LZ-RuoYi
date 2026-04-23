@@ -81,6 +81,7 @@ export interface ProductVariant {
   pkWeight?: number
   freight?: number
   isActualShipment?: string
+  isActiveAvailable?: string
   unitCostPrice?: number
   exchangeRate?: number
   suggestedPrice?: number

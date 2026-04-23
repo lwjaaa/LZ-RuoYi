@@ -25,6 +25,9 @@ public class Product implements Serializable
 {
     private static final long serialVersionUID = 1L;
 
+    // 商品名称
+    @Excel(name = "商品名称")
+    private String productName;
     /** 本地主键 */
     @TableId(value = "product_id", type = IdType.ASSIGN_ID)
     private Long productId;

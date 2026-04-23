@@ -1,0 +1,44 @@
+{
+  "manifest_version": 3,
+  "name": "PurchaseX - 跨境电商选品助手",
+  "description": "从淘宝、天猫、1688获取商品信息，同步至ERP系统",
+  "version": "1.0.0",
+  "permissions": ["storage", "activeTab", "tabs", "scripting"],
+  "host_permissions": [
+    "https://*.taobao.com/*",
+    "https://*.tmall.com/*",
+    "https://*.1688.com/*"
+  ],
+  "action": {
+    "default_popup": "src/popup/index.html",
+    "default_icon": {
+      "16": "src/assets/icon16.png",
+      "48": "src/assets/icon48.png",
+      "128": "src/assets/icon128.png"
+    }
+  },
+  "background": {
+    "service_worker": "src/background/index.ts",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*.taobao.com/item.htm*",
+        "https://*.tmall.com/item.htm*",
+        "https://detail.tmall.com/item.htm*",
+        "https://*.1688.com/offer/*"
+      ],
+      "js": [
+        "src/content_scripts/extractors/utils.js",
+        "src/content_scripts/extractors/utils_enhanced.js",
+        "src/content_scripts/extractors/base.js",
+        "src/content_scripts/extractors/taobao.js",
+        "src/content_scripts/extractors/tmall.js",
+        "src/content_scripts/extractors/alibaba.js",
+        "src/content_scripts/index.ts"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}

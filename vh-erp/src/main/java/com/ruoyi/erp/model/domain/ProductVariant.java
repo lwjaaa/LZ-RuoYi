@@ -122,6 +122,9 @@ public class ProductVariant implements Serializable
     @Excel(name = "利润 （分）")
     private BigDecimal profit;
 
+    /** 是否可用(0:否, 1:是) */
+    @Excel(name = "是否可用(0:否, 1:是)", dictType = "erp_product_variant_is_active_available")
+    private String isActiveAvailable;
     /** 创建者 */
     private String createBy;
 

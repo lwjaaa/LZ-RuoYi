@@ -2,6 +2,7 @@ package com.ruoyi.erp.model.dto.product;
 
 import com.alibaba.fastjson2.JSONObject;
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.ruoyi.common.annotation.Excel;
 import com.ruoyi.erp.model.domain.Product;
 import com.ruoyi.erp.model.domain.ProductOption;
 import com.ruoyi.erp.model.domain.ProductVariant;
@@ -23,6 +24,8 @@ public class ProductSelectionEdit implements Serializable
 {
     private static final long serialVersionUID = 1L;
 
+    // 商品名称
+    private String productName;
     /** 本地主键 */
     private Long productId;
 

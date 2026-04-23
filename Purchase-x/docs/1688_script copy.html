@@ -1,0 +1,22 @@
+<script>
+  window.contextPath = "/default";
+  window.context = (function (b, d) {
+    var c = d.module || {};
+    var e = {};
+    for (var a in c) {
+      if (typeof c[a] === "string") {
+        e[a] = c[a];
+      }
+    }
+    Object.assign(e, c[b] || {});
+    Object.assign(d, { module: e });
+    return d;
+  })(window.contextPath, {
+    result: {
+      data: {
+        position: "body",
+      },
+      reload: false,
+    },
+  });
+</script>

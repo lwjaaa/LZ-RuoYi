@@ -217,7 +217,12 @@ public class ProductWizardServiceImpl implements IProductWizardService {
 
         List<ProductTagRel> tagRelList = new ArrayList<>();
         Date now = DateUtils.getNowDate();
-        String createBy = SecurityUtils.getUsername();
+        String createBy = null;
+        try {
+            createBy = SecurityUtils.getUsername();
+        }catch (Exception e){
+
+        }
 
         for (Long tagId : tagIds) {
             ProductTagRel tagRel = new ProductTagRel();
@@ -258,7 +263,11 @@ public class ProductWizardServiceImpl implements IProductWizardService {
 
         Long productId = product.getProductId();
         Date now = DateUtils.getNowDate();
-        String currentUsername = SecurityUtils.getUsername();
+        String currentUsername = null;
+        try {
+            currentUsername = SecurityUtils.getUsername();
+        } catch (Exception e) {
+        }
 
         List<ProductVariant> saveList = new ArrayList<>();
         List<Long> existList = new ArrayList<>();

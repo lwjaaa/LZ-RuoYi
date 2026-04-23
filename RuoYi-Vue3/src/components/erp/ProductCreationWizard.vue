@@ -145,6 +145,16 @@
 
           <el-row :gutter="20">
             <el-col :span="12">
+              <el-form-item label="商品名称" prop="productName">
+                <el-input
+                  v-model="step1FormData.productName"
+                  placeholder="请输入商品名称（中文）"
+                  maxlength="100"
+                  show-word-limit
+                />
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
               <el-form-item label="来源 URL" prop="sourceUrl">
                 <el-input
                   ref="sourceUrlInputRef"
@@ -156,6 +166,9 @@
                 />
               </el-form-item>
             </el-col>
+          </el-row>
+
+          <el-row :gutter="20">
             <el-col :span="12">
               <el-form-item label="采购链接" prop="purchaseUrl">
                 <el-input
@@ -384,6 +397,18 @@
                   />
                 </template>
               </el-table-column>
+              <el-table-column label="是否可用" width="100" align="center">
+                <template #default="{ row }">
+                  <el-switch
+                    v-model="row.isActiveAvailable"
+                    :active-value="'1'"
+                    :inactive-value="'0'"
+                    active-text="是"
+                    inactive-text="否"
+                    size="small"
+                  />
+                </template>
+              </el-table-column>
               <el-table-column label="操作" width="80" fixed="right">
                 <template #default="{ row, $index }">
                   <el-button
@@ -550,31 +575,43 @@
           </el-form-item>
 
           <!-- 媒体文件列表 -->
-          <el-divider content-position="left">商品媒体文件管理</el-divider>
+          <el-divider
+            content-position="left"
+            class="media-section-divider"
+            :class="{ 'is-hidden': isMediaFloating }"
+            >商品媒体文件管理</el-divider
+          >
           <el-form-item class="form-item-block media-form-item">
-            <!-- 悬浮媒体面板 -->
+            <!-- 媒体面板（统一元素，通过CSS切换悬浮/内嵌） -->
             <div
-              v-if="isMediaFloating"
-              class="media-floating-panel"
-              ref="mediaFloatingPanelRef"
-              :style="{
-                width: mediaPanelWidth + 'px',
-                height: mediaPanelHeight + 'px',
-                left: mediaPanelLeft + 'px',
-                top: mediaPanelTop + 'px',
-              }"
+              class="media-panel"
+              :class="{ 'is-floating': isMediaFloating }"
+              ref="mediaPanelRef"
+              :style="
+                isMediaFloating
+                  ? {
+                      width: mediaPanelWidth + 'px',
+                      height: mediaPanelHeight + 'px',
+                      left: mediaPanelLeft + 'px',
+                      top: mediaPanelTop + 'px',
+                    }
+                  : {}
+              "
             >
               <div
-                class="floating-panel-header"
-                @mousedown="startDragMediaPanel"
+                class="media-panel-header"
+                :class="{ 'is-draggable': isMediaFloating }"
+                @mousedown="
+                  isMediaFloating ? startDragMediaPanel($event) : null
+                "
               >
-                <span class="floating-panel-title">媒体文件</span>
-                <div class="floating-panel-toolbar">
+                <span class="media-panel-title">媒体文件</span>
+                <div class="media-panel-toolbar">
                   <el-input
                     v-model="step2FormData.imageSearchKeyword"
                     placeholder="输入媒体文件所在目录搜索"
-                    style="width: 180px"
-                    size="small"
+                    :style="{ width: isMediaFloating ? '180px' : '240px' }"
+                    :size="isMediaFloating ? 'small' : 'default'"
                     clearable
                     @keyup.enter="loadServerImages"
                   />
@@ -583,11 +620,22 @@
                     icon="Upload"
                     @click="loadServerImages"
                     :loading="imageLoading"
-                    size="small"
+                    :size="isMediaFloating ? 'small' : 'default'"
                   >
-                    导入
+                    {{ isMediaFloating ? "导入" : "从服务器导入" }}
                   </el-button>
                   <el-button
+                    v-if="!isMediaFloating"
+                    type="default"
+                    icon="Rank"
+                    @click="toggleMediaFloating"
+                    size="default"
+                    title="悬浮媒体面板"
+                  >
+                    悬浮
+                  </el-button>
+                  <el-button
+                    v-else
                     type="danger"
                     size="small"
                     circle
@@ -597,15 +645,16 @@
                   />
                 </div>
               </div>
-              <div class="floating-panel-content">
+              <div class="media-panel-content">
                 <div
-                  class="image-grid image-grid--floating"
+                  class="image-grid"
+                  :class="{ 'is-floating-grid': isMediaFloating }"
                   @dragover.prevent
                   @drop="handleImageDrop($event)"
                 >
                   <div
                     v-for="(media, index) in step2FormData.mediaList"
-                    :key="'float-' + (media.mediaId || index)"
+                    :key="'media-' + (media.mediaId || index)"
                     class="image-item"
                     draggable
                     @dragstart="handleImageDragStart($event, media)"
@@ -669,121 +718,19 @@
                     v-if="step2FormData.mediaList?.length === 0"
                   >
                     <el-icon class="placeholder-icon"><Picture /></el-icon>
-                    <span class="placeholder-text">点击"导入"加载媒体</span>
-                  </div>
-                </div>
-              </div>
-              <div
-                class="floating-panel-resize"
-                @mousedown="startResizeMediaPanel"
-              ></div>
-            </div>
-            <!-- 内嵌媒体面板 -->
-            <div v-else class="media-embedded-panel">
-              <div class="media-header">
-                <span class="media-title">媒体文件</span>
-                <div class="media-toolbar">
-                  <el-input
-                    v-model="step2FormData.imageSearchKeyword"
-                    placeholder="输入媒体文件所在目录搜索"
-                    style="width: 240px"
-                    clearable
-                    @keyup.enter="loadServerImages"
-                  />
-                  <el-button
-                    type="primary"
-                    icon="Upload"
-                    @click="loadServerImages"
-                    :loading="imageLoading"
-                    size="default"
-                  >
-                    从服务器导入
-                  </el-button>
-                  <el-button
-                    type="default"
-                    icon="Rank"
-                    @click="toggleMediaFloating"
-                    size="default"
-                    title="悬浮媒体面板"
-                  >
-                    悬浮
-                  </el-button>
-                </div>
-              </div>
-              <div
-                class="image-grid"
-                @dragover.prevent
-                @drop="handleImageDrop($event)"
-              >
-                <div
-                  v-for="(media, index) in step2FormData.mediaList"
-                  :key="media.mediaId || index"
-                  class="image-item"
-                  draggable
-                  @dragstart="handleImageDragStart($event, media)"
-                  @dragenter.prevent="handleImageDragEnter($event, index)"
-                  @dragleave.prevent="handleImageDragLeave($event)"
-                  :title="media.alt || media.filename"
-                  :class="{
-                    'drag-over':
-                      dragOverIndex === index && draggedImage !== media,
-                  }"
-                >
-                  <!-- 图片展示 -->
-                  <template v-if="isImage(media)">
-                    <el-image
-                      :src="
-                        baseUrl + (media.nasMediaUrl || media.shopifyMediaUrl)
-                      "
-                      :alt="media.alt || media.filename"
-                      class="image-thumb"
-                      :preview-src-list="imagePreviewList"
-                      :initial-index="
-                        imagePreviewList.indexOf(
-                          baseUrl +
-                            (media.nasMediaUrl || media.shopifyMediaUrl),
-                        )
-                      "
-                      lazy
-                      show-progress
-                      preview-teleported
-                      fit="cover"
-                    />
-                  </template>
-                  <!-- 视频展示 -->
-                  <template v-else-if="isVideo(media)">
-                    <div class="video-thumbnail" @click="openVideoModal(media)">
-                      <el-image
-                        :src="getVideoThumbnail(media)"
-                        class="image-thumb"
-                        fit="cover"
-                      />
-                      <div class="video-play-button">
-                        <el-icon><VideoPlay /></el-icon>
-                      </div>
-                    </div>
-                  </template>
-                  <!-- 其他类型文件 -->
-                  <template v-else>
-                    <div class="file-placeholder">
-                      <el-icon><Document /></el-icon>
-                      <span class="file-name">{{ media.filename }}</span>
-                    </div>
-                  </template>
-                  <div class="image-overlay">
-                    <span class="media-type-badge">{{
-                      getMediaTypeLabel(media)
+                    <span class="placeholder-text">{{
+                      isMediaFloating
+                        ? '点击"导入"加载媒体'
+                        : '点击"从服务器导入"'
                     }}</span>
                   </div>
                 </div>
-                <div
-                  class="image-placeholder"
-                  v-if="step2FormData.mediaList?.length === 0"
-                >
-                  <el-icon class="placeholder-icon"><Picture /></el-icon>
-                  <span class="placeholder-text">点击"从服务器导入"</span>
-                </div>
               </div>
+              <div
+                v-if="isMediaFloating"
+                class="media-panel-resize"
+                @mousedown="startResizeMediaPanel"
+              ></div>
             </div>
           </el-form-item>
 
@@ -1385,6 +1332,7 @@ const dragOverVariant = ref<ProductVariant | null>(null); // 存储当前拖拽�
 interface Step1FormData {
   productId: number | undefined;
   spu: string;
+  productName: string;
   sourceUrl: string;
   purchaseUrl: string;
   tagIds: number[];
@@ -1412,6 +1360,7 @@ interface Step2FormData {
 const step1FormData = reactive<Step1FormData>({
   productId: undefined,
   spu: "",
+  productName: "",
   sourceUrl: "",
   purchaseUrl: "",
   tagIds: [],
@@ -1453,6 +1402,7 @@ interface Step1Variant {
   optionValueList: ProductVariant["optionValueList"];
   position: number;
   remark: string;
+  isActiveAvailable?: string;
 }
 
 const step1Variants = ref<Step1Variant[]>([
@@ -1463,6 +1413,7 @@ const step1Variants = ref<Step1Variant[]>([
     optionValueList: [],
     position: 0,
     remark: "",
+    isActiveAvailable: "1",
   },
 ]);
 
@@ -1485,6 +1436,7 @@ const step2Variants = ref<ProductVariant[]>([
     pkWeight: undefined,
     freight: undefined,
     isActualShipment: "0",
+    isActiveAvailable: "1",
     unitCostPrice: undefined,
     remark: "",
   },
@@ -1537,8 +1489,23 @@ const getMenuTag = (tagIds: number[] | number[][]): TagDictMenu[] | null => {
 // 第一步校验规则
 const step1Rules: FormRules = {
   spu: [{ required: true, message: "SPU 不能为空", trigger: "blur" }],
-
+  productName: [
+    { required: true, message: "商品名称不能为空", trigger: "blur" },
+    {
+      min: 2,
+      max: 100,
+      message: "商品名称长度在 2 到 100 个字符",
+      trigger: "blur",
+    },
+  ],
   tagIds: [{ required: true, message: "标签不能为空", trigger: "change" }],
+  sourceUrl: [
+    { required: true, message: "来源 URL 不能为空", trigger: "blur" },
+    { type: "url", message: "请输入有效的 URL 地址", trigger: "blur" },
+  ],
+  purchaseUrl: [
+    { type: "url", message: "请输入有效的 URL 地址", trigger: "blur" },
+  ],
 };
 
 // 第二步校验规则
@@ -1555,7 +1522,7 @@ const mediaPanelWidth = ref<number>(520);
 const mediaPanelHeight = ref<number>(420);
 const mediaPanelLeft = ref<number>(100);
 const mediaPanelTop = ref<number>(100);
-const mediaFloatingPanelRef = ref<HTMLElement | null>(null);
+const mediaPanelRef = ref<HTMLElement | null>(null);
 let isDraggingMediaPanel = false;
 let isResizingMediaPanel = false;
 let mediaDragStartX = 0;
@@ -1586,7 +1553,7 @@ const toggleMediaFloating = () => {
 };
 
 const startDragMediaPanel = (e: MouseEvent) => {
-  if (!mediaFloatingPanelRef.value) return;
+  if (!mediaPanelRef.value) return;
   e.preventDefault();
   isDraggingMediaPanel = true;
   mediaDragStartX = e.clientX;
@@ -2074,6 +2041,7 @@ function resetForm(step) {
     Object.assign(step1FormData, {
       productId: null,
       spu: "",
+      productName: "",
       category: "",
       productType: "",
       sourceUrl: "",
@@ -2089,6 +2057,7 @@ function resetForm(step) {
         optionValueList: [],
         position: 0,
         remark: "",
+        isActiveAvailable: "1",
       },
     ];
   } else {
@@ -2128,6 +2097,7 @@ function resetForm(step) {
         pkWeight: undefined,
         freight: undefined,
         isActualShipment: "0",
+        isActiveAvailable: "1",
         unitCostPrice: undefined,
         remark: "",
       },
@@ -3480,7 +3450,8 @@ defineExpose({
   display: block !important;
 }
 
-.media-embedded-panel {
+/* 媒体面板统一样式（通过.is-floating切换悬浮状态） */
+.media-panel {
   padding: 20px;
   border-radius: 20px;
   background: linear-gradient(
@@ -3490,100 +3461,112 @@ defineExpose({
   );
   border: 1px solid rgba(99, 102, 241, 0.1);
   box-shadow: 0 4px 20px rgba(15, 23, 42, 0.04);
-}
-
-.media-floating-panel {
-  position: fixed;
-  z-index: 9999;
-  background: #fff;
-  border-radius: 20px;
-  box-shadow: 0 25px 60px rgba(15, 23, 42, 0.25),
-    0 12px 28px rgba(15, 23, 42, 0.15), 0 0 0 1px rgba(99, 102, 241, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.8);
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
   transition: box-shadow 0.25s ease, transform 0.2s ease;
 }
 
-.media-floating-panel:hover {
+.media-panel.is-floating {
+  position: fixed;
+  z-index: 9999;
+  padding: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 25px 60px rgba(15, 23, 42, 0.25),
+    0 12px 28px rgba(15, 23, 42, 0.15), 0 0 0 1px rgba(99, 102, 241, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.media-panel.is-floating:hover {
   box-shadow: 0 30px 70px rgba(15, 23, 42, 0.3),
     0 16px 35px rgba(15, 23, 42, 0.2), 0 0 0 1px rgba(99, 102, 241, 0.15),
     inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 
-.floating-panel-header {
+/* 媒体面板头部 */
+.media-panel-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
-  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
-  color: #fff;
-  cursor: move;
-  user-select: none;
-  flex-shrink: 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 14px 18px;
+  background: linear-gradient(
+    135deg,
+    rgba(99, 102, 241, 0.08) 0%,
+    rgba(59, 130, 246, 0.05) 100%
+  );
+  border-radius: 14px;
+  border: 1px solid rgba(99, 102, 241, 0.12);
+  margin-bottom: 16px;
 }
 
-.floating-panel-title {
-  font-size: 14px;
+.media-panel.is-floating .media-panel-header {
+  margin: 16px 16px 0 16px;
+  cursor: move;
+  user-select: none;
+}
+
+.media-panel-title {
+  font-size: 15px;
   font-weight: 700;
-  letter-spacing: 0.3px;
+  color: #1e1b4b;
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.floating-panel-title::before {
+.media-panel-title::before {
   content: "";
   display: inline-block;
-  width: 3px;
-  height: 14px;
-  background: rgba(255, 255, 255, 0.8);
+  width: 4px;
+  height: 18px;
+  background: linear-gradient(180deg, #6366f1, #3b82f6);
   border-radius: 2px;
 }
 
-.floating-panel-toolbar {
+.media-panel-toolbar {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
 }
 
-.floating-panel-toolbar .el-input {
-  --el-input-bg-color: rgba(255, 255, 255, 0.15);
-  --el-input-border-color: rgba(255, 255, 255, 0.3);
-  --el-input-text-color: #fff;
-  --el-input-placeholder-color: rgba(255, 255, 255, 0.6);
+.media-panel-toolbar .el-input {
+  --el-input-border-color: rgba(99, 102, 241, 0.3);
+  --el-input-hover-border-color: rgba(99, 102, 241, 0.5);
+  --el-input-focus-border-color: #6366f1;
 }
 
-.floating-panel-toolbar .el-button--primary {
-  background: rgba(255, 255, 255, 0.2);
-  border-color: rgba(255, 255, 255, 0.4);
+.media-panel-toolbar .el-button--primary {
+  background: #fff;
+  border-color: rgba(99, 102, 241, 0.3);
+  color: #6366f1;
 }
 
-.floating-panel-toolbar .el-button--primary:hover {
-  background: rgba(255, 255, 255, 0.3);
+.media-panel-toolbar .el-button--primary:hover {
+  background: rgba(99, 102, 241, 0.08);
+  border-color: rgba(99, 102, 241, 0.5);
 }
 
-.floating-panel-header .el-button.is-circle {
-  color: #fff;
-  border-color: rgba(255, 255, 255, 0.4);
-  background: rgba(255, 255, 255, 0.15);
+.media-panel.is-floating .media-panel-toolbar .el-button.is-circle {
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.3);
+  background: #fff;
 }
 
-.floating-panel-header .el-button.is-circle:hover {
-  background: rgba(239, 68, 68, 0.9);
-  border-color: rgba(239, 68, 68, 0.9);
+.media-panel.is-floating .media-panel-toolbar .el-button.is-circle:hover {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.5);
 }
 
-.floating-panel-content {
+.media-panel-content {
   flex: 1;
   overflow: auto;
-  padding: 16px;
-  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
 }
 
-.floating-panel-resize {
+.media-panel.is-floating .media-panel-content {
+  padding: 16px;
+}
+
+/* 悬浮面板拖拽调整大小手柄 */
+.media-panel-resize {
   position: absolute;
   right: 0;
   bottom: 0;
@@ -3601,7 +3584,7 @@ defineExpose({
   transition: background 0.2s ease;
 }
 
-.floating-panel-resize:hover {
+.media-panel-resize:hover {
   background: linear-gradient(
     135deg,
     transparent 35%,
@@ -3609,6 +3592,11 @@ defineExpose({
     #6366f1 65%,
     transparent 65%
   );
+}
+
+/* 隐藏悬浮状态下的分割线 */
+.media-section-divider.is-hidden {
+  display: none;
 }
 
 .image-grid {
@@ -3624,11 +3612,10 @@ defineExpose({
     box-shadow 0.25s ease;
 }
 
-.image-grid--floating {
-  margin-top: 0;
-  min-height: 100px;
-  padding: 12px;
-  border-radius: 16px;
+.image-grid.is-floating-grid {
+  min-height: 140px;
+  padding: 20px;
+  border-radius: 20px;
 }
 
 .image-grid:hover {
