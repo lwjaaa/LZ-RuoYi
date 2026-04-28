@@ -43,7 +43,6 @@ export interface Product {
   id: string;
   productName: string;
   sourceUrl: string;
-  spu: string;
   tagIds: number[];
   mediaUrlList: string[];
   optionList: ProductOption[];

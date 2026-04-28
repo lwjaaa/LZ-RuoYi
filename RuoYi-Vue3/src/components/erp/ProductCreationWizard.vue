@@ -75,7 +75,7 @@
           </div>
         </template>
       </el-page-header>
-      <div class="wizard-progress-card">
+      <!-- <div class="wizard-progress-card">
         <div class="wizard-progress-copy">
           <div class="wizard-progress-copy__eyebrow">Workflow</div>
           <div class="wizard-progress-copy__title">商品创建双阶段协作流程</div>
@@ -92,7 +92,7 @@
           <el-step title="选品基础信息" />
           <el-step title="信息录入" />
         </el-steps>
-      </div>
+      </div> -->
 
       <!-- 第一步：选品基础信息 -->
       <div v-show="activeStep === 0" class="step-content">
@@ -103,6 +103,9 @@
           label-width="120px"
           class="step-form step1-form"
         >
+          <el-divider content-position="left" style="margin: 0 0 28px"
+            >主商品信息</el-divider
+          >
           <el-row :gutter="20">
             <el-col :span="12">
               <el-form-item label="标签" prop="tagIds">
@@ -145,16 +148,6 @@
 
           <el-row :gutter="20">
             <el-col :span="12">
-              <el-form-item label="商品名称" prop="productName">
-                <el-input
-                  v-model="step1FormData.productName"
-                  placeholder="请输入商品名称（中文）"
-                  maxlength="100"
-                  show-word-limit
-                />
-              </el-form-item>
-            </el-col>
-            <el-col :span="12">
               <el-form-item label="来源 URL" prop="sourceUrl">
                 <el-input
                   ref="sourceUrlInputRef"
@@ -166,9 +159,6 @@
                 />
               </el-form-item>
             </el-col>
-          </el-row>
-
-          <el-row :gutter="20">
             <el-col :span="12">
               <el-form-item label="采购链接" prop="purchaseUrl">
                 <el-input
@@ -181,249 +171,261 @@
             </el-col>
           </el-row>
 
+          <el-row :gutter="20">
+            <el-col :span="24">
+              <el-form-item label="商品名称" prop="productName">
+                <el-input
+                  v-model="step1FormData.productName"
+                  placeholder="请输入商品名称（中文）"
+                  show-word-limit
+                />
+              </el-form-item>
+            </el-col>
+          </el-row>
+
           <!-- 商品选项 -->
-          <el-form-item label="商品选项" class="form-item-block">
-            <div class="options-container">
-              <div
-                v-for="(option, optIndex) in optionList"
-                :key="optIndex"
-                class="option-row"
-                :class="{ 'option-row-collapsed': option.collapsed }"
-                tabindex="0"
-                @keyup.enter="toggleCollapse(optIndex)"
-              >
-                <!-- 选项值列表（可收起） -->
-                <div class="option-values-container" v-show="!option.collapsed">
-                  <div class="option-value-row">
-                    <div class="input-label">选项名称</div>
-                    <div class="input-combined">
-                      <el-input
-                        v-model="option.chineseName"
-                        placeholder="采购选项名称"
-                        class="input-left"
-                        size="small"
-                        @keydown.tab.prevent="
-                          handleTabKey($event, optIndex, null, 'purchase')
-                        "
-                      />
-                      <el-input
-                        v-model="option.englishName"
-                        placeholder="英文选项名称"
-                        class="input-right"
-                        size="small"
-                        @keydown.tab.prevent="
-                          handleTabKey($event, optIndex, null, 'product')
-                        "
-                      />
-                      <div class="delete-button-wrapper"></div>
-                    </div>
-                  </div>
-                  <div
-                    v-for="(value, valIndex) in option.values"
-                    :key="valIndex"
-                    class="option-value-row"
-                  >
-                    <div class="input-label">选项值</div>
-                    <div class="input-combined">
-                      <el-input
-                        v-model="value.chineseValue"
-                        placeholder="采购选项值"
-                        class="input-left"
-                        size="small"
-                        @keydown.tab.prevent="
-                          handleTabKey($event, optIndex, valIndex, 'purchase')
-                        "
-                      />
-                      <el-input
-                        v-model="value.englishValue"
-                        placeholder="英文选项值"
-                        class="input-right"
-                        size="small"
-                        @keydown.tab.prevent="
-                          handleTabKey($event, optIndex, valIndex, 'product')
-                        "
-                      />
-                      <div class="delete-button-wrapper">
-                        <el-button
-                          v-if="valIndex < option.values.length - 1"
-                          type="danger"
-                          icon="Delete"
-                          circle
-                          size="small"
-                          @click="removeOptionValue(optIndex, valIndex)"
-                          class="ml-2"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  <div class="option-footer" v-show="!option.collapsed">
-                    <el-button
-                      type="danger"
+          <el-divider content-position="left" style="margin: 28px 0"
+            >商品选项</el-divider
+          >
+          <div class="options-container">
+            <div
+              v-for="(option, optIndex) in optionList"
+              :key="optIndex"
+              class="option-row"
+              :class="{ 'option-row-collapsed': option.collapsed }"
+              tabindex="0"
+              @keyup.enter="toggleCollapse(optIndex)"
+            >
+              <!-- 选项值列表（可收起） -->
+              <div class="option-values-container" v-show="!option.collapsed">
+                <div class="option-value-row">
+                  <div class="input-label">选项名称</div>
+                  <div class="input-combined">
+                    <el-input
+                      v-model="option.chineseName"
+                      placeholder="采购选项名称"
+                      class="input-left"
                       size="small"
-                      @click="removeOption(optIndex)"
-                    >
-                      删除
-                    </el-button>
-                    <el-tooltip content="快捷键: Enter" placement="top">
-                      <el-button
-                        type="primary"
-                        size="small"
-                        @click="toggleCollapse(optIndex)"
-                        tabindex="-1"
-                      >
-                        {{ option.collapsed ? "展开" : "完成" }}
-                      </el-button>
-                    </el-tooltip>
+                      @keydown.tab.prevent="
+                        handleTabKey($event, optIndex, null, 'purchase')
+                      "
+                    />
+                    <el-autocomplete
+                      v-model="option.englishName"
+                      :fetch-suggestions="queryOptionNameSuggestions"
+                      placeholder="英文选项名称"
+                      class="input-right"
+                      size="small"
+                      @blur="handleOptionNameSelect"
+                      clearable
+                      @keydown.tab.prevent="
+                        handleTabKey($event, optIndex, null, 'product')
+                      "
+                    />
+                    <div class="delete-button-wrapper"></div>
                   </div>
                 </div>
-
-                <!-- 底部操作按钮 -->
-
-                <!-- 收起状态提示 -->
-                <div class="option-collapsed-hint" v-show="option.collapsed">
-                  <div class="collapsed-content">
-                    <span class="option-name-display">
-                      <strong
-                        >{{ option.chineseName || "采购选项" }} &nbsp</strong
-                      >
-                      <span v-if="option.englishName" class="en-name"
-                        >[{{ option.englishName || "商品选项" }}]</span
-                      >
-                    </span>
-                    <div class="option-values-display">
-                      <template
-                        v-for="(value, idx) in option.values"
-                        :key="idx"
-                      >
-                        <el-tag
-                          v-if="value.chineseValue || value.englishValue"
-                          size="small"
-                          class="value-tag"
-                        >
-                          {{ value.chineseValue || "-" }}&nbsp
-                          <span v-if="value.englishValue" class="en-value"
-                            >[{{ value.englishValue || "-" }}]</span
-                          >
-                        </el-tag>
-                      </template>
+                <div
+                  v-for="(value, valIndex) in option.values"
+                  :key="valIndex"
+                  class="option-value-row"
+                >
+                  <div class="input-label">选项值</div>
+                  <div class="input-combined">
+                    <el-input
+                      v-model="value.chineseValue"
+                      placeholder="采购选项值"
+                      class="input-left"
+                      size="small"
+                      @keydown.tab.prevent="
+                        handleTabKey($event, optIndex, valIndex, 'purchase')
+                      "
+                    />
+                    <el-autocomplete
+                      v-model="value.englishValue"
+                      :fetch-suggestions="queryOptionValueSuggestions"
+                      placeholder="英文选项值"
+                      class="input-right"
+                      size="small"
+                      @blur="handleOptionValueSelect"
+                      clearable
+                      @keydown.tab.prevent="
+                        handleTabKey($event, optIndex, valIndex, 'product')
+                      "
+                    />
+                    <div class="delete-button-wrapper">
+                      <el-button
+                        v-if="valIndex < option.values.length - 1"
+                        type="danger"
+                        icon="Delete"
+                        circle
+                        size="small"
+                        @click="removeOptionValue(optIndex, valIndex)"
+                        class="ml-2"
+                      />
                     </div>
                   </div>
+                </div>
+                <div class="option-footer" v-show="!option.collapsed">
+                  <el-button
+                    type="danger"
+                    size="small"
+                    @click="removeOption(optIndex)"
+                  >
+                    删除
+                  </el-button>
                   <el-tooltip content="快捷键: Enter" placement="top">
                     <el-button
                       type="primary"
-                      link
                       size="small"
                       @click="toggleCollapse(optIndex)"
-                      class="expand-btn"
                       tabindex="-1"
                     >
-                      展开
+                      {{ option.collapsed ? "展开" : "完成" }}
                     </el-button>
                   </el-tooltip>
                 </div>
               </div>
-              <el-tooltip content="快捷键: Ctrl+=" placement="top">
-                <el-button
-                  type="primary"
-                  icon="Plus"
-                  @click="addOption"
-                  size="small"
-                  tabindex="-1"
-                >
-                  添加选项
-                </el-button>
-              </el-tooltip>
+
+              <!-- 底部操作按钮 -->
+
+              <!-- 收起状态提示 -->
+              <div class="option-collapsed-hint" v-show="option.collapsed">
+                <div class="collapsed-content">
+                  <span class="option-name-display">
+                    <strong
+                      >{{ option.chineseName || "采购选项" }} &nbsp</strong
+                    >
+                    <span v-if="option.englishName" class="en-name"
+                      >[{{ option.englishName || "商品选项" }}]</span
+                    >
+                  </span>
+                  <div class="option-values-display">
+                    <template v-for="(value, idx) in option.values" :key="idx">
+                      <el-tag
+                        v-if="value.chineseValue || value.englishValue"
+                        size="small"
+                        class="value-tag"
+                      >
+                        {{ value.chineseValue || "-" }}&nbsp
+                        <span v-if="value.englishValue" class="en-value"
+                          >[{{ value.englishValue || "-" }}]</span
+                        >
+                      </el-tag>
+                    </template>
+                  </div>
+                </div>
+                <el-tooltip content="快捷键: Enter" placement="top">
+                  <el-button
+                    type="primary"
+                    link
+                    size="small"
+                    @click="toggleCollapse(optIndex)"
+                    class="expand-btn"
+                    tabindex="-1"
+                  >
+                    展开
+                  </el-button>
+                </el-tooltip>
+              </div>
             </div>
-          </el-form-item>
+            <el-tooltip content="快捷键: Ctrl+=" placement="top">
+              <el-button
+                type="primary"
+                icon="Plus"
+                @click="addOption"
+                size="small"
+                tabindex="-1"
+              >
+                添加选项
+              </el-button>
+            </el-tooltip>
+          </div>
 
           <!-- 变体分录表格 -->
-          <el-form-item label="变体分录" class="form-item-block">
-            <el-table
-              :data="step1Variants"
-              border
-              style="width: 100%"
-              row-key="variantId"
-              @row-drop="handleRowDrop"
-              class="variant-table variant-table--selection"
-            >
-              <!-- 动态生成选项列 -->
-              <template v-if="getActiveOptions().length > 0">
-                <el-table-column
-                  v-for="(opt, idx) in getActiveOptions()"
-                  :key="opt.optionId || idx"
-                  :label="opt.chineseName || '选项'"
-                  min-width="150"
-                  align="center"
-                >
-                  <template #default="{ row }">
-                    <!-- <span>{{
+          <el-divider content-position="left" style="margin: 48px 0 28px"
+            >变体详情</el-divider
+          >
+          <el-table
+            :data="step1Variants"
+            border
+            style="width: 100%"
+            row-key="variantId"
+            @row-drop="handleRowDrop"
+            class="variant-table variant-table--selection"
+          >
+            <!-- 动态生成选项列 -->
+            <template v-if="getActiveOptions().length > 0">
+              <el-table-column
+                v-for="(opt, idx) in getActiveOptions()"
+                :key="opt.optionId || idx"
+                :label="opt.chineseName || '选项'"
+                min-width="150"
+                align="center"
+              >
+                <template #default="{ row }">
+                  <!-- <span>{{
                     `${row.optionValueList[idx]?.chineseName}[${row.optionValueList[idx]?.optionValue}]` ||
                     "-"
                   }}</span> -->
 
-                    <span>
-                      {{ row.optionValueList[idx]?.chineseValue || "-" }}
-                      <span v-if="row.optionValueList[idx]?.englishValue">
-                        [{{ row.optionValueList[idx]?.englishValue }}]
-                      </span>
+                  <span>
+                    {{ row.optionValueList[idx]?.chineseValue || "-" }}
+                    <span v-if="row.optionValueList[idx]?.englishValue">
+                      [{{ row.optionValueList[idx]?.englishValue }}]
                     </span>
-                  </template>
-                </el-table-column>
+                  </span>
+                </template>
+              </el-table-column>
+            </template>
+
+            <!-- 当没有选项时，显示默认规格列 -->
+            <el-table-column v-else label="默认规格" width="120" align="center">
+              <template #default>
+                <span>-</span>
               </template>
+            </el-table-column>
 
-              <!-- 当没有选项时，显示默认规格列 -->
-              <el-table-column
-                v-else
-                label="默认规格"
-                width="120"
-                align="center"
-              >
-                <template #default>
-                  <span>-</span>
-                </template>
-              </el-table-column>
-
-              <el-table-column
-                label="采购链接"
-                prop="purchaseUrl"
-                min-width="200"
-              >
-                <template #default="{ row }">
-                  <el-input
-                    v-model="row.purchaseUrl"
-                    placeholder="继承主商品"
-                    size="small"
-                    tabindex="-1"
-                  />
-                </template>
-              </el-table-column>
-              <el-table-column label="是否可用" width="100" align="center">
-                <template #default="{ row }">
-                  <el-switch
-                    v-model="row.isActiveAvailable"
-                    :active-value="'1'"
-                    :inactive-value="'0'"
-                    active-text="是"
-                    inactive-text="否"
-                    size="small"
-                  />
-                </template>
-              </el-table-column>
-              <el-table-column label="操作" width="80" fixed="right">
-                <template #default="{ row, $index }">
-                  <el-button
-                    v-if="step1Variants.length > 1"
-                    type="danger"
-                    icon="Delete"
-                    circle
-                    size="small"
-                    @click="removeVariant($index)"
-                    tabindex="-1"
-                  />
-                </template>
-              </el-table-column>
-            </el-table>
-          </el-form-item>
+            <el-table-column
+              label="采购链接"
+              prop="purchaseUrl"
+              min-width="200"
+            >
+              <template #default="{ row }">
+                <el-input
+                  v-model="row.purchaseUrl"
+                  placeholder="继承主商品"
+                  size="small"
+                  tabindex="-1"
+                />
+              </template>
+            </el-table-column>
+            <el-table-column label="是否可用" width="100" align="center">
+              <template #default="{ row }">
+                <el-switch
+                  v-model="row.isActiveAvailable"
+                  :active-value="'1'"
+                  :inactive-value="'0'"
+                  active-text="是"
+                  inactive-text="否"
+                  size="small"
+                />
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="80" fixed="right">
+              <template #default="{ row, $index }">
+                <el-button
+                  v-if="step1Variants.length > 1"
+                  type="danger"
+                  icon="Delete"
+                  circle
+                  size="small"
+                  @click="removeVariant($index)"
+                  tabindex="-1"
+                />
+              </template>
+            </el-table-column>
+          </el-table>
         </el-form>
       </div>
 
@@ -438,7 +440,9 @@
           :label-position="'left'"
         >
           <!-- 主商品信息 -->
-          <el-divider content-position="left">主商品信息</el-divider>
+          <el-divider content-position="left" style="margin: 0 0 28px"
+            >主商品信息</el-divider
+          >
 
           <!-- SPU 与 商品标题 同行 -->
           <el-row :gutter="20">
@@ -483,268 +487,303 @@
           </el-row>
 
           <!-- 商品详情选项卡 -->
-          <el-form-item
-            label="商品详情"
-            prop="detailTabs"
-            class="form-item-block"
+          <el-divider
+            content-position="left"
+            class="media-section-divider"
+            style="margin: 28px 0"
+            >商品详详情编辑</el-divider
           >
-            <el-tabs
-              v-model="activeDetailTab"
-              type="border-card"
-              class="detail-tabs"
-            >
-              <!-- NOTE 选项卡 -->
-              <el-tab-pane label="DESCRIPTION" name="description">
-                <el-input
-                  v-model="step2FormData.description"
-                  type="textarea"
-                  :rows="4"
-                  placeholder="请输入商品详情"
-                />
-              </el-tab-pane>
-              <!-- SIZE 选项卡 -->
-              <el-tab-pane label="SIZE" name="size">
-                <el-input
-                  v-model="step2FormData.size"
-                  type="textarea"
-                  :rows="4"
-                  placeholder="请输入SIZE"
-                />
-              </el-tab-pane>
-              <!-- MATERIAL 选项卡 -->
-              <el-tab-pane label="MATERIAL" name="material">
-                <el-input
-                  v-model="step2FormData.material"
-                  type="textarea"
-                  :rows="4"
-                  placeholder="请输入MATERIAL"
-                />
-              </el-tab-pane>
-              <!-- NOTE 选项卡 -->
-              <el-tab-pane label="NOTE" name="note">
-                <el-input
-                  v-model="step2FormData.note"
-                  type="textarea"
-                  :rows="4"
-                  placeholder="请输入NOTE"
-                />
-              </el-tab-pane>
-              <!-- PACKAGE_INCLUDE 选项卡 -->
-              <el-tab-pane label="PACKAGE_INCLUDE" name="packageInclude">
-                <el-input
-                  v-model="step2FormData.packageInclude"
-                  type="textarea"
-                  :rows="4"
-                  placeholder="请输入PACKAGE_INCLUDE"
-                />
-              </el-tab-pane>
-              <!-- 商品详情描述选项卡 -->
-              <el-tab-pane label="商品详情描述" name="bodyHtml">
-                <div class="rich-text-editor-container">
-                  <div class="rich-text-editor-expanded">
-                    <div class="rich-text-editor-toolbar">
-                      <el-radio-group
-                        v-model="richTextEditor.mode"
-                        size="small"
-                      >
-                        <el-radio-button value="edit"
-                          >HTML 输入</el-radio-button
-                        >
-                        <el-radio-button value="preview">预览</el-radio-button>
-                      </el-radio-group>
-                    </div>
-                    <el-input
-                      v-if="richTextEditor.mode === 'edit'"
-                      v-model="step2FormData.bodyHtml"
-                      type="textarea"
-                      :rows="6"
-                      placeholder="请输入商品详情描述 (HTML)"
-                    />
-                    <div
-                      v-else
-                      class="rich-text-preview"
-                      v-html="
-                        step2FormData.bodyHtml ||
-                        '<span class=no-content>暂无内容</span>'
-                      "
-                    ></div>
-                  </div>
-                </div>
-              </el-tab-pane>
-            </el-tabs>
-          </el-form-item>
+          <el-tabs
+            v-model="activeDetailTab"
+            type="border-card"
+            class="detail-tabs"
+          >
+            <!-- NOTE 选项卡 -->
+            <el-tab-pane label="DESCRIPTION" name="description">
+              <el-input
+                v-model="step2FormData.descriptionCn"
+                type="textarea"
+                :rows="4"
+                placeholder="请输入商品详情（中文）"
+                style="margin-bottom: 10px"
+              />
+              <el-input
+                v-model="step2FormData.description"
+                type="textarea"
+                :rows="4"
+                placeholder="请输入商品详情"
+              />
+            </el-tab-pane>
+            <!-- SIZE 选项卡 -->
+            <el-tab-pane label="SIZE" name="size">
+              <el-autocomplete
+                v-model="step2FormData.size"
+                :fetch-suggestions="querySizeSuggestions"
+                placeholder="请输入SIZE"
+                @blur="handleSizeSelect"
+                clearable
+                type="textarea"
+                :rows="4"
+              />
+            </el-tab-pane>
+            <!-- MATERIAL 选项卡 -->
+            <el-tab-pane label="MATERIAL" name="material">
+              <el-autocomplete
+                v-model="step2FormData.material"
+                :fetch-suggestions="queryMaterialSuggestions"
+                placeholder="请输入MATERIAL"
+                @blur="handleMaterialSelect"
+                clearable
+                type="textarea"
+                :rows="4"
+              />
+            </el-tab-pane>
+            <!-- NOTE 选项卡 -->
+            <el-tab-pane label="NOTE" name="note">
+              <el-autocomplete
+                v-model="step2FormData.noteCn"
+                :fetch-suggestions="queryNoteCnSuggestions"
+                placeholder="请输入NOTE(中文)"
+                clearable
+                type="textarea"
+                :rows="4"
+                style="margin-bottom: 10px"
+              />
+              <el-autocomplete
+                v-model="step2FormData.note"
+                :fetch-suggestions="queryNoteSuggestions"
+                placeholder="请输入NOTE"
+                @blur="handleNoteSelect"
+                clearable
+                type="textarea"
+                :rows="4"
+              />
+            </el-tab-pane>
+            <!-- PACKAGE_INCLUDE 选项卡 -->
+            <el-tab-pane label="PACKAGE_INCLUDE" name="packageInclude">
+              <el-input
+                v-model="step2FormData.packageInclude"
+                type="textarea"
+                :rows="4"
+                placeholder="请输入PACKAGE_INCLUDE"
+              />
+            </el-tab-pane>
+            <!-- 商品详情描述选项卡 -->
+            <el-tab-pane label="商品详情描述" name="bodyHtml">
+              <RichTextEditor
+                v-model="step2FormData.bodyHtml"
+                placeholder="请输入商品详情描述"
+                :min-height="280"
+                @sync-html="handleApplyBodyHtml"
+              >
+                <template #toolbar-actions>
+                  <button
+                    type="button"
+                    class="rte__tool-btn rte__tool-btn--apply"
+                    @click="handleApplyBodyHtml"
+                  >
+                    <svg
+                      class="rte__icon"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <path d="M12 2L2 7l10 5 10-5-10-5z" />
+                      <path d="M2 17l10 5 10-5" />
+                      <path d="M2 12l10 5 10-5" />
+                    </svg>
+                    <span>同步HTML</span>
+                  </button>
+                  <button
+                    type="button"
+                    class="rte__tool-btn rte__tool-btn--extract"
+                    :disabled="!step2FormData.bodyHtml"
+                    @click="handleExtractFields"
+                  >
+                    <svg
+                      class="rte__icon"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                      <polyline points="7 10 12 15 17 10" />
+                      <line x1="12" y1="15" x2="12" y2="3" />
+                    </svg>
+                    <span>更新字段</span>
+                  </button>
+                </template>
+              </RichTextEditor>
+            </el-tab-pane>
+          </el-tabs>
 
           <!-- 媒体文件列表 -->
           <el-divider
             content-position="left"
             class="media-section-divider"
+            style="margin: 48px 0 28px"
             :class="{ 'is-hidden': isMediaFloating }"
             >商品媒体文件管理</el-divider
           >
-          <el-form-item class="form-item-block media-form-item">
-            <!-- 媒体面板（统一元素，通过CSS切换悬浮/内嵌） -->
+          <!-- 媒体面板（统一元素，通过CSS切换悬浮/内嵌） -->
+          <div
+            class="media-panel"
+            :class="{ 'is-floating': isMediaFloating }"
+            ref="mediaPanelRef"
+            :style="
+              isMediaFloating
+                ? {
+                    width: mediaPanelWidth + 'px',
+                    height: mediaPanelHeight + 'px',
+                    left: mediaPanelLeft + 'px',
+                    top: mediaPanelTop + 'px',
+                  }
+                : {}
+            "
+          >
             <div
-              class="media-panel"
-              :class="{ 'is-floating': isMediaFloating }"
-              ref="mediaPanelRef"
-              :style="
-                isMediaFloating
-                  ? {
-                      width: mediaPanelWidth + 'px',
-                      height: mediaPanelHeight + 'px',
-                      left: mediaPanelLeft + 'px',
-                      top: mediaPanelTop + 'px',
-                    }
-                  : {}
-              "
+              class="media-panel-header"
+              :class="{ 'is-draggable': isMediaFloating }"
+              @mousedown="isMediaFloating ? startDragMediaPanel($event) : null"
             >
-              <div
-                class="media-panel-header"
-                :class="{ 'is-draggable': isMediaFloating }"
-                @mousedown="
-                  isMediaFloating ? startDragMediaPanel($event) : null
-                "
-              >
-                <span class="media-panel-title">媒体文件</span>
-                <div class="media-panel-toolbar">
-                  <el-input
-                    v-model="step2FormData.imageSearchKeyword"
-                    placeholder="输入媒体文件所在目录搜索"
-                    :style="{ width: isMediaFloating ? '180px' : '240px' }"
-                    :size="isMediaFloating ? 'small' : 'default'"
-                    clearable
-                    @keyup.enter="loadServerImages"
-                  />
-                  <el-button
-                    type="primary"
-                    icon="Upload"
-                    @click="loadServerImages"
-                    :loading="imageLoading"
-                    :size="isMediaFloating ? 'small' : 'default'"
-                  >
-                    {{ isMediaFloating ? "导入" : "从服务器导入" }}
-                  </el-button>
-                  <el-button
-                    v-if="!isMediaFloating"
-                    type="default"
-                    icon="Rank"
-                    @click="toggleMediaFloating"
-                    size="default"
-                    title="悬浮媒体面板"
-                  >
-                    悬浮
-                  </el-button>
-                  <el-button
-                    v-else
-                    type="danger"
-                    size="small"
-                    circle
-                    icon="Close"
-                    @click="toggleMediaFloating"
-                    title="收起悬浮面板"
-                  />
-                </div>
-              </div>
-              <div class="media-panel-content">
-                <div
-                  class="image-grid"
-                  :class="{ 'is-floating-grid': isMediaFloating }"
-                  @dragover.prevent
-                  @drop="handleImageDrop($event)"
+              <span class="media-panel-title">媒体文件</span>
+              <div class="media-panel-toolbar">
+                <el-input
+                  v-model="step2FormData.imageSearchKeyword"
+                  placeholder="输入媒体文件所在目录搜索"
+                  :style="{ width: isMediaFloating ? '180px' : '240px' }"
+                  :size="isMediaFloating ? 'small' : 'default'"
+                  clearable
+                  @keyup.enter="loadServerImages"
+                />
+                <el-button
+                  type="primary"
+                  icon="Upload"
+                  @click="loadServerImages"
+                  :loading="imageLoading"
+                  :size="isMediaFloating ? 'small' : 'default'"
                 >
-                  <div
-                    v-for="(media, index) in step2FormData.mediaList"
-                    :key="'media-' + (media.mediaId || index)"
-                    class="image-item"
-                    draggable
-                    @dragstart="handleImageDragStart($event, media)"
-                    @dragenter.prevent="handleImageDragEnter($event, index)"
-                    @dragleave.prevent="handleImageDragLeave($event)"
-                    :title="media.alt || media.filename"
-                    :class="{
-                      'drag-over':
-                        dragOverIndex === index && draggedImage !== media,
-                    }"
-                  >
-                    <template v-if="isImage(media)">
+                  {{ isMediaFloating ? "导入" : "重新导入" }}
+                </el-button>
+                <el-button
+                  v-if="!isMediaFloating"
+                  type="default"
+                  icon="Rank"
+                  @click="toggleMediaFloating"
+                  size="default"
+                  title="悬浮媒体面板"
+                >
+                  悬浮
+                </el-button>
+                <el-button
+                  v-else
+                  type="danger"
+                  size="small"
+                  circle
+                  icon="Close"
+                  @click="toggleMediaFloating"
+                  title="收起悬浮面板"
+                />
+              </div>
+            </div>
+            <div class="media-panel-content">
+              <div
+                class="image-grid"
+                :class="{ 'is-floating-grid': isMediaFloating }"
+                @dragover.prevent
+                @drop="handleImageDrop($event)"
+              >
+                <div
+                  v-for="(media, index) in step2FormData.mediaList"
+                  :key="'media-' + (media.mediaId || index)"
+                  class="image-item"
+                  draggable
+                  @dragstart="handleImageDragStart($event, media)"
+                  @dragenter.prevent="handleImageDragEnter($event, index)"
+                  @dragleave.prevent="handleImageDragLeave($event)"
+                  :title="media.alt || media.filename"
+                  :class="{
+                    'drag-over':
+                      dragOverIndex === index && draggedImage !== media,
+                  }"
+                >
+                  <template v-if="isImage(media)">
+                    <el-image
+                      :src="
+                        baseUrl + (media.nasMediaUrl || media.shopifyMediaUrl)
+                      "
+                      :alt="media.alt || media.filename"
+                      class="image-thumb"
+                      :preview-src-list="imagePreviewList"
+                      :initial-index="
+                        imagePreviewList.indexOf(
+                          baseUrl +
+                            (media.nasMediaUrl || media.shopifyMediaUrl),
+                        )
+                      "
+                      lazy
+                      show-progress
+                      preview-teleported
+                      fit="cover"
+                    />
+                  </template>
+                  <template v-else-if="isVideo(media)">
+                    <div class="video-thumbnail" @click="openVideoModal(media)">
                       <el-image
-                        :src="
-                          baseUrl + (media.nasMediaUrl || media.shopifyMediaUrl)
-                        "
-                        :alt="media.alt || media.filename"
+                        :src="getVideoThumbnail(media)"
                         class="image-thumb"
-                        :preview-src-list="imagePreviewList"
-                        :initial-index="
-                          imagePreviewList.indexOf(
-                            baseUrl +
-                              (media.nasMediaUrl || media.shopifyMediaUrl),
-                          )
-                        "
-                        lazy
-                        show-progress
-                        preview-teleported
                         fit="cover"
                       />
-                    </template>
-                    <template v-else-if="isVideo(media)">
-                      <div
-                        class="video-thumbnail"
-                        @click="openVideoModal(media)"
-                      >
-                        <el-image
-                          :src="getVideoThumbnail(media)"
-                          class="image-thumb"
-                          fit="cover"
-                        />
-                        <div class="video-play-button">
-                          <el-icon><VideoPlay /></el-icon>
-                        </div>
+                      <div class="video-play-button">
+                        <el-icon><VideoPlay /></el-icon>
                       </div>
-                    </template>
-                    <template v-else>
-                      <div class="file-placeholder">
-                        <el-icon><Document /></el-icon>
-                        <span class="file-name">{{ media.filename }}</span>
-                      </div>
-                    </template>
-                    <div class="image-overlay">
-                      <span class="media-type-badge">{{
-                        getMediaTypeLabel(media)
-                      }}</span>
                     </div>
-                  </div>
-                  <div
-                    class="image-placeholder"
-                    v-if="step2FormData.mediaList?.length === 0"
-                  >
-                    <el-icon class="placeholder-icon"><Picture /></el-icon>
-                    <span class="placeholder-text">{{
-                      isMediaFloating
-                        ? '点击"导入"加载媒体'
-                        : '点击"从服务器导入"'
+                  </template>
+                  <template v-else>
+                    <div class="file-placeholder">
+                      <el-icon><Document /></el-icon>
+                      <span class="file-name">{{ media.filename }}</span>
+                    </div>
+                  </template>
+                  <div class="image-overlay">
+                    <span class="media-type-badge">{{
+                      getMediaTypeLabel(media)
                     }}</span>
                   </div>
                 </div>
+                <div
+                  class="image-placeholder"
+                  v-if="step2FormData.mediaList?.length === 0"
+                >
+                  <el-icon class="placeholder-icon"><Picture /></el-icon>
+                  <span class="placeholder-text">{{
+                    isMediaFloating
+                      ? '点击"导入"加载媒体'
+                      : '点击"从服务器导入"'
+                  }}</span>
+                </div>
               </div>
-              <div
-                v-if="isMediaFloating"
-                class="media-panel-resize"
-                @mousedown="startResizeMediaPanel"
-              ></div>
             </div>
-          </el-form-item>
+            <div
+              v-if="isMediaFloating"
+              class="media-panel-resize"
+              @mousedown="startResizeMediaPanel"
+            ></div>
+          </div>
 
           <!-- 变体详细设置 -->
-          <el-divider content-position="left">变体详细设置</el-divider>
+          <div style="display: flex; align-items: center; margin: 48px 0 28px">
+            <el-divider content-position="left">变体详细设置</el-divider>
 
-          <el-row :gutter="10" class="mb8">
             <right-toolbar
               :showSearch="false"
               :showrRefresh="false"
               :search="false"
               :columns="columns"
             ></right-toolbar>
-          </el-row>
+          </div>
 
           <el-table
             :data="step2Variants"
@@ -1220,11 +1259,13 @@ import {
 } from "@element-plus/icons-vue";
 import {
   ElMessageBox,
+  ElMessage,
   type FormInstance,
   type FormRules,
   type UploadUserFile,
 } from "element-plus";
 import CustomVideoModal from "./CustomVideoModal.vue";
+import RichTextEditor from "./RichTextEditor.vue";
 import {
   addSelectionInfo,
   updateBaseInfo,
@@ -1233,7 +1274,9 @@ import {
 import { getProduct } from "@/api/erp/product";
 import { treeList } from "@/api/erp/tag";
 import { scanMedia } from "@/api/erp/media";
+import { batchGetSuggestions } from "@/api/erp/formSuggestion";
 import { useExchangeRateStore } from "@/store/modules/exchangeRate";
+import { useDict } from "@/utils/dict";
 import type {
   Product,
   ProductOption,
@@ -1248,7 +1291,31 @@ const { proxy } = getCurrentInstance() as any;
 // 汇率状态管理
 const exchangeRateStore = useExchangeRateStore();
 
+// 获取默认物流配置字典
+const { product_config } = useDict("product_config");
+
 const baseUrl = import.meta.env.VITE_APP_BASE_API;
+
+// 金额转换工具函数
+/**
+ * 将后端返回的"分"转换为前端展示的"元"
+ * @param value 金额（分）
+ * @returns 金额（元），保留2位小数
+ */
+const centsToYuan = (value: number | null | undefined): number | null => {
+  if (value === null || value === undefined) return null;
+  return parseFloat((value / 100).toFixed(2));
+};
+
+/**
+ * 将前端输入的"元"转换为后端存储的"分"
+ * @param value 金额（元）
+ * @returns 金额（分），整数
+ */
+const yuanToCents = (value: number | null | undefined): number | null => {
+  if (value === null || value === undefined) return null;
+  return Math.round(value * 100);
+};
 
 // Emit
 // 新增：返回处理
@@ -1345,13 +1412,14 @@ interface Step2FormData {
   category: string;
   productType: string;
   description: string;
+  descriptionCn: string;
   size: string;
   material: string;
   note: string;
+  noteCn: string;
   packageInclude: string;
   bodyHtml: string;
   mediaList: Media[];
-  mainMediaId: number | undefined;
   remark: string;
   imageSearchKeyword: string;
 }
@@ -1374,16 +1442,315 @@ const step2FormData = reactive<Step2FormData>({
   category: "",
   productType: "",
   description: "",
+  descriptionCn: "",
   size: "",
   material: "",
   note: "",
+  noteCn: "",
   packageInclude: "",
   bodyHtml: "",
   mediaList: [],
-  mainMediaId: undefined,
   remark: "",
   imageSearchKeyword: "",
 });
+
+// 防循环标志位：避免双向同步导致无限循环
+let isSyncingFromBodyHtml = false;
+let isSyncingFromFields = false;
+
+// 计算属性：判断是否有可生成 bodyHtml 的字段
+const hasBodyHtmlFields = computed(() => {
+  const { description, size, material, note, packageInclude } = step2FormData;
+  return !!(description || size || material || note || packageInclude);
+});
+
+// SVG 图标常量（用于模板生成）
+const DETAIL_SVG = `<svg height="25" width="25" xmlns="http://www.w3.org/2000/svg" version="1.1" viewbox="0 0 1024 1024" class="icon"><path fill="#ffc439" d="M166.692 234.795h692.46l-343.068 593.65z"></path></svg>`;
+
+/**
+ * 最小范围更新 bodyHtml 中的字段值（正向同步）
+ * 只更新对应 id 标签内的文本内容，保持富文本的其他自定义修改不被覆盖
+ */
+function updateBodyHtmlFields(): void {
+  let html = step2FormData.bodyHtml || "";
+
+  // 字段映射：字段名 -> id 选择器正则
+  const fieldMappings = [
+    { field: "description", id: "my_description", tag: "span" },
+    { field: "size", id: "my_size", tag: "span" },
+    { field: "material", id: "my_material", tag: "span" },
+    { field: "note", id: "my_note", tag: "div" },
+    { field: "packageInclude", id: "my_package_include", tag: "div" },
+  ] as const;
+
+  for (const { field, id, tag } of fieldMappings) {
+    const value = step2FormData[field as keyof typeof step2FormData] as string;
+    const regex = new RegExp(
+      `(<${tag}[^>]*id="${id}"[^>]*>)(.*?)(</${tag}>)`,
+      "s",
+    );
+
+    if (regex.test(html)) {
+      // 标签已存在，只更新标签内的内容
+      html = html.replace(regex, `$1${value}$3`);
+    } else if (value) {
+      // 标签不存在但有值，需要创建新标签并追加到合适位置
+      const newElement = `<${tag} id="${id}">${value}</${tag}>`;
+
+      // 根据字段类型决定插入位置
+      if (["description", "size", "material"].includes(field)) {
+        // DETAIL 区块字段：查找 DETAIL 标题，在其后插入或追加到 DETAIL 区块
+        const detailTitleRegex = /(<p[^>]*>.*?DETAIL.*?<\/p>)/s;
+        const detailMatch = html.match(detailTitleRegex);
+
+        if (detailMatch) {
+          // DETAIL 标题存在，在其后插入新字段行
+          const insertHtml = `<p style="color: rgb(64, 64, 64);"><strong>${
+            field.charAt(0).toUpperCase() + field.slice(1)
+          }: </strong>${newElement}</p>`;
+          html = html.replace(detailTitleRegex, `$1\n${insertHtml}`);
+        } else {
+          // DETAIL 标题不存在，创建整个 DETAIL 区块并添加到开头
+          const detailBlock = `<p style="display: flex; align-items: center; font-weight: bold; font-size: 18px;">${DETAIL_SVG} DETAIL</p>\n<p style="color: rgb(64, 64, 64);"><strong>${
+            field.charAt(0).toUpperCase() + field.slice(1)
+          }: </strong>${newElement}</p>`;
+          html = detailBlock + (html ? `\n${html}` : "");
+        }
+      } else if (field === "note") {
+        // NOTE 区块：查找 NOTE 标题或添加到末尾
+        const noteTitleRegex = /(<p[^>]*>.*?NOTE.*?<\/p>)/s;
+        const noteMatch = html.match(noteTitleRegex);
+
+        if (noteMatch) {
+          const insertHtml = `<div id="${id}" class="table-wrapper" uia-uid="379|1">${value}</div>`;
+          html = html.replace(noteTitleRegex, `$1\n${insertHtml}`);
+        } else {
+          const noteBlock = `<p> </p>\n<p style="display: flex; align-items: center; font-weight: bold; font-size: 18px;">${DETAIL_SVG} NOTE</p>\n<div id="${id}" class="table-wrapper" uia-uid="379|1">${value}</div>`;
+          html = html + (html ? `\n${noteBlock}` : noteBlock);
+        }
+      } else if (field === "packageInclude") {
+        // PACKAGE INCLUDE 区块
+        const pkgTitleRegex = /(<p[^>]*>.*?PACKAGE INCLUDE.*?<\/p>)/s;
+        const pkgMatch = html.match(pkgTitleRegex);
+
+        if (pkgMatch) {
+          const insertHtml = `<div id="${id}" class="table-wrapper" uia-uid="379|2">${value}</div>`;
+          html = html.replace(pkgTitleRegex, `$1\n${insertHtml}`);
+        } else {
+          const pkgBlock = `<p> </p>\n<p style="display: flex; align-items: center; font-weight: bold; font-size: 18px;">${DETAIL_SVG} PACKAGE INCLUDE</p>\n<div id="${id}" class="table-wrapper" uia-uid="379|2">${value}</div>`;
+          html = html + (html ? `\n${pkgBlock}` : pkgBlock);
+        }
+      }
+    }
+  }
+
+  step2FormData.bodyHtml = html;
+}
+
+/**
+ * 根据5个字段动态生成 bodyHtml（正向同步）
+ * 规则：有值的字段才生成对应的HTML段落
+ */
+function generateBodyHtml(): string {
+  const parts: string[] = [];
+  const { description, size, material, note, packageInclude } = step2FormData;
+
+  // DETAIL 区块：只要 description/size/material 有任意一个值就生成
+  if (description || size || material) {
+    parts.push(
+      `<p style="display: flex; align-items: center; font-weight: bold; font-size: 18px;">${DETAIL_SVG} DETAIL</p>`,
+    );
+    if (description) {
+      parts.push(
+        `<p style="color: rgb(64, 64, 64);"><strong>Description: </strong><span id="my_description">${description}</span></p>`,
+      );
+    }
+    if (size) {
+      parts.push(
+        `<p style="color: rgb(64, 64, 64);"><strong>Size: </strong><span id="my_size">${size}</span></p>`,
+      );
+    }
+    if (material) {
+      parts.push(
+        `<p style="color: rgb(64, 64, 64);"><strong>Material: </strong><span id="my_material">${material}</span></p>`,
+      );
+    }
+  }
+
+  // NOTE 区块
+  if (note) {
+    parts.push(`<p> </p>`);
+    parts.push(
+      `<p style="display: flex; align-items: center; font-weight: bold; font-size: 18px;">${DETAIL_SVG} NOTE</p>`,
+    );
+    parts.push(
+      `<div id="my_note" class="table-wrapper" uia-uid="379|1">${note}</div>`,
+    );
+  }
+
+  // PACKAGE INCLUDE 区块
+  if (packageInclude) {
+    parts.push(`<p> </p>`);
+    parts.push(
+      `<p style="display: flex; align-items: center; font-weight: bold; font-size: 18px;">${DETAIL_SVG} PACKAGE INCLUDE</p>`,
+    );
+    parts.push(
+      `<div id="my_package_include" class="table-wrapper" uia-uid="379|2">${packageInclude}</div>`,
+    );
+  }
+
+  return parts.join("\n");
+}
+
+/**
+ * 从 bodyHtml 解析出5个字段的值（反向同步）
+ */
+function parseBodyHtml(html: string): {
+  description?: string;
+  size?: string;
+  material?: string;
+  note?: string;
+  packageInclude?: string;
+} {
+  const result: {
+    description?: string;
+    size?: string;
+    material?: string;
+    note?: string;
+    packageInclude?: string;
+  } = {};
+
+  // 提取 Description（在 id="my_description" 的 span 中）
+  const descMatch = html.match(/id="my_description"[^>]*>(.*?)<\/span>/s);
+  if (descMatch) {
+    result.description = descMatch[1].trim();
+  }
+
+  // 提取 Size（在 id="my_size" 的 span 中）
+  const sizeMatch = html.match(/id="my_size"[^>]*>(.*?)<\/span>/s);
+  if (sizeMatch) {
+    result.size = sizeMatch[1].trim();
+  }
+
+  // 提取 Material（在 id="my_material" 的 span 中）
+  const materialMatch = html.match(/id="my_material"[^>]*>(.*?)<\/span>/s);
+  if (materialMatch) {
+    result.material = materialMatch[1].trim();
+  }
+
+  // 提取 NOTE（在 id="my_note" 的 div 中）
+  const noteMatch = html.match(/id="my_note"[^>]*>(.*?)<\/div>/s);
+  if (noteMatch) {
+    result.note = noteMatch[1].trim();
+  }
+
+  // 提取 PACKAGE_INCLUDE（在 id="my_package_include" 的 div 中）
+  const pkgMatch = html.match(/id="my_package_include"[^>]*>(.*?)<\/div>/s);
+  if (pkgMatch) {
+    result.packageInclude = pkgMatch[1].trim();
+  }
+
+  return result;
+}
+
+// // 监听5个字段变化，同步更新 bodyHtml（正向同步 - 最小范围覆盖）
+// watch(
+//   () => [
+//     step2FormData.description,
+//     step2FormData.size,
+//     step2FormData.material,
+//     step2FormData.note,
+//     step2FormData.packageInclude,
+//   ],
+//   () => {
+//     if (isSyncingFromBodyHtml) return;
+//     isSyncingFromFields = true;
+//     updateBodyHtmlFields();
+//     nextTick(() => {
+//       isSyncingFromFields = false;
+//     });
+//   },
+// );
+
+// // 监听 bodyHtml 变化，反向解析 5 个字段（反向同步）
+// watch(
+//   () => step2FormData.bodyHtml,
+//   (newVal) => {
+//     if (isSyncingFromFields) return;
+//     if (!newVal) return;
+
+//     isSyncingFromBodyHtml = true;
+//     const parsed = parseBodyHtml(newVal);
+//     if (parsed.description !== undefined)
+//       step2FormData.description = parsed.description;
+//     if (parsed.size !== undefined) step2FormData.size = parsed.size;
+//     if (parsed.material !== undefined) step2FormData.material = parsed.material;
+//     if (parsed.note !== undefined) step2FormData.note = parsed.note;
+//     if (parsed.packageInclude !== undefined)
+//       step2FormData.packageInclude = parsed.packageInclude;
+//     nextTick(() => {
+//       isSyncingFromBodyHtml = false;
+//     });
+//   },
+// );
+
+/**
+ * 处理应用按钮点击
+ * - bodyHtml 为空时：调用 generateBodyHtml 生成完整 HTML
+ * - bodyHtml 有值时：调用 updateBodyHtmlFields 局部更新
+ */
+function handleApplyBodyHtml(): void {
+  if (!step2FormData.bodyHtml) {
+    // bodyHtml 为空，生成完整 HTML
+    step2FormData.bodyHtml = generateBodyHtml();
+    ElMessage.success("已生成商品详情描述");
+  } else {
+    // bodyHtml 有值，局部更新
+    updateBodyHtmlFields();
+    ElMessage.success("已更新商品详情描述");
+  }
+}
+
+/**
+ * 处理提取按钮点击
+ * - 从 bodyHtml 中提取 5 个字段到对应表单字段
+ */
+function handleExtractFields(): void {
+  if (!step2FormData.bodyHtml) {
+    ElMessage.warning("商品详情描述为空，无法提取");
+    return;
+  }
+
+  const parsed = parseBodyHtml(step2FormData.bodyHtml);
+  let extractedCount = 0;
+
+  if (parsed.description !== undefined) {
+    step2FormData.description = parsed.description;
+    extractedCount++;
+  }
+  if (parsed.size !== undefined) {
+    step2FormData.size = parsed.size;
+    extractedCount++;
+  }
+  if (parsed.material !== undefined) {
+    step2FormData.material = parsed.material;
+    extractedCount++;
+  }
+  if (parsed.note !== undefined) {
+    step2FormData.note = parsed.note;
+    extractedCount++;
+  }
+  if (parsed.packageInclude !== undefined) {
+    step2FormData.packageInclude = parsed.packageInclude;
+    extractedCount++;
+  }
+
+  if (extractedCount > 0) {
+    ElMessage.success(`已提取 ${extractedCount} 个字段`);
+  } else {
+    ElMessage.warning("未从商品详情描述中提取到有效字段");
+  }
+}
 
 // 计算属性：所有图片的 URL 列表（不包含视频）
 const imagePreviewList = computed<string[]>(() => {
@@ -1491,12 +1858,6 @@ const step1Rules: FormRules = {
   spu: [{ required: true, message: "SPU 不能为空", trigger: "blur" }],
   productName: [
     { required: true, message: "商品名称不能为空", trigger: "blur" },
-    {
-      min: 2,
-      max: 100,
-      message: "商品名称长度在 2 到 100 个字符",
-      trigger: "blur",
-    },
   ],
   tagIds: [{ required: true, message: "标签不能为空", trigger: "change" }],
   sourceUrl: [
@@ -1630,23 +1991,35 @@ const startResizeMediaPanel = (e: MouseEvent) => {
   document.addEventListener("mouseup", stopResize);
 };
 
-// 富文本编辑器状态
-interface RichTextEditorState {
-  expanded: boolean;
-  mode: "edit" | "preview";
-}
-
-const richTextEditor = reactive<RichTextEditorState>({
-  expanded: false,
-  mode: "edit", // 'edit' | 'preview'
-});
-
 // 视频播放相关状态
 const videoModalVisible = ref<boolean>(false);
 const currentVideo = ref<Media | null>(null);
 
 // 商品详情选项卡当前激活项，description 排在第一位
 const activeDetailTab = ref<string>("description");
+
+// 提示词缓存
+interface SuggestionItem {
+  value: string;
+}
+
+interface SuggestionsCache {
+  size: SuggestionItem[];
+  material: SuggestionItem[];
+  note: SuggestionItem[];
+  noteCn: SuggestionItem[];
+  optionEnglishName: SuggestionItem[];
+  optionEnglishValue: SuggestionItem[];
+}
+
+const suggestionsCache = reactive<SuggestionsCache>({
+  size: [],
+  material: [],
+  note: [],
+  noteCn: [],
+  optionEnglishName: [],
+  optionEnglishValue: [],
+});
 
 // 监听采购链接 变化，同步到变体的采购链接
 // 如果采购链接 有值，变体采购链接等于旧值, 则同步
@@ -1834,6 +2207,9 @@ const open = async (
   // 重置第一步表单并加载数据
   await resetAndLoadData(step);
 
+  // 加载提示词
+  loadSuggestions();
+
   activeStep.value = step;
   visible.value = true;
 };
@@ -1875,7 +2251,24 @@ const handleLoadStep2Data = async (): Promise<void> => {
   const productData = response.data;
 
   // 填充第二步表单
-  Object.assign(step2FormData, productData);
+  Object.assign(step2FormData, {
+    productId: productData.productId,
+    spu: productData.spu,
+    productTitle: productData.productTitle,
+    category: productData.category,
+    productType: productData.productType,
+    description: productData.description,
+    descriptionCn: productData.descriptionCn,
+    size: productData.size,
+    material: productData.material,
+    note: productData.note,
+    noteCn: productData.noteCn,
+    packageInclude: productData.packageInclude,
+    bodyHtml: productData.bodyHtml,
+    mediaList: productData.mediaList,
+    remark: productData.remark,
+    imageSearchKeyword: productData.imageSearchKeyword,
+  });
 
   // 解析采购商品选项
   if (productData.optionJson) {
@@ -1905,6 +2298,12 @@ const handleLoadStep2Data = async (): Promise<void> => {
               .toString()
               .padStart(3, "0"),
         optionValueList,
+        // 将后端返回的"分"转换为前端展示的"元"
+        purchasePrice: centsToYuan(v.purchasePrice),
+        freight: centsToYuan(v.freight),
+        unitCostPrice: centsToYuan(v.unitCostPrice),
+        price: centsToYuan(v.price),
+        compareAtPrice: centsToYuan(v.compareAtPrice),
       };
       if (!variant.exchangeRate) {
         await fillExchangeRate(variant);
@@ -1928,10 +2327,11 @@ const handleLoadStep1Data = async (): Promise<void> => {
   // 填充第一步表单
   Object.assign(step1FormData, {
     productId: productData.productId,
-    spu: productData.spu || null,
-    sourceUrl: productData.sourceUrl || null,
-    purchaseUrl: productData.purchaseUrl || null,
-    tagIds: productData.tagIds || [],
+    spu: productData.spu,
+    productName: productData.productName,
+    sourceUrl: productData.sourceUrl,
+    purchaseUrl: productData.purchaseUrl,
+    tagIds: productData.tagIds,
   });
 
   // 解析采购商品选项
@@ -1962,6 +2362,7 @@ const handleLoadStep1Data = async (): Promise<void> => {
         optionValueList,
         position: v.position,
         remark: v.remark || "",
+        isActiveAvailable: v.isActiveAvailable || "1",
       });
       step1Variants.value = step1V;
     });
@@ -2068,14 +2469,15 @@ function resetForm(step) {
       productId: undefined,
       productTitle: "",
       note: "",
+      noteCn: "",
       packageInclude: "",
       bodyHtml: "",
       size: "",
       material: "",
       mediaList: [],
-      mainMediaId: undefined,
       remark: "",
       description: "",
+      descriptionCn: "",
       imageSearchKeyword: "",
     });
 
@@ -2288,6 +2690,7 @@ function generateVariants(): void {
         optionValueList: [],
         position: 0,
         remark: "",
+        isActiveAvailable: "1",
       },
     ];
     return;
@@ -2321,6 +2724,7 @@ function generateVariants(): void {
       optionValueList: optionValueList,
       position: existingVariant?.position || index,
       remark: existingVariant?.remark || "",
+      isActiveAvailable: existingVariant?.isActiveAvailable || "1",
     };
   });
 }
@@ -2373,7 +2777,10 @@ async function calculateVariantCost(row) {
       row.unitCostPrice = 0;
       return;
     }
-    row.unitCostPrice = (row.purchasePrice || 0) + (row.freight || 0);
+    // 此时 purchasePrice 和 freight 已经是"元"单位，直接相加
+    row.unitCostPrice = parseFloat(
+      ((row.purchasePrice || 0) + (row.freight || 0)).toFixed(2),
+    );
 
     // 如果exchangeRate为空，自动填入缓存的汇率
     if (!row.exchangeRate) {
@@ -2406,7 +2813,8 @@ function calculateProfitRate(row) {
       row.profitRate = null;
       return;
     }
-    const rmbPrice = row.price * row.exchangeRate;
+    // price 是美元（元），exchangeRate 是汇率，相乘得到人民币（元）
+    const rmbPrice = parseFloat((row.price * row.exchangeRate).toFixed(2));
     // 保留两位小数
     row.profit = parseFloat((rmbPrice - row.unitCostPrice).toFixed(2));
     row.profitRate = parseFloat(((row.profit / rmbPrice) * 100).toFixed(2));
@@ -2456,15 +2864,34 @@ async function calculateFreight(row) {
       row.pkWeight > 0 &&
       row.materialWeight > 0
     ) {
+      console.log(
+        product_config.value.find((item) => item.value === "default_logistic"),
+      );
+      // 从字典中获取默认物流代码
+      const logisticsCode =
+        product_config.value?.length > 0
+          ? [
+              product_config.value.find(
+                (item) => item.value === "default_logistic",
+              ).label,
+            ]
+          : undefined;
+
       const param = {
         pkWidth: row.pkWidth,
         pkHeight: row.pkHeight,
         pkLength: row.pkLength,
         materialWeight: row.materialWeight,
         pkWeight: row.pkWeight,
+        logisticsCode: logisticsCode,
       };
       const response = await calculateShipping(param);
-      row.freight = response.data || 0;
+      console.log(response);
+      if (response && response.data) {
+        row.freight = response.data[0]?.lumpSumFee;
+      } else {
+        row.freight = 0;
+      }
       await calculateVariantCost(row);
     }
   } catch (error) {
@@ -2965,17 +3392,23 @@ const handleSubmitData = async (): Promise<number> => {
       optionList: optionList.value,
       productVariantList: variantsToSubmit,
     };
-    console.log("handleSubmitData", submitData);
     const response = await addSelectionInfo(submitData);
     return response.data;
   } else if (activeStep.value === 1) {
     // 保存第二步
+    // 将前端输入的"元"转换为后端存储的"分"
+    const variantsToSubmit = step2Variants.value.map((v) => ({
+      ...v,
+      purchasePrice: yuanToCents(v.purchasePrice),
+      freight: yuanToCents(v.freight),
+      unitCostPrice: yuanToCents(v.unitCostPrice),
+      price: yuanToCents(v.price),
+      compareAtPrice: yuanToCents(v.compareAtPrice),
+    }));
+
     const submitData = {
-      productId: step2FormData.productId!,
-      productTitle: step2FormData.productTitle,
-      bodyHtml: step2FormData.bodyHtml,
-      mediaList: step2FormData.mediaList,
-      productVariantList: step2Variants.value,
+      ...step2FormData,
+      productVariantList: variantsToSubmit,
     };
     await updateBaseInfo(submitData);
     return step2FormData.productId!;
@@ -2988,6 +3421,171 @@ const handleSubmitData = async (): Promise<number> => {
   visible.value = false;
   emit("submit", { action: "cancel", hasChanged: false });
 }*/
+
+/**
+ * 加载提示词
+ */
+function loadSuggestions() {
+  const fields = [
+    { fieldName: "size", limit: 30 },
+    { fieldName: "material", limit: 30 },
+    { fieldName: "note", limit: 30 },
+    { fieldName: "noteCn", limit: 30 },
+    { fieldName: "optionEnglishName", limit: 30 },
+    { fieldName: "optionEnglishValue", limit: 30 },
+  ];
+
+  batchGetSuggestions(fields)
+    .then((response) => {
+      if (response.code === 200 && response.data) {
+        // 按字段名分组缓存
+        const cache: SuggestionsCache = {
+          size: [],
+          material: [],
+          note: [],
+          noteCn: [],
+          optionEnglishName: [],
+          optionEnglishValue: [],
+        };
+
+        response.data.forEach((item: any) => {
+          let cacheKey = item.fieldName;
+          if (cache[cacheKey as keyof SuggestionsCache]) {
+            cache[cacheKey as keyof SuggestionsCache].push({
+              value: item.fieldValue,
+            });
+          }
+        });
+
+        Object.assign(suggestionsCache, cache);
+      }
+    })
+    .catch((error) => {
+      console.error("加载提示词失败:", error);
+    });
+}
+
+/**
+ * 查询大小建议
+ */
+function querySizeSuggestions(queryString: string, cb: any) {
+  const results = queryString
+    ? suggestionsCache.size.filter((item) =>
+        item.value.toLowerCase().includes(queryString.toLowerCase()),
+      )
+    : suggestionsCache.size;
+  cb(results);
+}
+
+/**
+ * 查询材质建议
+ */
+function queryMaterialSuggestions(queryString: string, cb: any) {
+  const results = queryString
+    ? suggestionsCache.material.filter((item) =>
+        item.value.toLowerCase().includes(queryString.toLowerCase()),
+      )
+    : suggestionsCache.material;
+  cb(results);
+}
+
+/**
+ * 查询备注建议
+ */
+function queryNoteSuggestions(queryString: string, cb: any) {
+  const results = queryString
+    ? suggestionsCache.note.filter((item) =>
+        item.value.toLowerCase().includes(queryString.toLowerCase()),
+      )
+    : suggestionsCache.note;
+  cb(results);
+}
+
+/**
+ * 查询备注建议
+ */
+function queryNoteCnSuggestions(queryString: string, cb: any) {
+  const results = queryString
+    ? suggestionsCache.noteCn.filter((item) =>
+        item.value.toLowerCase().includes(queryString.toLowerCase()),
+      )
+    : suggestionsCache.noteCn;
+  cb(results);
+}
+
+/**
+ * 查询英文选项名建议
+ */
+function queryOptionNameSuggestions(queryString: string, cb: any) {
+  const results = queryString
+    ? suggestionsCache.optionEnglishName.filter((item) =>
+        item.value.toLowerCase().includes(queryString.toLowerCase()),
+      )
+    : suggestionsCache.optionEnglishName;
+  cb(results);
+}
+/**
+ * 查询英文选项值建议
+ */
+function queryOptionValueSuggestions(queryString: string, cb: any) {
+  const results = queryString
+    ? suggestionsCache.optionEnglishValue.filter((item) =>
+        item.value.toLowerCase().includes(queryString.toLowerCase()),
+      )
+    : suggestionsCache.optionEnglishValue;
+  cb(results);
+}
+
+/**
+ * 选择大小建议后的回调
+ */
+function handleSizeSelect(item: SuggestionItem) {
+  updateSuggestionUsage("size", item.value);
+}
+
+/**
+ * 选择材质建议后的回调
+ */
+function handleMaterialSelect(item: SuggestionItem) {
+  updateSuggestionUsage("material", item.value);
+}
+
+/**
+ * 选择备注建议后的回调
+ */
+function handleNoteSelect(item: SuggestionItem) {
+  updateSuggestionUsage("note", item.value);
+}
+
+/**
+ * 选择英文选项名建议后的回调
+ */
+function handleOptionNameSelect(item: SuggestionItem) {
+  updateSuggestionUsage("optionEnglishName", item.value);
+}
+
+/**
+ * 选择英文选项值建议后的回调
+ */
+function handleOptionValueSelect(item: SuggestionItem) {
+  updateSuggestionUsage("optionEnglishValue", item.value);
+}
+
+/**
+ * 更新提示词使用记录
+ */
+function updateSuggestionUsage(fieldName: string, newValue: string) {
+  // 这里可以调用后端接口更新使用时间
+  // 但由于保存商品时已经自动更新，所以这里可以不调用
+  // 如果需要在选择时就更新，可以取消下面的注释
+  /*batchUpdateUsage([{
+    fieldName: fieldName,
+    oldValue: null,
+    newValue: newValue
+  }]).catch(error => {
+    console.error('更新提示词使用记录失败:', error)
+  })*/
+}
 
 //表格展示列
 const columns = ref([
@@ -3038,10 +3636,9 @@ defineExpose({
 }
 
 .wizard-header,
-.wizard-progress-card,
+/* .wizard-progress-card, */
 .step-form,
 .image-manager,
-.rich-text-editor-expanded,
 .variant-table,
 .option-row {
   border: 1px solid rgba(148, 163, 184, 0.18);
@@ -3138,7 +3735,7 @@ defineExpose({
 .header-action-btn--strong {
   box-shadow: 0 12px 24px rgba(34, 197, 94, 0.18);
 }
-
+/* 
 .wizard-progress-card {
   display: grid;
   grid-template-columns: minmax(280px, 360px) 1fr;
@@ -3179,13 +3776,13 @@ defineExpose({
   font-size: 13px;
   line-height: 1.7;
   color: rgba(226, 232, 240, 0.88);
-}
+} */
 
-.wizard-steps {
+/* .wizard-steps {
   padding: 16px 18px;
   border-radius: 20px;
   background: rgba(255, 255, 255, 0.06);
-}
+} */
 
 .step-content {
   flex: 1;
@@ -3231,8 +3828,7 @@ defineExpose({
 
 .options-container,
 .image-manager,
-.detail-tabs,
-.rich-text-editor-container {
+.detail-tabs {
   width: 100%;
 }
 
@@ -3297,17 +3893,24 @@ defineExpose({
 }
 
 .option-value-row .input-combined .input-left,
-.option-value-row .input-combined .input-right {
+:deep(.option-value-row .input-combined .input-right) {
   flex: 1;
 }
 
+:deep(.option-value-row .input-combined .input-right) {
+  margin-top: -1px;
+}
+
+/* 左侧输入框样式 */
 .option-value-row .input-combined .input-left :deep(.el-input__wrapper) {
   border-radius: 12px 0 0 12px;
   border-right: none;
 }
 
-.option-value-row .input-combined .input-right :deep(.el-input__wrapper) {
-  border-radius: 0 12px 12px 0;
+/* 右侧输入框样式（autocomplete） */
+
+:deep(.option-value-row .input-combined .input-right .el-input__wrapper) {
+  border-radius: 0 12px 12px 0 !important;
 }
 
 .delete-button-wrapper {
@@ -3809,44 +4412,6 @@ defineExpose({
   overflow: hidden;
 }
 
-.rich-text-editor-expanded {
-  border-radius: 18px;
-  background: #ffffff;
-  overflow: hidden;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.rich-text-editor-expanded:hover {
-  border-color: rgba(37, 99, 235, 0.22);
-  box-shadow: 0 16px 28px rgba(15, 23, 42, 0.08);
-}
-
-.rich-text-editor-toolbar {
-  padding: 14px 16px;
-  background: linear-gradient(
-    180deg,
-    rgba(248, 250, 252, 0.96),
-    rgba(241, 245, 249, 0.96)
-  );
-  border-bottom: 1px solid rgba(148, 163, 184, 0.16);
-}
-
-.rich-text-preview {
-  min-height: 220px;
-  padding: 20px;
-  background: #ffffff;
-  color: #334155;
-}
-
-.rich-text-preview .no-content {
-  display: inline-flex;
-  width: 100%;
-  justify-content: center;
-  padding: 40px 0;
-  color: #94a3b8;
-  font-style: italic;
-}
-
 .variant-table {
   margin-top: 12px;
   border-radius: 20px;
@@ -3943,7 +4508,7 @@ defineExpose({
 :deep(.el-page-header__left) {
   align-items: flex-start;
 }
-
+/* 
 :deep(.wizard-progress-card .el-step__title) {
   color: rgba(226, 232, 240, 0.88);
   font-weight: 600;
@@ -3964,15 +4529,15 @@ defineExpose({
 :deep(.wizard-progress-card .is-finish .el-step__icon) {
   background: linear-gradient(135deg, #2563eb, #22c55e);
   border-color: transparent;
-}
+} */
 
 :deep(.step-form .el-form-item) {
   margin-bottom: 20px;
 }
 
-:deep(.step-form .el-divider) {
+/* :deep(.step-form .el-divider) {
   margin: 22px 0 14px;
-}
+} */
 
 :deep(.step-form .el-divider__text) {
   padding: 0 14px;
@@ -4064,6 +4629,11 @@ defineExpose({
 :deep(.detail-tabs .el-tabs__content) {
   padding: 18px;
   background: #ffffff;
+  min-height: 360px;
+}
+
+:deep(.detail-tabs .el-tab-pane) {
+  min-height: 324px;
 }
 
 :deep(.variant-table .el-table__header-wrapper th) {
@@ -4091,12 +4661,12 @@ defineExpose({
 :deep(.el-table .set-row) {
   --el-table-tr-bg-color: rgba(219, 234, 254, 0.8) !important;
 }
-
+/* 
 @media (max-width: 1200px) {
   .wizard-progress-card {
     grid-template-columns: 1fr;
   }
-}
+} */
 
 @media (max-width: 768px) {
   .product-wizard-container {
@@ -4104,7 +4674,7 @@ defineExpose({
   }
 
   .wizard-header,
-  .wizard-progress-card,
+  /* .wizard-progress-card, */
   .step-form,
   .image-manager,
   .variant-table,
@@ -4129,9 +4699,9 @@ defineExpose({
     min-width: 0;
   }
 
-  .wizard-progress-card {
+  /* .wizard-progress-card {
     padding: 18px;
-  }
+  } */
 
   .step-form {
     padding: 16px;
@@ -4186,7 +4756,7 @@ defineExpose({
 
 @media (prefers-reduced-motion: reduce) {
   .wizard-header,
-  .wizard-progress-card,
+  /* .wizard-progress-card, */
   .step-form,
   .image-manager,
   .variant-table,

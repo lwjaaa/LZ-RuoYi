@@ -8,6 +8,25 @@ class TmallExtractor extends BaseExtractor {
     this._scriptDataParsed = false;
   }
 
+  async extractSourceUrl() {
+    try {
+      const urlObj = new URL(window.location.href);
+      
+      // 天猫平台：从路径中提取id参数
+      // 例如: /item.htm?id=123456 或 /item/123456.html
+      const id = urlObj.searchParams.get('id');
+      if (id) {
+        return `${urlObj.protocol}//${urlObj.hostname}${urlObj.pathname}?id=${id}`;
+      }
+      
+      // 如果没有id参数，返回原URL
+      return window.location.href;
+    } catch (e) {
+      Logger.warn("URL精简失败", e.message);
+      return window.location.href;
+    }
+  }
+
   _getPageScriptData() {
     if (this._scriptDataParsed) return this._scriptData;
     this._scriptDataParsed = true;
@@ -276,7 +295,7 @@ class TmallExtractor extends BaseExtractor {
           const chineseName = prop.name.replace(/[：:]/g, "").trim();
           if (!chineseName) continue;
 
-          const englishName = generateEnglishName(chineseName, "tmall");
+          const englishName = generateEnglishName(chineseName);
 
           const values = [];
           for (const val of prop.values) {
@@ -285,11 +304,7 @@ class TmallExtractor extends BaseExtractor {
 
             values.push({
               chineseValue,
-              englishValue: generateEnglishValue(
-                chineseValue,
-                chineseName,
-                "tmall",
-              ),
+              englishValue: generateEnglishValue(chineseValue),
               isDisabled: !!val.empty,
               imageUrl: val.image ? normalizeImageUrl(val.image) : "",
               vid: val.vid || null,

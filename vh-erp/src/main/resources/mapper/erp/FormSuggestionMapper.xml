@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.erp.mapper.FormSuggestionMapper">
+
+    <resultMap type="com.ruoyi.erp.model.domain.FormSuggestion" id="FormSuggestionResult">
+        <id     property="suggestionId"   column="suggestion_id"   />
+        <result property="fieldName"      column="field_name"      />
+        <result property="fieldValue"     column="field_value"     />
+        <result property="lastUsedTime"   column="last_used_time"  />
+        <result property="createTime"     column="create_time"     />
+        <result property="updateTime"     column="update_time"     />
+        <result property="delFlag"        column="del_flag"        />
+    </resultMap>
+
+    <sql id="selectFormSuggestionVo">
+        select suggestion_id, field_name, field_value, last_used_time, create_time, update_time, del_flag
+        from erp_form_suggestion
+    </sql>
+
+    <!-- 批量查询多个字段的提示词 -->
+    <select id="selectSuggestionsByFields" resultMap="FormSuggestionResult">
+        <foreach collection="fieldConfigs" item="config" separator="UNION ALL">
+            (SELECT suggestion_id, field_name, field_value, last_used_time, create_time, update_time, del_flag
+             FROM erp_form_suggestion
+             WHERE field_name = #{config.fieldName} 
+               AND del_flag = '0'
+             ORDER BY last_used_time DESC
+             LIMIT #{config.limit})
+        </foreach>
+        ORDER BY FIELD(field_name, 
+            <foreach collection="fieldConfigs" item="config" separator=",">
+                #{config.fieldName}
+            </foreach>
+        ), last_used_time DESC
+    </select>
+
+    <select id="selectByFieldAndValue" resultMap="FormSuggestionResult">
+        <include refid="selectFormSuggestionVo"/>
+        where field_name = #{fieldName} and field_value = #{fieldValue} and del_flag = '0'
+    </select>
+
+    <insert id="insertFormSuggestion" parameterType="com.ruoyi.erp.model.domain.FormSuggestion" useGeneratedKeys="true" keyProperty="suggestionId">
+        insert into erp_form_suggestion
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="fieldName != null and fieldName != ''">field_name,</if>
+            <if test="fieldValue != null and fieldValue != ''">field_value,</if>
+            <if test="lastUsedTime != null">last_used_time,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateTime != null">update_time,</if>
+            <if test="delFlag != null and delFlag != ''">del_flag,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="fieldName != null and fieldName != ''">#{fieldName},</if>
+            <if test="fieldValue != null and fieldValue != ''">#{fieldValue},</if>
+            <if test="lastUsedTime != null">#{lastUsedTime},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+            <if test="delFlag != null and delFlag != ''">#{delFlag},</if>
+         </trim>
+    </insert>
+
+    <update id="updateFormSuggestion" parameterType="com.ruoyi.erp.model.domain.FormSuggestion">
+        update erp_form_suggestion
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="lastUsedTime != null">last_used_time = #{lastUsedTime},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+        </trim>
+        where suggestion_id = #{suggestionId}
+    </update>
+
+</mapper>

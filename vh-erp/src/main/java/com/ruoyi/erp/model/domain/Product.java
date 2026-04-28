@@ -97,6 +97,10 @@ public class Product implements Serializable
     @Excel(name = "DESCRIPTION")
     private String description;
 
+    /** 描述 */
+    @Excel(name = "中文DESCRIPTION")
+    private String descriptionCn;
+
     /** 大小 */
     @Excel(name = "SIZE")
     private String size;
@@ -108,6 +112,10 @@ public class Product implements Serializable
     /** 备注 */
     @Excel(name = "NOTE")
     private String note;
+
+    /** 中文备注 */
+    @Excel(name = "中文NOTE")
+    private String noteCn;
 
     /** 包含的包材 */
     @Excel(name = "PACKAGEINCLUDE")
@@ -152,5 +160,9 @@ public class Product implements Serializable
     @TableField(exist = false)
     private Map<String, Object> params;
 
+    @TableField(exist = false)
     private List<Media> mediaList;
+
+    @TableField(exist = false)
+    private List<String> mediaUrlList;
 }

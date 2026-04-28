@@ -72,7 +72,6 @@ function transformToProduct(
     id: generateId(),
     productName: data.productName,
     sourceUrl: data.sourceUrl,
-    spu: "",
     tagIds: [],
     mediaUrlList: data.mediaUrlList,
     optionList: data.optionList.map((opt) => ({
@@ -84,7 +83,7 @@ function transformToProduct(
       })),
     })),
     productVariantList: data.productVariantList.map((variant) => ({
-      purchasePrice: variant.purchasePrice ?? 0,
+      purchasePrice: Math.round((variant.purchasePrice ?? 0) * 100),
       mediaUrl: variant.mediaUrl,
       isActiveAvailable: variant.isActiveAvailable,
       optionValueList: variant.optionValueList,

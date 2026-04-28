@@ -35,30 +35,46 @@
         <div
           class="absolute inset-0 bg-gradient-to-t from-primary-deeper/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"
         />
-        <span
-          v-if="product.spu"
-          class="absolute top-2 right-2 px-2 py-0.5 bg-accent/20 backdrop-blur-sm border border-accent/30 text-accent text-[10px] rounded-md font-mono"
-        >
-          {{ product.spu }}
-        </span>
       </div>
 
       <div class="flex-1 p-4 min-w-0 h-[300px] flex flex-col justify-between">
         <div class="space-y-3">
-          <div>
-            <h3
-              class="text-sm font-semibold text-white truncate group-hover:text-accent transition-colors duration-200"
+          <div class="flex items-start justify-between gap-2">
+            <div class="flex-1 min-w-0">
+              <h3
+                class="text-sm font-semibold text-white truncate group-hover:text-accent transition-colors duration-200"
+              >
+                {{ product.productName }}
+              </h3>
+              <a
+                :href="product.sourceUrl"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="text-[11px] text-gray-500 hover:text-accent transition-colors break-all block mt-0.5"
+              >
+                {{ product.sourceUrl }}
+              </a>
+            </div>
+            <button
+              class="flex-shrink-0 w-7 h-7 flex items-center justify-center bg-danger/10 hover:bg-danger/20 border border-danger/20 hover:border-danger/40 rounded-lg text-danger transition-all duration-200 cursor-pointer"
+              title="删除商品"
+              @click="$emit('delete-product', product.id)"
             >
-              {{ product.productName }}
-            </h3>
-            <a
-              :href="product.sourceUrl"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="text-[11px] text-gray-500 hover:text-accent transition-colors break-all block mt-0.5"
-            >
-              {{ product.sourceUrl }}
-            </a>
+              <svg
+                class="w-3.5 h-3.5"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <polyline points="3 6 5 6 21 6" />
+                <path
+                  d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+                />
+                <line x1="10" y1="11" x2="10" y2="17" />
+                <line x1="14" y1="11" x2="14" y2="17" />
+              </svg>
+            </button>
           </div>
 
           <div>
@@ -186,12 +202,7 @@
       <div
         class="absolute inset-0 bg-gradient-to-t from-primary-deeper/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"
       />
-      <span
-        v-if="product.spu"
-        class="absolute top-2 right-2 px-2 py-0.5 bg-accent/20 backdrop-blur-sm border border-accent/30 text-accent text-[10px] rounded-md font-mono"
-      >
-        {{ product.spu }}
-      </span>
+
       <div class="absolute bottom-2 left-2 flex gap-1">
         <span
           class="px-1.5 py-0.5 bg-black/50 backdrop-blur-sm text-white text-[10px] rounded"
@@ -332,7 +343,7 @@
               </div>
               <div class="flex flex-col items-end gap-0.5 flex-shrink-0">
                 <span class="text-accent font-medium font-mono text-[11px]">
-                  ¥{{ variant.purchasePrice.toFixed(2) }}
+                  ¥{{ (variant.purchasePrice / 100).toFixed(2) }}
                 </span>
                 <span
                   :class="[
@@ -352,20 +363,42 @@
     </div>
 
     <div v-else class="flex-1 p-4 space-y-3 min-w-0">
-      <div>
-        <h3
-          class="text-sm font-semibold text-white truncate group-hover:text-accent transition-colors duration-200"
+      <div class="flex items-start justify-between gap-2">
+        <div class="flex-1 min-w-0">
+          <h3
+            class="text-sm font-semibold text-white truncate group-hover:text-accent transition-colors duration-200"
+          >
+            {{ product.productName }}
+          </h3>
+          <a
+            :href="product.sourceUrl"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="text-[11px] text-gray-500 hover:text-accent transition-colors break-all block mt-0.5"
+          >
+            {{ product.sourceUrl }}
+          </a>
+        </div>
+        <button
+          class="flex-shrink-0 w-7 h-7 flex items-center justify-center bg-danger/10 hover:bg-danger/20 border border-danger/20 hover:border-danger/40 rounded-lg text-danger transition-all duration-200 cursor-pointer"
+          title="删除商品"
+          @click="$emit('delete-product', product.id)"
         >
-          {{ product.productName }}
-        </h3>
-        <a
-          :href="product.sourceUrl"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="text-[11px] text-gray-500 hover:text-accent transition-colors break-all block mt-0.5"
-        >
-          {{ product.sourceUrl }}
-        </a>
+          <svg
+            class="w-3.5 h-3.5"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <polyline points="3 6 5 6 21 6" />
+            <path
+              d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+            />
+            <line x1="10" y1="11" x2="10" y2="17" />
+            <line x1="14" y1="11" x2="14" y2="17" />
+          </svg>
+        </button>
       </div>
 
       <div>
@@ -568,7 +601,7 @@
               </span>
             </div>
             <span class="text-accent font-medium font-mono text-[11px]">
-              ¥{{ variant.purchasePrice.toFixed(2) }}
+              ¥{{ (variant.purchasePrice / 100).toFixed(2) }}
             </span>
             <span
               :class="[
@@ -601,7 +634,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
 import type { Product, TagNode } from "@/types";
-import { fetchTagTree, generateSPU } from "@/api";
+import { fetchTagTree } from "@/api";
 import TagSelector from "./TagSelector.vue";
 
 const props = defineProps<{
@@ -613,8 +646,9 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: "delete-image", productId: string, imageIndex: number): void;
   (e: "delete-option", productId: string, optionIndex: number): void;
-  (e: "update-tags", productId: string, tagIds: number[], spu: string): void;
+  (e: "update-tags", productId: string, tagIds: number[]): void;
   (e: "preview", url: string): void;
+  (e: "delete-product", productId: string): void;
 }>();
 
 const showTagSelector = ref(false);
@@ -692,41 +726,29 @@ function toggleTag(tagId: number): void {
   } else {
     currentIds.push(tagId);
   }
-  emit("update-tags", props.product.id, currentIds, props.product.spu);
+  emit("update-tags", props.product.id, currentIds);
 }
 
 function removeTag(tagId: number): void {
   const currentIds = props.product.tagIds.filter((id) => id !== tagId);
-  emit("update-tags", props.product.id, currentIds, props.product.spu);
+  emit("update-tags", props.product.id, currentIds);
 }
 
 async function confirmSelection(): Promise<void> {
   showTagSelector.value = false;
-  let newSpu = props.product.spu;
-  if (!newSpu) {
-    for (const tagId of props.product.tagIds) {
-      const tag = findTagById(tagTree.value, tagId);
-      if (tag && tag.tagType === "MENU" && tag.children.length === 0) {
-        newSpu = await generateSPU(tag);
-        if (newSpu) break;
-      }
-    }
-  }
-  emit("update-tags", props.product.id, props.product.tagIds, newSpu);
-}
 
-function findTagById(tags: TagNode[], id: number): TagNode | null {
-  for (const tag of tags) {
-    if (tag.tagId === id) return tag;
-    if (tag.children.length > 0) {
-      const found = findTagById(tag.children, id);
-      if (found) return found;
-    }
-  }
-  return null;
+  emit("update-tags", props.product.id, props.product.tagIds);
 }
 
 onMounted(() => {
   loadTags();
+
+  // 监听标签缓存变化，自动刷新
+  chrome.storage.onChanged.addListener((changes) => {
+    if (changes.tagTree) {
+      console.log("[ProductCard] 检测到标签缓存更新，重新加载");
+      tagTree.value = changes.tagTree.newValue || [];
+    }
+  });
 });
 </script>

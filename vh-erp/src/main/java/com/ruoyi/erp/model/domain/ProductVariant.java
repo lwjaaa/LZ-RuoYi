@@ -70,6 +70,8 @@ public class ProductVariant implements Serializable
     private Long mediaId;
     @TableField(exist = false)
     private MediaVo media;
+    @TableField(exist = false)
+    private String mediaUrl;
 
     /** 排序位置 列表中的第一个位置是 1 */
     @Excel(name = "排序位置 列表中的第一个位置是 1")

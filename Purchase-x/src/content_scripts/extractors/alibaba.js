@@ -8,6 +8,24 @@ class AlibabaExtractor extends BaseExtractor {
     this._scriptDataParsed = false;
   }
 
+  async extractSourceUrl() {
+    try {
+      const urlObj = new URL(window.location.href);
+      
+      // 1688平台：只保留offerId参数
+      const offerId = urlObj.searchParams.get('offerId');
+      if (offerId) {
+        return `${urlObj.protocol}//${urlObj.hostname}${urlObj.pathname}?offerId=${offerId}`;
+      }
+      
+      // 如果没有offerId，返回原URL
+      return window.location.href;
+    } catch (e) {
+      Logger.warn("URL精简失败", e.message);
+      return window.location.href;
+    }
+  }
+
   _getPageScriptData() {
     if (this._scriptDataParsed) return this._scriptData;
     this._scriptDataParsed = true;
@@ -218,7 +236,7 @@ class AlibabaExtractor extends BaseExtractor {
           const chineseName = prop.prop.replace(/[：:]/g, "").trim();
           if (!chineseName) continue;
 
-          const englishName = generateEnglishName(chineseName, "1688");
+          const englishName = generateEnglishName(chineseName);
 
           const values = [];
           for (const val of prop.value) {
@@ -227,11 +245,7 @@ class AlibabaExtractor extends BaseExtractor {
 
             values.push({
               chineseValue,
-              englishValue: generateEnglishValue(
-                chineseValue,
-                chineseName,
-                "1688",
-              ),
+              englishValue: generateEnglishValue(chineseValue),
               isDisabled: false,
               imageUrl: val.imageUrl ? normalizeImageUrl(val.imageUrl) : "",
               fid: prop.fid || null,

@@ -7,9 +7,7 @@ import com.ruoyi.common.core.page.TableDataInfo;
 import com.ruoyi.common.enums.BusinessType;
 import com.ruoyi.common.utils.poi.ExcelUtil;
 import com.ruoyi.erp.model.domain.Product;
-import com.ruoyi.erp.model.dto.product.ProductBaseInfoEdit;
 import com.ruoyi.erp.model.dto.product.ProductQuery;
-import com.ruoyi.erp.model.dto.product.ProductSelectionEdit;
 import com.ruoyi.erp.model.vo.product.ProductVo;
 import com.ruoyi.erp.service.IProductService;
 import com.ruoyi.erp.service.IProductWizardService;
@@ -124,10 +122,13 @@ public class ProductController extends BaseController {
     public AjaxResult pushResult(@PathVariable Long taskId) {
         return success(productService.getPushResult(taskId));
     }
+/*
 
-    /**
+    */
+/**
      * 编辑/新增 选品信息
-     */
+     *//*
+
     @PreAuthorize("@ss.hasPermi('erp:product:add')")
     @Log(title = "编辑/新增 选品信息", businessType = BusinessType.INSERT)
     @PostMapping("/selectionInfo")
@@ -137,9 +138,11 @@ public class ProductController extends BaseController {
         return success(productWizardService.saveProductWithWizard(product,1));
     }
 
-    /**
+    */
+/**
      * 编辑 商品其他信息16:03:02.718 16:03:02.914
-     */
+     *//*
+
     @PreAuthorize("@ss.hasPermi('erp:product:edit')")
     @Log(title = "编辑/新增 商品其他信息", businessType = BusinessType.UPDATE)
     @PostMapping("/baseInfo")
@@ -148,5 +151,6 @@ public class ProductController extends BaseController {
         Product product = ProductBaseInfoEdit.editToObj(productSelectionEdit);
         return success(productWizardService.saveProductWithWizard(product,2));
     }
+*/
 
 }

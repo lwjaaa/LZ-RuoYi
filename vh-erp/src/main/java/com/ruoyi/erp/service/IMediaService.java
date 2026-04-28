@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.ruoyi.erp.model.domain.Media;
 import com.ruoyi.erp.model.domain.Product;
 import com.ruoyi.erp.model.dto.media.MediaQuery;
+import com.ruoyi.erp.model.vo.media.MediaRenameVo;
 import com.ruoyi.erp.model.vo.media.MediaVo;
 
 import java.util.List;
@@ -99,6 +100,12 @@ public interface IMediaService extends IService<Media>
     List<Media> scanMediaToProduct(String dirPath, String productId);
 
     void updateProductMedia(Product product);
+    /**
+     * 执行媒体文件重命名
+     *
+     * @param toRenameList 需要重命名的媒体文件列表
+     */
+    void doRenameMediaFiles(List<MediaRenameVo> toRenameList);
 
     List<Media> listByProductId(Long productId);
 }

@@ -43,3 +43,8 @@ exchange-rate:
   read-timeout: 10000
   default-base-currency: USD
   target-currencies: CNY
+
+fpx:
+  api:
+    appKey: 29d36ce5-1e53-4559-b233-78385be39acb
+    appSecret: 60f9b9e6-1129-4842-bbf1-507ef83ffea2

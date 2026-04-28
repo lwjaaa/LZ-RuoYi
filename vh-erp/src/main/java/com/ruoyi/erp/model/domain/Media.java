@@ -51,6 +51,10 @@ public class Media implements Serializable
     @Excel(name = "文件名")
     private String filename;
 
+    /** 临时存储文件名 */
+    @TableField(exist = false)
+    private String tempFilename;
+
     /** 替代文本 */
     @Excel(name = "替代文本")
     private String alt;

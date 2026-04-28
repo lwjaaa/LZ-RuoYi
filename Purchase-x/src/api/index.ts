@@ -1,6 +1,28 @@
 import type { ApiResponse, TagNode } from "@/types";
 
-const API_BASE_URL = "http://127.0.0.1:8080/api/erp";
+const STORAGE_KEY = "purchasex_server_domain";
+const DEFAULT_API_BASE_URL = "http://127.0.0.1:8080";
+
+function getApiBaseUrl(): string {
+  const savedDomain = localStorage.getItem(STORAGE_KEY);
+  return savedDomain || DEFAULT_API_BASE_URL;
+}
+
+export function setApiBaseUrl(domain: string): void {
+  if (domain) {
+    localStorage.setItem(STORAGE_KEY, domain);
+  } else {
+    localStorage.removeItem(STORAGE_KEY);
+  }
+}
+
+export function getSavedDomain(): string | null {
+  return localStorage.getItem(STORAGE_KEY);
+}
+
+export function hasValidDomain(): boolean {
+  return !!localStorage.getItem(STORAGE_KEY);
+}
 
 export async function fetchTagTree(forceRefresh = false): Promise<TagNode[]> {
   if (!forceRefresh) {
@@ -10,8 +32,10 @@ export async function fetchTagTree(forceRefresh = false): Promise<TagNode[]> {
     }
   }
 
+  const apiBaseUrl = getApiBaseUrl();
+
   try {
-    const response = await fetch(`${API_BASE_URL}/tag/treelist/ALL`);
+    const response = await fetch(`${apiBaseUrl}/api/erp/tag/treelist/ALL`);
     const result: ApiResponse<TagNode[]> = await response.json();
 
     if (result.code === 200 && result.data) {
@@ -27,27 +51,10 @@ export async function fetchTagTree(forceRefresh = false): Promise<TagNode[]> {
   }
 }
 
-export async function generateSPU(tag: TagNode): Promise<string> {
-  if (tag.tagType !== "MENU" || tag.children.length > 0) {
-    return "";
-  }
-
-  const prefix = tag.spuPrefix;
-  if (!prefix) {
-    return "";
-  }
-
-  const newSeq = tag.currentMaxSeq + 1;
-  const seqStr = newSeq.toString().padStart(4, "0");
-
-  return `${prefix}${seqStr}`;
-}
-
 export async function syncProductToErp(product: {
   productName: string;
   tagIds: number[];
   sourceUrl: string;
-  spu: string;
   mediaUrlList: string[];
   optionList: Array<{
     chineseName: string;
@@ -66,7 +73,9 @@ export async function syncProductToErp(product: {
     }>;
   }>;
 }): Promise<number> {
-  const response = await fetch(`${API_BASE_URL}/product/selectionInfo`, {
+  const apiBaseUrl = getApiBaseUrl();
+
+  const response = await fetch(`${apiBaseUrl}/api/erp/product/selectionInfo`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

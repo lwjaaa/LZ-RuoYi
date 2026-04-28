@@ -2,7 +2,6 @@ package com.ruoyi.erp.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.ruoyi.common.config.RuoYiConfig;
 import com.ruoyi.common.constant.Constants;
@@ -15,13 +14,16 @@ import com.ruoyi.erp.model.domain.Media;
 import com.ruoyi.erp.model.domain.Product;
 import com.ruoyi.erp.model.domain.ProductVariant;
 import com.ruoyi.erp.model.dto.media.MediaQuery;
+import com.ruoyi.erp.model.vo.media.MediaRenameVo;
 import com.ruoyi.erp.model.vo.media.MediaVo;
+import com.ruoyi.erp.model.vo.media.RenameOperationVo;
 import com.ruoyi.erp.service.IMediaService;
-import graphql.com.google.common.collect.Sets;
+import com.ruoyi.erp.utils.MediaFileUtil;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.CollectionUtils;
 
 import java.io.File;
 import java.util.*;
@@ -35,8 +37,7 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Service
-public class MediaServiceImpl extends ServiceImpl<MediaMapper, Media> implements IMediaService
-{
+public class MediaServiceImpl extends ServiceImpl<MediaMapper, Media> implements IMediaService {
 
     @Resource
     private MediaMapper mediaMapper;
@@ -44,6 +45,7 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, Media> implements
     private ProductMapper productMapper;
 
     //region mybatis代码
+
     /**
      * 查询erp媒体
      *
@@ -51,8 +53,7 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, Media> implements
      * @return erp媒体
      */
     @Override
-    public Media selectMediaByMediaId(Long mediaId)
-    {
+    public Media selectMediaByMediaId(Long mediaId) {
         return mediaMapper.selectMediaByMediaId(mediaId);
     }
 
@@ -63,8 +64,7 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, Media> implements
      * @return erp媒体
      */
     @Override
-    public List<Media> selectMediaList(Media media)
-    {
+    public List<Media> selectMediaList(Media media) {
         return mediaMapper.selectMediaList(media);
     }
 
@@ -75,8 +75,7 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, Media> implements
      * @return 结果
      */
     @Override
-    public int insertMedia(Media media)
-    {
+    public int insertMedia(Media media) {
         media.setCreateTime(DateUtils.getNowDate());
         return mediaMapper.insertMedia(media);
     }
@@ -88,8 +87,7 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, Media> implements
      * @return 结果
      */
     @Override
-    public int updateMedia(Media media)
-    {
+    public int updateMedia(Media media) {
         media.setUpdateTime(DateUtils.getNowDate());
         return mediaMapper.updateMedia(media);
     }
@@ -101,8 +99,7 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, Media> implements
      * @return 结果
      */
     @Override
-    public int deleteMediaByMediaIds(Long[] mediaIds)
-    {
+    public int deleteMediaByMediaIds(Long[] mediaIds) {
         return mediaMapper.deleteMediaByMediaIds(mediaIds);
     }
 
@@ -113,30 +110,29 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, Media> implements
      * @return 结果
      */
     @Override
-    public int deleteMediaByMediaId(Long mediaId)
-    {
+    public int deleteMediaByMediaId(Long mediaId) {
         return mediaMapper.deleteMediaByMediaId(mediaId);
     }
+
     //endregion
     @Override
-    public QueryWrapper<Media> getQueryWrapper(MediaQuery mediaQuery){
+    public QueryWrapper<Media> getQueryWrapper(MediaQuery mediaQuery) {
         QueryWrapper<Media> queryWrapper = new QueryWrapper<>();
-        //如果不使用params可以删除
         Map<String, Object> params = mediaQuery.getParams();
         if (StringUtils.isNull(params)) {
             params = new HashMap<>();
         }
         Long productId = mediaQuery.getProductId();
-        queryWrapper.eq( StringUtils.isNotNull(productId),"product_id",productId);
+        queryWrapper.eq(StringUtils.isNotNull(productId), "product_id", productId);
 
         String shopifyMediaId = mediaQuery.getShopifyMediaId();
-        queryWrapper.eq(StringUtils.isNotEmpty(shopifyMediaId) ,"shopify_media_id",shopifyMediaId);
+        queryWrapper.eq(StringUtils.isNotEmpty(shopifyMediaId), "shopify_media_id", shopifyMediaId);
 
         String filename = mediaQuery.getFilename();
-        queryWrapper.like(StringUtils.isNotEmpty(filename) ,"filename",filename);
+        queryWrapper.like(StringUtils.isNotEmpty(filename), "filename", filename);
 
         String alt = mediaQuery.getAlt();
-        queryWrapper.like(StringUtils.isNotEmpty(alt) ,"alt",alt);
+        queryWrapper.like(StringUtils.isNotEmpty(alt), "alt", alt);
 
         return queryWrapper;
     }
@@ -152,57 +148,44 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, Media> implements
     /**
      * 导入erp媒体数据
      *
-     * @param mediaList erp媒体数据列表
+     * @param mediaList       erp媒体数据列表
      * @param isUpdateSupport 是否更新支持，如果已存在，则进行更新数据
-     * @param operName 操作用户
+     * @param operName        操作用户
      * @return 结果
      */
     @Override
-    public String importMediaData(List<Media> mediaList, Boolean isUpdateSupport, String operName)
-    {
-        if (StringUtils.isEmpty(mediaList))
-        {
+    public String importMediaData(List<Media> mediaList, Boolean isUpdateSupport, String operName) {
+        if (StringUtils.isEmpty(mediaList)) {
             throw new ServiceException("导入erp媒体数据不能为空！");
         }
         int successNum = 0;
         int failureNum = 0;
         StringBuilder successMsg = new StringBuilder();
         StringBuilder failureMsg = new StringBuilder();
-        for (Media media : mediaList)
-        {
-            try
-            {
-                // 验证是否存在这个erp媒体
+        for (Media media : mediaList) {
+            try {
                 Long mediaId = media.getMediaId();
                 Media mediaExist = null;
-                if (StringUtils.isNotNull(mediaId))
-                {
+                if (StringUtils.isNotNull(mediaId)) {
                     mediaExist = mediaMapper.selectMediaByMediaId(mediaId);
                 }
-                if (StringUtils.isNull(mediaExist))
-                {
+                if (StringUtils.isNull(mediaExist)) {
                     media.setCreateTime(DateUtils.getNowDate());
                     mediaMapper.insertMedia(media);
                     successNum++;
                     String mediaIdStr = StringUtils.isNotNull(mediaId) ? mediaId.toString() : "新记录";
                     successMsg.append("<br/>" + successNum + "、erp媒体 " + mediaIdStr + " 导入成功");
-                }
-                else if (isUpdateSupport)
-                {
+                } else if (isUpdateSupport) {
                     media.setUpdateTime(DateUtils.getNowDate());
                     mediaMapper.updateMedia(media);
                     successNum++;
                     successMsg.append("<br/>" + successNum + "、erp媒体 " + mediaId.toString() + " 更新成功");
-                }
-                else
-                {
+                } else {
                     failureNum++;
                     String mediaIdStr = StringUtils.isNotNull(mediaId) ? mediaId.toString() : "未知";
                     failureMsg.append("<br/>" + failureNum + "、erp媒体 " + mediaIdStr + " 已存在");
                 }
-            }
-            catch (Exception e)
-            {
+            } catch (Exception e) {
                 failureNum++;
                 Long mediaId = media.getMediaId();
                 String mediaIdStr = StringUtils.isNotNull(mediaId) ? mediaId.toString() : "未知";
@@ -211,13 +194,10 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, Media> implements
                 log.error(msg, e);
             }
         }
-        if (failureNum > 0)
-        {
+        if (failureNum > 0) {
             failureMsg.insert(0, "很抱歉，导入失败！共 " + failureNum + " 条数据格式不正确，错误如下：");
             throw new ServiceException(failureMsg.toString());
-        }
-        else
-        {
+        } else {
             successMsg.insert(0, "恭喜您，数据已全部导入成功！共 " + successNum + " 条，数据如下：");
         }
         return successMsg.toString();
@@ -226,36 +206,389 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, Media> implements
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void updateProductMedia(Product product) {
-        // 根据下标设置media的顺序属性position，
-        List<Media> mediaList = this.listByProductId(product.getProductId());
         Long productId = product.getProductId();
-        if (mediaList == null || mediaList.isEmpty()) {
-            return;
-        }
-        ;
+        String spu = product.getSpu();
+        List<Media> newMediaList = product.getMediaList();
 
-        Set<Long> mediaIds = Sets.newHashSet();
-        for (int i = 0; i < mediaList.size(); i++) {
-            Long mediaId = mediaList.get(i).getMediaId();
-            mediaIds.add(mediaId);
-            this.update(new LambdaUpdateWrapper<>(Media.class)
-                    .eq(Media::getMediaId, mediaId)
-                    .set(Media::getPosition, i));
+        log.info("开始更新商品媒体，商品ID: {}, SPU: {}, 新媒体数量: {}",
+                productId, spu, newMediaList != null ? newMediaList.size() : 0);
+
+        // ==================== 1. 获取数据库中现有的媒体列表 ====================
+        List<Media> existingMediaList = this.listByProductId(productId);
+        if (existingMediaList == null || existingMediaList.isEmpty()) {
+            log.info("商品没有现有媒体记录，直接新增");
+            existingMediaList = new ArrayList<>();
         }
 
-        // 校验规格图片是否存在
-        List<ProductVariant> variantList = product.getProductVariantList();
-        for (int i = 0; i < variantList.size(); i++) {
-            Long mediaId = variantList.get(i).getMediaId();
-            if (mediaId != null && !mediaIds.contains(mediaId)){
-                throw new ServiceException("第" + (i + 1) + "个变体图片不存在！");
+        // 构建现有媒体的 ID -> Media 映射
+        Map<Long, Media> existingMediaMap = existingMediaList.stream()
+                .collect(Collectors.toMap(Media::getMediaId, media -> media));
+
+        // 收集需要保留的媒体 ID
+        Set<Long> keepMediaIds = new HashSet<>();
+
+        // ==================== 2. 处理新媒体列表（根据下标设置 position） ====================
+        if (!CollectionUtils.isEmpty(newMediaList)) {
+            for (int i = 0; i < newMediaList.size(); i++) {
+                Media media = newMediaList.get(i);
+                Long mediaId = media.getMediaId();
+
+                // 设置 position（从 0 开始）
+                media.setPosition(i);
+
+                if (mediaId != null && existingMediaMap.containsKey(mediaId)) {
+                    // 已存在的媒体，更新
+                    media.setUpdateTime(DateUtils.getNowDate());
+                    this.updateById(media);
+                    keepMediaIds.add(mediaId);
+                    log.debug("更新媒体记录，ID: {}, Position: {}", mediaId, i);
+                } else {
+                    // 新增媒体
+                    media.setProductId(productId);
+                    media.setCreateTime(DateUtils.getNowDate());
+                    this.save(media);
+                    keepMediaIds.add(media.getMediaId());
+                    log.debug("新增媒体记录，ID: {}, Position: {}", media.getMediaId(), i);
+                }
             }
         }
 
-        // 删除该商品的其他media。
-        this.remove(new LambdaQueryWrapper<>(Media.class)
+        // ==================== 3. 删除不在新媒体列表中的媒体记录和文件 ====================
+        Set<Long> toDeleteMediaIds = existingMediaMap.keySet().stream()
+                .filter(id -> !keepMediaIds.contains(id))
+                .collect(Collectors.toSet());
+
+        if (!toDeleteMediaIds.isEmpty()) {
+            // 先获取要删除的媒体文件路径
+            List<Media> toDeleteMedias = existingMediaList.stream()
+                    .filter(m -> toDeleteMediaIds.contains(m.getMediaId()))
+                    .collect(Collectors.toList());
+
+            // 删除数据库记录
+            this.removeByIds(toDeleteMediaIds);
+            log.info("删除媒体数据库记录，数量: {}, IDs: {}", toDeleteMediaIds.size(), toDeleteMediaIds);
+
+            // 删除磁盘文件
+            deleteMediaFilesFromDisk(toDeleteMedias, spu);
+        }
+
+        // 第一步：收集需要重命名的媒体文件
+        List<MediaRenameVo> toRenameList = new ArrayList<>();
+
+
+        // ==================== 4. 获取 SKU 绑定的规格图的文件名称 ====================
+        String fileNamePrefix = StringUtils.isNotBlank(spu) ? spu : productId.toString();
+
+        List<ProductVariant> variantList = product.getProductVariantList();
+        this.renameVariantMediaFiles(variantList, newMediaList, fileNamePrefix, toRenameList);
+
+
+        // ==================== 5. 获取 非主图和规格图的文件名称 ====================
+        // 收集所有被变体绑定的媒体ID
+        Set<Long> variantMediaIds = new HashSet<>();
+        if (!CollectionUtils.isEmpty(variantList)) {
+            variantList.stream()
+                    .map(ProductVariant::getMediaId)
+                    .filter(Objects::nonNull)
+                    .forEach(variantMediaIds::add);
+        }
+        // 重命名非主图和非规格图的媒体文件 这个入口肯定有spu了，已spu为文件名前缀
+        renameOtherMediaAndMainMediaFiles(newMediaList, variantMediaIds, spu, toRenameList);
+
+        // ==================== 6. 执行文件重命名 ====================
+        this.doRenameMediaFiles(toRenameList);
+        log.info("商品媒体更新完成，商品ID: {}, 保留媒体数: {}, 删除媒体数: {}",
+                productId, keepMediaIds.size(), toDeleteMediaIds.size());
+    }
+
+    /**
+     * 从磁盘删除媒体文件
+     *
+     * @param medias 要删除的媒体列表
+     * @param spu    商品 SPU（用于定位文件夹）
+     */
+    private void deleteMediaFilesFromDisk(List<Media> medias, String spu) {
+        if (CollectionUtils.isEmpty(medias)) {
+            return;
+        }
+
+        for (Media media : medias) {
+            String nasMediaUrl = media.getNasMediaUrl();
+            if (StringUtils.isEmpty(nasMediaUrl)) {
+                log.warn("媒体文件路径为空，跳过删除，媒体ID: {}", media.getMediaId());
+                continue;
+            }
+
+            try {
+                // 将 URL 转换为文件路径
+                String filePath = convertUrlToFilePath(nasMediaUrl);
+                File file = new File(filePath);
+
+                if (file.exists() && file.isFile()) {
+                    boolean deleted = file.delete();
+                    if (deleted) {
+                        log.info("删除媒体文件成功: {}", filePath);
+                    } else {
+                        log.warn("删除媒体文件失败: {}", filePath);
+                    }
+                } else {
+                    log.warn("媒体文件不存在，跳过删除: {}", filePath);
+                }
+            } catch (Exception e) {
+                log.error("删除媒体文件异常，媒体ID: {}, URL: {}, 错误: {}",
+                        media.getMediaId(), nasMediaUrl, e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * 重命名变体绑定的规格图文件
+     * <p>
+     * 命名规则：SPU_规格值1_规格值2...扩展名
+     * 例如：ABC0001_Red_L.jpg
+     * </p>
+     *
+     * @param variantList 变体列表
+     * @param spu         商品 SPU
+     */
+    private void renameVariantMediaFiles(List<ProductVariant> variantList, List<Media> mediaList, String spu,
+                                         List<MediaRenameVo> toRenameList) {
+        // 第一步：收集需要重命名的媒体文件
+        Map<Long, Media> mediaMap = mediaList.stream().collect(Collectors.toMap(Media::getMediaId, media -> media));
+
+        for (ProductVariant variant : variantList) {
+            Long mediaId = variant.getMediaId();
+            if (mediaId == null) {
+                continue;
+            }
+
+            try {
+                // 查询媒体信息
+                Media media = mediaMap.get(mediaId);
+
+                // 生成新文件名
+                String fileExtension = MediaFileUtil.getFileExtensionByFilename(media.getFilename());
+                String newFilename = MediaFileUtil.getVariantMediaFilename(spu, variant, fileExtension);
+                if (StringUtils.isEmpty(newFilename)) {
+                    log.warn("无法生成新文件名，跳过重命名，媒体ID: {}", mediaId);
+                    continue;
+                }
+
+                // 如果文件名已经相同，跳过
+                if (!newFilename.equals(media.getFilename())) {
+                    toRenameList.add(new MediaRenameVo(media, newFilename));
+                } else {
+                    log.debug("文件名已正确，无需重命名，媒体ID: {}", mediaId);
+                }
+
+            } catch (Exception e) {
+                log.error("重命名变体媒体文件异常，变体ID: {}, 媒体ID: {}, 错误: {}",
+                        variant.getVariantId(), mediaId, e.getMessage(), e);
+            }
+        }
+    }
+
+
+
+    /**
+     * 重命名主图和非规格图的媒体文件
+     * <p>
+     * 命名规则：SPU-序号.扩展名（序号从1开始）
+     * 例如：ABC0001-1.jpg, ABC0001-2.png
+     * </p>
+     *
+     * @param mediaList       所有保留的媒体列表（按 position 排序）
+     * @param variantMediaIds 被变体绑定的媒体ID集合
+     * @param spu             商品 SPU
+     */
+    private void renameOtherMediaAndMainMediaFiles(List<Media> mediaList, Set<Long> variantMediaIds, String spu, List<MediaRenameVo> toRenameList) {
+        if (CollectionUtils.isEmpty(mediaList)) {
+            return;
+        }
+
+        int sequence = 1;
+
+        for (int i = 0; i < mediaList.size(); i++) {
+            Media media = mediaList.get(i);
+            Long mediaId = media.getMediaId();
+            String extension = MediaFileUtil.getFileExtensionByFilename(media.getFilename());
+            // 跳过主图（第一个媒体）
+            if (i == 0) {
+                // 生成新文件名
+
+                String newFilename = MediaFileUtil.getMainMediaFilename(spu, extension);
+
+
+                // 如果文件名已经相同，跳过
+                if (!newFilename.equals(media.getFilename())) {
+                    toRenameList.add(new MediaRenameVo(media, newFilename));
+                } else {
+                    log.debug("文件名已正确，无需重命名，媒体ID: {}", mediaId);
+                }
+                continue;
+            }
+
+            // 跳过被变体绑定的规格图
+            if (variantMediaIds.contains(mediaId)) {
+                log.debug("跳过规格图，媒体ID: {}", mediaId);
+                continue;
+            }
+
+            // 生成新文件名
+            String newFilename =  MediaFileUtil.getOtherMediaFilename(spu, sequence, extension);
+
+            // 如果文件名已经相同，跳过
+            if (!newFilename.equals(media.getFilename())) {
+                toRenameList.add(new MediaRenameVo(media, newFilename));
+            } else {
+                log.debug("文件名已正确，无需重命名，媒体ID: {}", mediaId);
+            }
+
+            sequence++;
+        }
+
+        log.info("其他媒体文件重命名完成，SPU: {}, 处理数量: {}", spu, toRenameList.size());
+
+    }
+
+   
+    @Override
+    public void doRenameMediaFiles(List<MediaRenameVo> toRenameList) {
+        if (toRenameList.isEmpty()) {
+            log.info("没有需要重命名的其他媒体文件");
+            return;
+        }
+
+        // 使用临时文件名进行重命名，避免冲突
+        String timestamp = String.valueOf(System.currentTimeMillis());
+        // 临时文件名映射
+        Map<String, RenameOperationVo> tempFilenameMap = new HashMap<>();
+
+        for (MediaRenameVo task : toRenameList) {
+            try {
+                Media media = task.getMedia();
+                String newFilename = task.getNewFilename();
+
+                String oldFilePath = convertUrlToFilePath(media.getNasMediaUrl());
+                File oldFile = new File(oldFilePath);
+
+                if (!oldFile.exists() || !oldFile.isFile()) {
+                    log.warn("原文件不存在，跳过重命名: {}", oldFilePath);
+                    // 从临时文件名映射中获取临时文件名
+                    RenameOperationVo renameOp = tempFilenameMap.get(newFilename);
+                    if (renameOp.getFile() != null) {
+                        oldFile = renameOp.getFile();
+                    } else {
+                        log.warn("无法获取原文件，跳过重命名，媒体ID: {}", media.getMediaId());
+                        continue;
+                    }
+                }
+
+                // 使用正斜杠作为路径分隔符，保证跨平台一致性
+                String newFilePath = MediaFileUtil.fixFileSeparator(oldFile.getParent() + "/" + newFilename);
+                File newFile = new File(newFilePath);
+
+                // 如果目标文件已存在，先移动到临时文件名
+                if (newFile.exists()) {
+                    log.warn("目标文件已存在，将被移动到临时位置: {}", newFilePath);
+                    String tempFilename = "temp_" + timestamp + "_" + newFilename;
+                    String tempFilePath = MediaFileUtil.fixFileSeparator(oldFile.getParent() + "/" + tempFilename);;
+                    File tempFile = new File(tempFilePath);
+
+                    boolean tempRenamed = newFile.renameTo(tempFile);
+                    if (!tempRenamed) {
+                        log.error("无法将目标文件移动到临时位置: {} -> {}", newFilePath, tempFilePath);
+                        continue;
+                    }
+                    // 记录临时文件名映射，方便后续找到进行重命名
+                    tempFilenameMap.put(newFilename, new RenameOperationVo(tempFilePath, newFilePath, newFile));
+                    log.debug("目标文件已移动到临时位置: {} -> {}", newFilePath, tempFilePath);
+                }
+
+                // 执行重命名
+                boolean renamed = oldFile.renameTo(newFile);
+                if (renamed) {
+                    // 更新数据库记录
+                    media.setFilename(newFilename);
+                    media.setNasMediaUrl(MediaFileUtil.generateNasUrl(newFilePath));
+                    media.setUpdateTime(DateUtils.getNowDate());
+                    this.updateById(media);
+
+                    log.info("重命名其他媒体文件成功: {} -> {}", oldFilePath, newFilePath);
+                } else {
+                    log.error("重命名其他媒体文件失败: {} -> {}", oldFilePath, newFilePath);
+                }
+            } catch (Exception e) {
+                log.error("重命名其他媒体文件异常，媒体ID: {}, 错误: {}",
+                        task.getMedia().getMediaId(), e.getMessage(), e);
+            }
+        }
+
+    }
+
+
+
+    /**
+     * 获取文件扩展名
+     *
+     * @param mediaId 媒体ID
+     * @return 扩展名（不含点）
+     */
+    private String getFileExtension(Long mediaId) {
+        if (mediaId == null) {
+            return null;
+        }
+
+        Media media = this.getById(mediaId);
+        if (media == null || StringUtils.isEmpty(media.getFilename())) {
+            return null;
+        }
+
+        int lastDotIndex = media.getFilename().lastIndexOf('.');
+        if (lastDotIndex > 0 && lastDotIndex < media.getFilename().length() - 1) {
+            return media.getFilename().substring(lastDotIndex + 1);
+        }
+
+        return null;
+    }
+
+
+    /**
+     * 将 URL 转换为文件路径
+     *
+     * @param nasMediaUrl NAS 媒体 URL
+     * @return 文件绝对路径
+     */
+    private String convertUrlToFilePath(String nasMediaUrl) {
+        if (StringUtils.isEmpty(nasMediaUrl)) {
+            return null;
+        }
+
+        // 如果是完整 URL，提取路径部分
+        if (nasMediaUrl.startsWith("http://") || nasMediaUrl.startsWith("https://")) {
+            // 提取 /profile/ 后面的路径
+            int profileIndex = nasMediaUrl.indexOf(Constants.RESOURCE_PREFIX);
+            if (profileIndex >= 0) {
+                String relativePath = nasMediaUrl.substring(profileIndex + Constants.RESOURCE_PREFIX.length());
+                return RuoYiConfig.getProfile() + relativePath;
+            }
+        }
+
+        // 如果已经是相对路径（以 /profile/ 开头）
+        if (nasMediaUrl.startsWith(Constants.RESOURCE_PREFIX)) {
+            String relativePath = nasMediaUrl.substring(Constants.RESOURCE_PREFIX.length());
+            return RuoYiConfig.getProfile() + relativePath;
+        }
+
+        // 否则直接返回
+        return nasMediaUrl;
+    }
+
+    @Override
+    public List<Media> listByProductId(Long productId) {
+        return this.list(new LambdaQueryWrapper<>(Media.class)
                 .eq(Media::getProductId, productId)
-                .notIn(Media::getMediaId, mediaIds));
+                .orderByAsc(Media::getPosition));
     }
 
     @Override
@@ -274,7 +607,6 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, Media> implements
             throw new ServiceException("目录不存在：" + basePath);
         }
 
-        // 获取目录下所有文件
         // 获取目录下所有文件（包括图片和视频）
         File[] files = dir.listFiles((f, name) -> {
             String lowerName = name.toLowerCase();
@@ -293,16 +625,16 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, Media> implements
         });
 
         if (files != null) {
-            this.remove(new LambdaQueryWrapper<>(Media.class).eq(Media::getProductId, productId));
+            this.remove(new LambdaQueryWrapper<>(Media.class).eq(Media::getProductId, Long.parseLong(productId)));
             for (int i = 0; i < files.length; i++) {
                 File file = files[i];
                 Media media = new Media();
                 media.setProductId(Long.parseLong(productId));
                 media.setFilename(file.getName());
-                media.setNasMediaUrl(getFileUrl(file,dirPath));
+                media.setNasMediaUrl(MediaFileUtil.generateNasUrl(file, dirPath));
 
                 // 根据文件扩展名判断媒体类型
-                String mediaType = getMediaType(file.getName());
+                String mediaType = MediaFileUtil.getMediaType(file.getName());
                 media.setMediaContentType(mediaType);
 
                 this.save(media);
@@ -317,41 +649,7 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, Media> implements
     }
 
 
-
-    /**
-     * 根据文件名判断媒体类型
-     */
-    private String getMediaType(String filename) {
-        String lowerName = filename.toLowerCase();
-        if (lowerName.endsWith(".jpg") || lowerName.endsWith(".jpeg") ||
-                lowerName.endsWith(".png") || lowerName.endsWith(".gif") ||
-                lowerName.endsWith(".webp") || lowerName.endsWith(".bmp")) {
-            return "image";
-        } else if (lowerName.endsWith(".mp4") || lowerName.endsWith(".avi") ||
-                lowerName.endsWith(".mov") || lowerName.endsWith(".wmv") ||
-                lowerName.endsWith(".flv") || lowerName.endsWith(".mkv")) {
-            return "video";
-        }
-        return "unknown";
-    }
-
-    /**
-     * 将文件路径转换为可访问的 URL
-     */
-    private String getFileUrl(File file,String dirPath) {
-        String profile = RuoYiConfig.getProfile();
-        String absolutePath = file.getAbsolutePath();
-
-        // 将本地路径转换为资源访问路径
-        if (absolutePath.startsWith(profile)) {
-            return Constants.RESOURCE_PREFIX + absolutePath.substring(profile.length());
-        }
-        return Constants.RESOURCE_PREFIX + "/media/" +dirPath + "/"+ file.getName();
-    }
-
-    @Override
-    public List<Media> listByProductId(Long productId) {
-        return this.list(new LambdaQueryWrapper<>(Media.class).eq(Media::getProductId, productId).orderByAsc(Media::getPosition));
-    }
-
 }
+
+
+

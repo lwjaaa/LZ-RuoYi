@@ -181,6 +181,25 @@ async function handleFetchError(
 
 chrome.runtime.onInstalled.addListener(() => {
   console.log("PurchaseX extension installed");
+  
+  // 创建右键菜单
+  chrome.contextMenus.create({
+    id: "open-dashboard",
+    title: "打开 Dashboard",
+    contexts: ["all"],
+  });
+  
+  chrome.contextMenus.create({
+    id: "fetch-current-product",
+    title: "获取当前商品",
+    contexts: ["page"],
+    documentUrlPatterns: [
+      "https://*.taobao.com/item.htm*",
+      "https://*.tmall.com/item.htm*",
+      "https://detail.tmall.com/item.htm*",
+      "https://*.1688.com/offer/*",
+    ],
+  });
 });
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -263,4 +282,72 @@ chrome.tabs.onRemoved.addListener((tabId) => {
       console.warn(`Tab ${tabId} closed, task ${taskId} marked as failed`);
     }
   });
+});
+
+// 右键菜单点击事件
+chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+  if (!tab || !tab.id) return;
+
+  switch (info.menuItemId) {
+    case "open-dashboard":
+      // 打开 Dashboard 页面
+      try {
+        const dashboardUrl = chrome.runtime.getURL("src/dashboard/index.html");
+        await chrome.tabs.create({ url: dashboardUrl });
+      } catch (error) {
+        console.error("Failed to open dashboard:", error);
+      }
+      break;
+
+    case "fetch-current-product":
+      // 获取当前商品
+      try {
+        const title = tab.title || "未知商品";
+        const url = tab.url || "";
+        
+        if (!url) {
+          console.error("No URL found for current tab");
+          return;
+        }
+
+        // 检查是否已存在
+        const exists = await isProductOrTaskExists(title, url);
+        if (exists) {
+          console.warn("商品已存在或正在获取中");
+          return;
+        }
+
+        // 触发获取流程
+        const platform = detectPlatform(url);
+        const task: FetchTask = {
+          id: url,
+          title,
+          url,
+          platform,
+          status: "pending",
+          totalVariants: 0,
+          currentVariants: 0,
+          progress: 0,
+          startTime: Date.now(),
+        };
+
+        await addTask(task);
+        startTaskTimeout(task.id, tab.id);
+
+        // 发送消息到 content script
+        await chrome.tabs.sendMessage(tab.id, {
+          type: "START_FETCH",
+          payload: { taskId: task.id },
+        });
+
+        await updateTask(task.id, { status: "fetching" });
+        console.log(`开始获取商品: ${title}`);
+      } catch (error) {
+        console.error("Failed to fetch product:", error);
+      }
+      break;
+
+    default:
+      console.warn(`Unknown menu item: ${info.menuItemId}`);
+  }
 });

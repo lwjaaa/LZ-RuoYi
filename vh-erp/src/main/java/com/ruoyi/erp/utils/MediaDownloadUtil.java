@@ -1,9 +1,17 @@
 package com.ruoyi.erp.utils;
 
 import com.ruoyi.common.config.RuoYiConfig;
+import com.ruoyi.common.utils.DateUtils;
 import com.ruoyi.common.utils.StringUtils;
-import com.ruoyi.common.utils.file.FileUtils;
-import com.ruoyi.common.utils.http.HttpUtils;
+import com.ruoyi.erp.constant.MediaConstants;
+import com.ruoyi.erp.mapper.ProductMapper;
+import com.ruoyi.erp.mapper.ProductVariantMapper;
+import com.ruoyi.erp.model.domain.Media;
+import com.ruoyi.erp.model.domain.Product;
+import com.ruoyi.erp.model.domain.ProductVariant;
+import com.ruoyi.erp.model.vo.media.MediaRenameVo;
+import com.ruoyi.erp.service.IMediaService;
+import jakarta.annotation.Resource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -19,7 +27,7 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
+import java.util.Map;
 
 /**
  * 媒体文件下载工具类
@@ -29,7 +37,15 @@ import java.util.UUID;
  */
 @Component
 public class MediaDownloadUtil {
+
+    @Resource
+    private ProductVariantMapper productVariantMapper;
     
+    @Resource
+    private IMediaService mediaService;
+    @Resource
+    private ProductMapper productMapper;
+
     private static final Logger log = LoggerFactory.getLogger(MediaDownloadUtil.class);
     
     /**
@@ -38,63 +54,96 @@ public class MediaDownloadUtil {
     public static final String MEDIA_BASE_PATH = RuoYiConfig.getProfile() + "/media/";
     
     /**
-     * 下载媒体文件列表并保存到SPU专属文件夹
+     * 下载媒体文件列表并保存到SPU专属文件夹，同时创建 Media 数据
      * 
-     * @param spu 商品SPU
+     * @param product 商品对象
      * @param mediaUrlList 媒体文件URL列表
-     * @return 下载成功的文件路径列表
+     * @param mediaUrlVariantMap URL到变体的映射（用于规格图绑定）
+     * @return 下载成功的 Media 对象列表
      */
-    public List<String> downloadMediaFiles(String spu, List<String> mediaUrlList) {
+    public List<Media> downloadMediaFiles(Product product, List<String> mediaUrlList, Map<String, ProductVariant> mediaUrlVariantMap) {
         long startTime = System.currentTimeMillis();
-        List<String> downloadedFiles = new ArrayList<>();
+        List<Media> downloadedMedias = new ArrayList<>();
         int successCount = 0;
         int failCount = 0;
-        
-        if (StringUtils.isEmpty(spu) || mediaUrlList == null || mediaUrlList.isEmpty()) {
+
+        if (mediaUrlList == null || mediaUrlList.isEmpty()) {
             log.warn("SPU或媒体文件列表为空，跳过下载");
-            return downloadedFiles;
+            return downloadedMedias;
         }
-        
-        log.info("开始下载媒体文件，SPU: {}, 文件数量: {}", spu, mediaUrlList.size());
-        
+
+        String filefolder = product.getImageSearchKeyword();
+        log.info("开始下载媒体文件，文件夹: {}, 文件数量: {}", filefolder, mediaUrlList.size());
+
+        // 收集需要重命名的媒体文件
+        List<MediaRenameVo> toRenameList = new ArrayList<>();
         try {
-            // 创建SPU专属文件夹
-            String spuFolderPath = createSpuFolder(spu);
+            // 创建SPU专属文件夹，返回绝对路径
+            String spuFolderPath = createSpuFolder(filefolder);
             if (spuFolderPath == null) {
-                log.error("创建SPU文件夹失败: {}", spu);
-                return downloadedFiles;
+                log.error("创建文件夹失败: {}", filefolder);
+                return downloadedMedias;
             }
-            
+            int sequence = 1;
+
             for (int i = 0; i < mediaUrlList.size(); i++) {
                 String mediaUrl = mediaUrlList.get(i);
-                if (StringUtils.isEmpty(mediaUrl)) {
-                    log.warn("第{}个媒体文件URL为空，跳过", i + 1);
-                    failCount++;
-                    continue;
-                }
-                
                 try {
-                    String savedFilePath = downloadAndSaveMediaFile(mediaUrl, spuFolderPath, i + 1);
-                    if (savedFilePath != null) {
-                        downloadedFiles.add(savedFilePath);
+                    // 下载文件并获取文件信息
+                    DownloadResult result = downloadAndSaveMediaFile(mediaUrl, spuFolderPath, i + 1);
+                    if (result != null) {
+                        // 创建 Media 对象
+                        Media media = createMediaObject(product, result, i);
+                        mediaService.save(media);
+                        // 判断是否是规格图
+                        ProductVariant variant = null;
+                        if (mediaUrlVariantMap != null && mediaUrlVariantMap.containsKey(mediaUrl)) {
+                            variant = mediaUrlVariantMap.get(mediaUrl);
+                        }
+                        String filename;
+
+                        if(variant != null){
+                            // 如果是规格图，绑定到变体
+                            filename = MediaFileUtil.getVariantMediaFilename(filefolder, variant, result.fileExtension);
+                            ProductVariant variantUpdate = new ProductVariant();
+                            variantUpdate.setVariantId(variant.getVariantId());
+                            variantUpdate.setMediaId(media.getMediaId());
+                            productVariantMapper.updateById(variantUpdate);
+                        } else {
+                            if (i == 0) {
+                                // 第一张图为主图, 绑定到商品
+                                filename = MediaFileUtil.getMainMediaFilename(filefolder, result.fileExtension);
+                                Product productUpdate = new Product();
+                                productUpdate.setProductId(product.getProductId());
+                                productUpdate.setMainMediaId(media.getMediaId());
+                                productMapper.updateById(productUpdate);
+                            }else{
+                                filename = MediaFileUtil.getOtherMediaFilename(filefolder, sequence, result.fileExtension);
+                                sequence++;
+                            }
+                        }
+                        toRenameList.add(new MediaRenameVo(media, filename));
+                        
+                        downloadedMedias.add(media);
                         successCount++;
-                        log.info("媒体文件下载成功: {} -> {}", mediaUrl, savedFilePath);
+                        log.info("媒体文件下载成功: {} -> {}, 文件名: {}", mediaUrl, result.filePath, media.getFilename());
                     } else {
                         failCount++;
                         log.warn("媒体文件下载返回null: {}", mediaUrl);
                     }
+
                 } catch (Exception e) {
                     failCount++;
                     log.error("下载媒体文件失败: {}, 错误信息: {}", mediaUrl, e.getMessage());
                     log.debug("详细错误信息:", e);
                 }
             }
-            
+
             long endTime = System.currentTimeMillis();
             long duration = endTime - startTime;
             
-            log.info("媒体文件下载完成，SPU: {}, 成功: {}个, 失败: {}个, 总耗时: {}ms", 
-                    spu, successCount, failCount, duration);
+            log.info("媒体文件下载完成，文件夹: {}, 成功: {}个, 失败: {}个, 总耗时: {}ms",
+                    filefolder, successCount, failCount, duration);
             
             // 记录详细的下载统计信息
             if (failCount > 0) {
@@ -104,38 +153,38 @@ public class MediaDownloadUtil {
             }
             
         } catch (Exception e) {
-            log.error("下载媒体文件整体流程异常，SPU: {}, 错误信息: {}", spu, e.getMessage());
+            log.error("下载媒体文件整体流程异常，文件夹: {}, 错误信息: {}", filefolder, e.getMessage());
             log.debug("详细错误信息:", e);
         }
-        
-        return downloadedFiles;
+        mediaService.doRenameMediaFiles(toRenameList);
+        return downloadedMedias;
     }
     
     /**
      * 创建SPU专属文件夹
      * 
-     * @param spu 商品SPU
+     * @param fileFolder 商品SPU
      * @return 文件夹路径，创建失败返回null
      */
-    private String createSpuFolder(String spu) {
+    private String createSpuFolder(String fileFolder) {
         try {
             // 清理SPU中的非法字符
-            String safeSpu = spu.replaceAll("[^a-zA-Z0-9.-_]", "_");
+            String safeSpu = fileFolder.replaceAll("[^a-zA-Z0-9.-_]", "_");
             String folderPath = MEDIA_BASE_PATH + safeSpu + "/";
             
             File folder = new File(folderPath);
             if (!folder.exists()) {
                 boolean created = folder.mkdirs();
                 if (!created) {
-                    log.error("创建SPU文件夹失败: {}", folderPath);
+                    log.error("创建文件夹失败: {}", folderPath);
                     return null;
                 }
-                log.info("创建SPU文件夹成功: {}", folderPath);
+                log.info("创建文件夹成功: {}", folderPath);
             }
             
             return folderPath;
         } catch (Exception e) {
-            log.error("创建SPU文件夹异常: {}, 错误信息: {}", spu, e.getMessage());
+            log.error("创建文件夹异常: {}, 错误信息: {}", fileFolder, e.getMessage());
             return null;
         }
     }
@@ -146,9 +195,9 @@ public class MediaDownloadUtil {
      * @param mediaUrl 媒体文件URL
      * @param folderPath 保存文件夹路径
      * @param index 文件序号
-     * @return 保存的文件路径，失败返回null
+     * @return 下载结果对象，失败返回null
      */
-    private String downloadAndSaveMediaFile(String mediaUrl, String folderPath, int index) {
+    public DownloadResult downloadAndSaveMediaFile(String mediaUrl, String folderPath, int index) {
         HttpURLConnection connection = null;
         InputStream inputStream = null;
         
@@ -157,8 +206,8 @@ public class MediaDownloadUtil {
             URL url = new URL(mediaUrl);
             connection = (HttpURLConnection) url.openConnection();
             connection.setRequestMethod("GET");
-            connection.setConnectTimeout(30000); // 30秒连接超时
-            connection.setReadTimeout(60000);    // 60秒读取超时
+            connection.setConnectTimeout(60000); // 60秒连接超时
+            connection.setReadTimeout(120000);    // 120秒读取超时
             connection.setRequestProperty("User-Agent", 
                 "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
             
@@ -171,7 +220,7 @@ public class MediaDownloadUtil {
             
             // 获取文件类型和扩展名
             String contentType = connection.getContentType();
-            String fileExtension = getFileExtension(contentType, mediaUrl);
+            String fileExtension = MediaFileUtil.getFileExtensionByUrl(contentType, mediaUrl);
             
             // 生成文件名
             String fileName = generateFileName(index, fileExtension);
@@ -184,7 +233,13 @@ public class MediaDownloadUtil {
             
             // 验证文件完整性
             if (isFileValid(targetPath)) {
-                return filePath;
+                DownloadResult result = new DownloadResult();
+                result.filePath = filePath;
+                result.filename = fileName;
+                result.fileExtension = fileExtension;
+                result.mediaUrl = mediaUrl;
+                result.contentType = contentType;
+                return result;
             } else {
                 log.warn("文件完整性验证失败: {}", filePath);
                 Files.deleteIfExists(targetPath);
@@ -208,49 +263,8 @@ public class MediaDownloadUtil {
             }
         }
     }
-    
-    /**
-     * 获取文件扩展名
-     * 
-     * @param contentType Content-Type
-     * @param mediaUrl 媒体文件URL
-     * @return 文件扩展名
-     */
-    private String getFileExtension(String contentType, String mediaUrl) {
-        // 根据Content-Type判断文件类型
-        if (contentType != null) {
-            if (contentType.startsWith("image/jpeg") || contentType.startsWith("image/jpg")) {
-                return ".jpg";
-            } else if (contentType.startsWith("image/png")) {
-                return ".png";
-            } else if (contentType.startsWith("image/gif")) {
-                return ".gif";
-            } else if (contentType.startsWith("image/webp")) {
-                return ".webp";
-            } else if (contentType.startsWith("video/mp4")) {
-                return ".mp4";
-            } else if (contentType.startsWith("video/avi")) {
-                return ".avi";
-            } else if (contentType.startsWith("video/mov")) {
-                return ".mov";
-            }
-        }
-        
-        // 从URL中提取扩展名
-        if (mediaUrl != null) {
-            int lastDotIndex = mediaUrl.lastIndexOf('.');
-            int lastSlashIndex = mediaUrl.lastIndexOf('/');
-            if (lastDotIndex > lastSlashIndex && lastDotIndex < mediaUrl.length() - 1) {
-                String ext = mediaUrl.substring(lastDotIndex);
-                if (ext.length() <= 5) { // 扩展名通常不超过5个字符
-                    return ext;
-                }
-            }
-        }
-        
-        // 默认扩展名
-        return ".dat";
-    }
+
+
     
     /**
      * 生成文件名
@@ -260,8 +274,47 @@ public class MediaDownloadUtil {
      * @return 文件名
      */
     private String generateFileName(int index, String extension) {
-        return String.format("media_%02d_%s%s", index, 
-                UUID.randomUUID().toString().substring(0, 8), extension);
+        return String.format("media_%02d%s", index, extension);
+    }
+    
+    /**
+     * 创建 Media 对象
+     * 
+     * @param product 商品对象
+     * @param result 下载结果
+     * @param position 位置索引（从0开始）
+     * @return Media 对象
+     */
+    private Media createMediaObject(Product product, DownloadResult result, int position) {
+        Media media = new Media();
+        
+        // 设置商品ID
+        media.setProductId(product.getProductId());
+        
+        // 构建 NAS URL: /profile/media/SPU/filename
+        String safeSpu = (StringUtils.isNotBlank(product.getSpu()) ? product.getSpu() : product.getProductId().toString())
+                .replaceAll("[^a-zA-Z0-9.-_]", "_");
+        media.setNasMediaUrl(MediaFileUtil.generateNasUrl(result.filePath));
+
+        // 设置文件名
+        media.setFilename(result.filename);
+        
+        // 设置位置
+        media.setPosition(position);
+        
+        // 设置媒体类型
+        if (result.contentType != null) {
+            if (result.contentType.startsWith("image/")) {
+                media.setMediaContentType(MediaConstants.TYPE_IMAGE);
+            } else if (result.contentType.startsWith("video/")) {
+                media.setMediaContentType(MediaConstants.TYPE_VIDEO);
+            }
+        }
+        
+        // 设置创建时间
+        media.setCreateTime(DateUtils.getNowDate());
+        
+        return media;
     }
     
     /**
@@ -474,5 +527,16 @@ public class MediaDownloadUtil {
             log.debug("详细错误信息:", e);
             return false;
         }
+    }
+    
+    /**
+     * 下载结果对象
+     */
+    static class DownloadResult {
+        String filePath;        // 文件路径
+        String filename;        // 文件名
+        String fileExtension;   // 文件扩展名
+        String mediaUrl;        // 原始URL
+        String contentType;     // Content-Type
     }
 }

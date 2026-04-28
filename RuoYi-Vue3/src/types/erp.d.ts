@@ -17,6 +17,7 @@ export interface Product {
   productId: number
   shopifyProductId?: string
   productTitle: string
+  productName?: string
   spu: string
   category?: string
   productType?: string
@@ -32,9 +33,11 @@ export interface Product {
   lastSyncTime?: Date
   version?: number
   description?: string
+  descriptionCn?: string
   size?: string
   material?: string
   note?: string
+  noteCn?: string
   packageInclude?: string
   createBy?: string
   createTime?: Date
@@ -46,6 +49,7 @@ export interface Product {
   tagIds?: number[]
   params?: Record<string, unknown>
   mediaList?: Media[]
+  imageSearchKeyword?: string
 }
 
 export interface ProductOption {
@@ -66,9 +70,9 @@ export interface ProductVariant {
   productId: number
   shopifyVariantId?: string
   sku: string
-  price: number
-  compareAtPrice?: number
-  purchasePrice?: number
+  price: number | null
+  compareAtPrice?: number | null
+  purchasePrice?: number | null
   purchaseUrl?: string
   optionValues: string
   optionValueList: ProductVariantOption[]
@@ -79,13 +83,14 @@ export interface ProductVariant {
   pkLength?: number
   materialWeight?: number
   pkWeight?: number
-  freight?: number
+  freight?: number | null
   isActualShipment?: string
   isActiveAvailable?: string
-  unitCostPrice?: number
-  exchangeRate?: number
-  suggestedPrice?: number
-  profitRate?: number
+  unitCostPrice?: number | null
+  exchangeRate?: number | null
+  suggestedPrice?: number | null
+  profit?: number | null
+  profitRate?: number | null
   createBy?: string
   createTime?: Date
   updateBy?: string
@@ -176,10 +181,22 @@ export interface SelectionInfoData {
 }
 
 export interface BaseInfoData {
-  productId: number
-  productTitle?: string
-  bodyHtml?: string
-  mediaList?: Media[]
+  productId: number | undefined;
+  spu: string;
+  productTitle: string;
+  category: string;
+  productType: string;
+  description: string;
+  descriptionCn: string;
+  size: string;
+  material: string;
+  note: string;
+  noteCn: string;
+  packageInclude: string;
+  bodyHtml: string;
+  mediaList: Media[];
+  remark: string;
+  imageSearchKeyword: string;
   productVariantList?: ProductVariant[]
 }
 
@@ -191,8 +208,15 @@ export interface ShippingCalcData {
 }
 
 export interface ShippingResult {
-  freight: number
-  currency?: string
+  lumpSumFee: number
+  estimatedTime?: string
+  logisticsProductCode: string
+  chargeWeight?: number
+  isShowTrack?: string
+  isVolumeCargo?: string
+  remarks?: string
+  trackingNo?: string
+  refNo?: string
 }
 
 export interface DragNodeData {

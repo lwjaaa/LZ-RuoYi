@@ -54,7 +54,7 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
      */
     @Override
     public Product selectProductByProductId(Long productId) {
-        Product product = productMapper.selectProductByProductId(productId);
+        Product product = this.getById(productId);
         if (StringUtils.isNull(product)) {
             return null;
         }
@@ -175,17 +175,17 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
                 Long productId = product.getProductId();
                 Product productExist = null;
                 if (StringUtils.isNotNull(productId)) {
-                    productExist = productMapper.selectProductByProductId(productId);
+                    productExist = this.getById(productId);
                 }
                 if (StringUtils.isNull(productExist)) {
                     product.setCreateTime(DateUtils.getNowDate());
-                    productMapper.insertProduct(product);
+                    this.save(product);
                     successNum++;
                     String productIdStr = StringUtils.isNotNull(productId) ? productId.toString() : "新记录";
                     successMsg.append("<br/>" + successNum + "、erp商品 " + productIdStr + " 导入成功");
                 } else if (isUpdateSupport) {
                     product.setUpdateTime(DateUtils.getNowDate());
-                    productMapper.updateProduct(product);
+                    this.updateById(product);
                     successNum++;
                     successMsg.append("<br/>" + successNum + "、erp商品 " + productId.toString() + " 更新成功");
                 } else {

@@ -5,6 +5,7 @@ import com.ruoyi.common.core.controller.BaseController;
 import com.ruoyi.common.core.domain.AjaxResult;
 import com.ruoyi.common.enums.BusinessType;
 import com.ruoyi.common.utils.poi.ExcelUtil;
+import com.ruoyi.erp.constant.TagConstants;
 import com.ruoyi.erp.model.domain.TagDict;
 import com.ruoyi.erp.model.dto.tagDict.TagDictEdit;
 import com.ruoyi.erp.model.dto.tagDict.TagDictInsert;
@@ -83,6 +84,8 @@ public class TagDictController extends BaseController
     public AjaxResult add(@RequestBody TagDictInsert tagDictInsert)
     {
         TagDict tagDict = TagDictInsert.insertToObj(tagDictInsert);
+
+        checkAndResetParam(tagDict);
         return toAjax(tagDictService.insertTagDict(tagDict));
     }
 
@@ -95,6 +98,7 @@ public class TagDictController extends BaseController
     public AjaxResult edit(@RequestBody TagDictEdit tagDictEdit)
     {
         TagDict tagDict = TagDictEdit.editToObj(tagDictEdit);
+        checkAndResetParam(tagDict);
         return toAjax(tagDictService.updateTagDict(tagDict));
     }
 
@@ -176,5 +180,23 @@ public class TagDictController extends BaseController
     @PostMapping("/top/{tagId}")
     public AjaxResult top(@PathVariable("tagId") Long tagId) {
         return toAjax(tagDictService.top(tagId));
+    }
+
+
+    /**
+     * 参数校验
+     */
+    private void checkAndResetParam(TagDict tagDict){
+        if(tagDict.getTagType() == null){
+            throw new IllegalArgumentException("参数错误");
+        }
+        if(!tagDict.getTagType().equals(TagConstants.TYPE_MENU)){
+            tagDict.setParentId(0L);
+            tagDict.setMenuLevel(1);
+            tagDict.setSpuPrefix(null);
+            tagDict.setCurrentMaxSeq(null);
+            tagDict.setAncestors("0");
+
+        }
     }
 }

@@ -8,6 +8,7 @@
       @refresh-options="handleRefreshOptions"
       @clear="handleClearProducts"
       @refresh="loadProducts"
+      @settings="showSettings = true"
     />
 
     <main class="px-4 sm:px-6 lg:px-8 py-6 max-w-[1920px] mx-auto space-y-5">
@@ -68,6 +69,7 @@
           @delete-option="handleDeleteOption"
           @update-tags="handleUpdateTags"
           @preview="handlePreviewImage"
+          @delete-product="handleDeleteProduct"
         />
       </div>
 
@@ -132,13 +134,24 @@
     />
 
     <Toast ref="toastRef" />
+
+    <SettingsModal
+      v-if="showSettings"
+      @close="showSettings = false"
+      @save="handleSettingsSave"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch, toRaw } from "vue";
 import type { Product, FetchTask } from "@/types";
-import { syncProductToErp } from "@/api";
+import {
+  syncProductToErp,
+  fetchTagTree,
+  setApiBaseUrl,
+  hasValidDomain,
+} from "@/api";
 import DashboardHeader from "./components/DashboardHeader.vue";
 import TaskProgressPanel from "./components/TaskProgressPanel.vue";
 import FilterBar from "./components/FilterBar.vue";
@@ -147,6 +160,7 @@ import ProductCard from "./components/ProductCard.vue";
 import ImagePreviewModal from "./components/ImagePreviewModal.vue";
 import ConfirmModal from "./components/ConfirmModal.vue";
 import Toast from "./components/Toast.vue";
+import SettingsModal from "./components/SettingsModal.vue";
 
 const products = ref<Product[]>([]);
 const taskQueue = ref<FetchTask[]>([]);
@@ -157,6 +171,7 @@ const isLoadingData = ref(true);
 const viewMode = ref<"grid" | "list">("grid");
 const currentPage = ref(1);
 const pageSize = 12;
+const showSettings = ref(false);
 const filterState = ref<FilterState>({
   searchQuery: "",
   sortBy: "default",
@@ -396,10 +411,21 @@ async function handleSync(): Promise<void> {
     return;
   }
 
+  if (!hasValidDomain()) {
+    toastRef.value?.warning("请先设置服务器域名");
+    showSettings.value = true;
+    return;
+  }
+
   const untaggedProducts = products.value.filter((p) => p.tagIds.length === 0);
   if (untaggedProducts.length > 0) {
-    toastRef.value?.warning(`有 ${untaggedProducts.length} 个商品未选择标签`);
-    return;
+    const confirmed = await showConfirm(
+      "确认提交",
+      `有 ${untaggedProducts.length} 个商品未选择标签，是否继续提交？`,
+    );
+    if (!confirmed) {
+      return;
+    }
   }
 
   if (isSyncing.value) {
@@ -418,7 +444,6 @@ async function handleSync(): Promise<void> {
           productName: product.productName,
           tagIds: product.tagIds,
           sourceUrl: product.sourceUrl,
-          spu: product.spu,
           mediaUrlList: product.mediaUrlList,
           optionList: product.optionList,
           productVariantList: product.productVariantList,
@@ -455,6 +480,32 @@ async function handleSync(): Promise<void> {
 
 async function handleRefreshOptions(): Promise<void> {
   console.log("[Dashboard] Refresh options triggered");
+
+  if (!hasValidDomain()) {
+    toastRef.value?.warning("请先设置服务器域名");
+    showSettings.value = true;
+    return;
+  }
+
+  try {
+    // 强制刷新标签树，从服务器获取最新数据
+    await fetchTagTree(true);
+    toastRef.value?.success("标签缓存已刷新");
+  } catch (error) {
+    console.error("[Dashboard] Failed to refresh tags:", error);
+    toastRef.value?.error("刷新标签失败");
+  }
+}
+
+function handleSettingsSave(domain: string): void {
+  setApiBaseUrl(domain);
+  showSettings.value = false;
+
+  if (domain) {
+    toastRef.value?.success("服务器域名已保存");
+  } else {
+    toastRef.value?.info("服务器域名已清除");
+  }
 }
 
 async function handleClearProducts(): Promise<void> {
@@ -518,14 +569,27 @@ async function handleDeleteOption(
 async function handleUpdateTags(
   productId: string,
   tagIds: number[],
-  spu: string,
 ): Promise<void> {
   const product = products.value.find((p) => p.id === productId);
   if (product) {
     product.tagIds = tagIds;
-    product.spu = spu;
     console.log("[Dashboard] Updated product:", products.value);
     await chrome.storage.local.set({ productList: toRaw(products.value) });
+  }
+}
+
+async function handleDeleteProduct(productId: string): Promise<void> {
+  const confirmed = await showConfirm(
+    "确认删除",
+    "确定要删除此商品吗？此操作不可撤销。",
+  );
+  if (confirmed) {
+    const index = products.value.findIndex((p) => p.id === productId);
+    if (index > -1) {
+      products.value.splice(index, 1);
+      await chrome.storage.local.set({ productList: toRaw(products.value) });
+      toastRef.value?.success("商品已删除");
+    }
   }
 }
 

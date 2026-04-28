@@ -3,7 +3,7 @@
   "name": "PurchaseX - 跨境电商选品助手",
   "description": "从淘宝、天猫、1688获取商品信息，同步至ERP系统",
   "version": "1.0.0",
-  "permissions": ["storage", "activeTab", "tabs", "scripting"],
+  "permissions": ["storage", "activeTab", "tabs", "scripting", "contextMenus"],
   "host_permissions": [
     "https://*.taobao.com/*",
     "https://*.tmall.com/*",

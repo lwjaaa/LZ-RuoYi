@@ -7,7 +7,7 @@ import com.ruoyi.common.enums.BusinessType;
 import com.ruoyi.erp.model.domain.Product;
 import com.ruoyi.erp.model.dto.product.ProductBaseInfoEdit;
 import com.ruoyi.erp.model.dto.product.ProductSelectionEdit;
-import com.ruoyi.erp.model.dto.productVariant.ShippingFeeQurey;
+import com.ruoyi.erp.model.dto.shipping.ShippingFeeQuery;
 import com.ruoyi.erp.service.IProductService;
 import com.ruoyi.erp.service.IProductWizardService;
 import jakarta.annotation.Resource;
@@ -59,15 +59,8 @@ public class ProductWizardController extends BaseController {
      * 计算运费
      */
     @PostMapping("/calculateShipping")
-    public AjaxResult calculateShipping(@RequestBody ShippingFeeQurey shippingFeeQurey) {
+    public AjaxResult calculateShipping(@RequestBody ShippingFeeQuery shippingFeeQurey) {
         return success(productWizardService.calculateShipping(shippingFeeQurey));
     }
 
-    /**
-     * 获取今日美国汇率
-     */
-    @GetMapping("/getUsdRate")
-    public AjaxResult getUsdRate() {
-        return success(productWizardService.getUsdRate());
-    }
 }

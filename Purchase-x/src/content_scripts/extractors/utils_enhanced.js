@@ -1,343 +1,387 @@
 // 增强的工具函数 - 针对淘宝、天猫、1688 平台优化
 
+// ==================== 统一的规格名映射表（所有平台共用）====================
+const OPTION_NAME_MAP = {
+  // 颜色相关
+  颜色: "COLOR",
+  颜色分类: "COLOR",
+  配色: "COLOR_SCHEME",
+  花色: "PATTERN",
+  
+  // 尺寸相关
+  尺寸: "SIZE",
+  尺码: "SIZE",
+  大小: "SIZE",
+  
+  // 规格型号
+  规格: "SPECIFICATION",
+  型号: "MODEL",
+  款号: "STYLE_NO",
+  
+  // 款式风格
+  款式: "STYLE",
+  类型: "TYPE",
+  风格: "STYLE_TYPE",
+  
+  // 材质面料
+  材质: "MATERIAL",
+  面料: "FABRIC",
+  成分: "COMPOSITION",
+  质地: "TEXTURE",
+  
+  // 形状图案
+  形状: "SHAPE",
+  图案: "PATTERN_TYPE",
+  花纹: "DESIGN",
+  
+  // 尺寸属性
+  厚度: "THICKNESS",
+  长度: "LENGTH",
+  宽度: "WIDTH",
+  高度: "HEIGHT",
+  深度: "DEPTH",
+  直径: "DIAMETER",
+  
+  // 重量容量
+  重量: "WEIGHT",
+  容量: "CAPACITY",
+  体积: "VOLUME",
+  
+  // 包装套装
+  包装: "PACKAGE",
+  套装: "SET",
+  套餐: "COMBO",
+  组合: "COMBINATION",
+  
+  // 版本配置
+  版本: "VERSION",
+  配置: "CONFIGURATION",
+  等级: "GRADE",
+  
+  // 电子数码
+  网络: "NETWORK",
+  存储: "STORAGE",
+  内存: "MEMORY",
+  处理器: "PROCESSOR",
+  屏幕: "SCREEN",
+  
+  // 适用对象
+  适用场景: "SCENE",
+  适用人群: "TARGET_AUDIENCE",
+  适用性别: "GENDER",
+  适用年龄: "AGE_GROUP",
+  
+  // 时间季节
+  季节: "SEASON",
+  年份: "YEAR",
+  系列: "SERIES",
+  
+  // 品牌产地
+  品牌: "BRAND",
+  产地: "ORIGIN",
+  
+  // 工艺用途
+  工艺: "CRAFT",
+  用途: "USAGE",
+  功能: "FUNCTION",
+  
+  // 其他
+  包装方式: "PACKAGING",
+  装箱数: "CARTON_QTY",
+  颜色备注: "COLOR_NOTE",
+};
+
+// ==================== 统一的规格值映射表（所有平台共用）====================
+const OPTION_VALUE_MAP = {
+  // 颜色
+  黑色: "BLACK",
+  白色: "WHITE",
+  红色: "RED",
+  蓝色: "BLUE",
+  绿色: "GREEN",
+  黄色: "YELLOW",
+  灰色: "GRAY",
+  粉色: "PINK",
+  紫色: "PURPLE",
+  橙色: "ORANGE",
+  棕色: "BROWN",
+  金色: "GOLD",
+  银色: "SILVER",
+  米色: "BEIGE",
+  藏青色: "NAVY",
+  卡其色: "KHAKI",
+  咖啡色: "COFFEE",
+  杏色: "APRICOT",
+  驼色: "CAMEL",
+  多色: "MULTICOLOR",
+  混色: "ASSORTED",
+  随机: "RANDOM",
+  彩色: "COLORFUL",
+  
+  // 尺寸
+  S: "S",
+  M: "M",
+  L: "L",
+  XL: "XL",
+  XXL: "XXL",
+  XXXL: "XXXL",
+  XS: "XS",
+  小: "SMALL",
+  中: "MEDIUM",
+  大: "LARGE",
+  加大: "EXTRA_LARGE",
+  加加大: "XXL",
+  均码: "ONE_SIZE",
+  自由: "FREE_SIZE",
+  
+  // 材质
+  棉质: "COTTON",
+  棉: "COTTON",
+  涤纶: "POLYESTER",
+  聚酯纤维: "POLYESTER",
+  氨纶: "SPANDEX",
+  锦纶: "NYLON",
+  麻: "LINEN",
+  亚麻: "LINEN",
+  羊毛: "WOOL",
+  羊绒: "CASHMERE",
+  丝绸: "SILK",
+  真丝: "SILK",
+  雪纺: "CHIFFON",
+  蕾丝: "LACE",
+  牛仔: "DENIM",
+  皮革: "LEATHER",
+  PU: "PU_LEATHER",
+  人造革: "FAUX_LEATHER",
+  实木: "SOLID_WOOD",
+  木质: "WOOD",
+  金属: "METAL",
+  不锈钢: "STAINLESS_STEEL",
+  合金: "ALLOY",
+  塑料: "PLASTIC",
+  树脂: "RESIN",
+  陶瓷: "CERAMIC",
+  玻璃: "GLASS",
+  水晶: "CRYSTAL",
+  亚克力: "ACRYLIC",
+  硅胶: "SILICONE",
+  橡胶: "RUBBER",
+  纸质: "PAPER",
+  布艺: "FABRIC",
+  帆布: "CANVAS",
+  绒布: "VELVET",
+  牛津布: "OXFORD",
+  尼龙: "NYLON",
+  
+  // 风格
+  中式: "CHINESE_STYLE",
+  新中式: "NEW_CHINESE",
+  欧式: "EUROPEAN",
+  美式: "AMERICAN",
+  现代: "MODERN",
+  简约: "MINIMALIST",
+  北欧: "NORDIC",
+  日式: "JAPANESE",
+  韩式: "KOREAN",
+  复古: "VINTAGE",
+  古典: "CLASSICAL",
+  田园: "PASTORAL",
+  工业风: "INDUSTRIAL",
+  地中海: "MEDITERRANEAN",
+  东南亚: "SOUTHEAST_ASIAN",
+  轻奢: "LIGHT_LUXURY",
+  
+  // 性别
+  男: "MALE",
+  女: "FEMALE",
+  中性: "UNISEX",
+  情侣: "COUPLE",
+  儿童: "KIDS",
+  婴儿: "BABY",
+  成人: "ADULT",
+  
+  // 季节
+  春季: "SPRING",
+  夏季: "SUMMER",
+  秋季: "AUTUMN",
+  冬季: "WINTER",
+  四季: "ALL_SEASONS",
+  春秋: "SPRING_AUTUMN",
+  
+  // 布尔值
+  有: "YES",
+  无: "NO",
+  是: "YES",
+  否: "NO",
+  带: "WITH",
+  不带: "WITHOUT",
+  含: "INCLUDED",
+  不含: "EXCLUDED",
+  
+  // 程度
+  高: "HIGH",
+  中: "MEDIUM",
+  低: "LOW",
+  厚: "THICK",
+  薄: "THIN",
+  长: "LONG",
+  短: "SHORT",
+  宽: "WIDE",
+  窄: "NARROW",
+  深: "DEEP",
+  浅: "LIGHT",
+  亮: "BRIGHT",
+  暗: "DARK",
+  
+  // 透明度
+  透明: "TRANSPARENT",
+  半透明: "TRANSLUCENT",
+  不透明: "OPAQUE",
+  
+  // 产品状态
+  定制: "CUSTOM",
+  成品: "READY_MADE",
+  新款: "NEW",
+  经典: "CLASSIC",
+  基础: "BASIC",
+  升级: "UPGRADED",
+  豪华: "DELUXE",
+  标准: "STANDARD",
+  经济: "ECONOMY",
+  专业: "PROFESSIONAL",
+  
+  // 使用场景
+  家用: "HOUSEHOLD",
+  商用: "COMMERCIAL",
+  户外: "OUTDOOR",
+  室内: "INDOOR",
+  
+  // 功能特性
+  便携: "PORTABLE",
+  折叠: "FOLDABLE",
+  可调节: "ADJUSTABLE",
+  固定: "FIXED",
+  手动: "MANUAL",
+  自动: "AUTOMATIC",
+  电动: "ELECTRIC",
+  智能: "SMART",
+  无线: "WIRELESS",
+  有线: "WIRED",
+  蓝牙: "BLUETOOTH",
+  USB: "USB",
+  "Type-C": "TYPE_C",
+};
+
 /**
  * 生成英文名称（规格名）
  * @param {string} chinese - 中文规格名
- * @param {string} platform - 平台：taobao/tmall/1688
- * @returns {string} 英文规格名
+ * @returns {string} 英文规格名（大写）
  */
-function generateEnglishName(chinese, platform = "taobao") {
+function generateEnglishName(chinese) {
   if (!chinese) return "";
 
-  const platformMaps = {
-    taobao: {
-      颜色: "color",
-      颜色分类: "color",
-      配色: "color_scheme",
-      花色: "pattern",
-      尺寸: "size",
-      尺码: "size",
-      规格: "specification",
-      型号: "model",
-      款式: "style",
-      类型: "type",
-      材质: "material",
-      面料: "fabric",
-      成分: "composition",
-      风格: "style_type",
-      形状: "shape",
-      图案: "pattern_type",
-      厚度: "thickness",
-      长度: "length",
-      宽度: "width",
-      高度: "height",
-      重量: "weight",
-      容量: "capacity",
-      包装: "package",
-      套装: "set",
-      套餐: "combo",
-      版本: "version",
-      配置: "configuration",
-      网络: "network",
-      存储: "storage",
-      内存: "memory",
-    },
-    1688: {
-      颜色: "color",
-      尺寸: "size",
-      规格: "spec",
-      型号: "model_no",
-      款式: "style",
-      材质: "material",
-      等级: "grade",
-      用途: "usage",
-      工艺: "craft",
-      品牌: "brand",
-      产地: "origin",
-      包装方式: "packaging",
-      装箱数: "carton_qty",
-    },
-    tmall: {
-      颜色: "color",
-      尺码: "size",
-      规格: "specification",
-      型号: "model",
-      款式: "style",
-      材质: "material",
-      适用场景: "scene",
-      适用人群: "target_audience",
-      适用性别: "gender",
-      季节: "season",
-      年份: "year",
-      系列: "series",
-    },
-  };
-
   const cleanName = chinese.trim().replace(/[：:]/g, "");
-  const map = platformMaps[platform] || platformMaps.taobao;
 
-  if (map[cleanName]) return map[cleanName];
+  // 1. 精确匹配
+  if (OPTION_NAME_MAP[cleanName]) return OPTION_NAME_MAP[cleanName];
 
-  for (const [key, value] of Object.entries(map)) {
+  // 2. 包含匹配（提高匹配率）
+  for (const [key, value] of Object.entries(OPTION_NAME_MAP)) {
     if (cleanName.includes(key)) return value;
   }
 
-  const pinyinMap = {
-    颜色: "color",
-    尺寸: "size",
-    规格: "spec",
-    材质: "material",
-    型号: "model",
-    款式: "style",
-    类型: "type",
-    图案: "pattern",
-    风格: "style_type",
-  };
-
-  for (const [key, value] of Object.entries(pinyinMap)) {
-    if (cleanName.includes(key)) return value;
+  // 3. 反向包含匹配（如"商品规格"包含"规格"）
+  for (const [key, value] of Object.entries(OPTION_NAME_MAP)) {
+    if (key.includes(cleanName)) return value;
   }
 
+  // 4. 默认处理：转大写
   return cleanName
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, "_")
+    .toUpperCase()
+    .replace(/[^A-Z0-9\s]/g, "_")
     .replace(/\s+/g, "_");
 }
 
 /**
  * 生成英文值（规格值）
  * @param {string} chinese - 中文规格值
- * @param {string} optionName - 规格名（用于上下文）
- * @param {string} platform - 平台：taobao/tmall/1688
- * @returns {string} 英文规格值
+ * @returns {string} 英文规格值（大写）
  */
-function generateEnglishValue(chinese, optionName = "", platform = "taobao") {
+function generateEnglishValue(chinese) {
   if (!chinese) return "";
 
   const cleanValue = chinese.trim();
 
-  const valueMaps = {
-    // 颜色
-    黑色: "black",
-    白色: "white",
-    红色: "red",
-    蓝色: "blue",
-    绿色: "green",
-    黄色: "yellow",
-    灰色: "gray",
-    粉色: "pink",
-    紫色: "purple",
-    橙色: "orange",
-    棕色: "brown",
-    金色: "gold",
-    银色: "silver",
-    米色: "beige",
-    藏青色: "navy",
-    卡其色: "khaki",
-    咖啡色: "coffee",
-    杏色: "apricot",
-    驼色: "camel",
-    多色: "multicolor",
-    混色: "assorted",
-    随机: "random",
+  // 1. 精确匹配
+  if (OPTION_VALUE_MAP[cleanValue]) return OPTION_VALUE_MAP[cleanValue];
 
-    // 尺寸
-    S: "s",
-    M: "m",
-    L: "l",
-    XL: "xl",
-    XXL: "xxl",
-    XXXL: "xxxl",
-    XS: "xs",
-    小: "small",
-    中: "medium",
-    大: "large",
-    加大: "extra_large",
-    均码: "one_size",
-    自由: "free_size",
-
-    // 材质
-    棉质: "cotton",
-    棉: "cotton",
-    涤纶: "polyester",
-    聚酯纤维: "polyester",
-    氨纶: "spandex",
-    锦纶: "nylon",
-    麻: "linen",
-    亚麻: "linen",
-    羊毛: "wool",
-    羊绒: "cashmere",
-    丝绸: "silk",
-    真丝: "silk",
-    雪纺: "chiffon",
-    蕾丝: "lace",
-    牛仔: "denim",
-    皮革: "leather",
-    PU: "pu_leather",
-    人造革: "faux_leather",
-    实木: "solid_wood",
-    木质: "wood",
-    金属: "metal",
-    不锈钢: "stainless_steel",
-    合金: "alloy",
-    塑料: "plastic",
-    树脂: "resin",
-    陶瓷: "ceramic",
-    玻璃: "glass",
-    水晶: "crystal",
-    亚克力: "acrylic",
-    硅胶: "silicone",
-    橡胶: "rubber",
-    纸质: "paper",
-    布艺: "fabric",
-    帆布: "canvas",
-    绒布: "velvet",
-    牛津布: "oxford",
-    尼龙: "nylon",
-
-    // 风格
-    中式: "chinese_style",
-    新中式: "new_chinese",
-    欧式: "european",
-    美式: "american",
-    现代: "modern",
-    简约: "minimalist",
-    北欧: "nordic",
-    日式: "japanese",
-    韩式: "korean",
-    复古: "vintage",
-    古典: "classical",
-    田园: "pastoral",
-    工业风: "industrial",
-    地中海: "mediterranean",
-    东南亚: "southeast_asian",
-    轻奢: "light_luxury",
-
-    // 性别
-    男: "male",
-    女: "female",
-    中性: "unisex",
-    情侣: "couple",
-    儿童: "kids",
-    婴儿: "baby",
-    成人: "adult",
-
-    // 季节
-    春季: "spring",
-    夏季: "summer",
-    秋季: "autumn",
-    冬季: "winter",
-    四季: "all_seasons",
-    春秋: "spring_autumn",
-
-    // 其他
-    有: "yes",
-    无: "no",
-    是: "yes",
-    否: "no",
-    带: "with",
-    不带: "without",
-    含: "included",
-    不含: "excluded",
-    高: "high",
-    中: "medium",
-    低: "low",
-    厚: "thick",
-    薄: "thin",
-    长: "long",
-    短: "short",
-    宽: "wide",
-    窄: "narrow",
-    深: "deep",
-    浅: "light",
-    亮: "bright",
-    暗: "dark",
-    透明: "transparent",
-    半透明: "translucent",
-    不透明: "opaque",
-    定制: "custom",
-    成品: "ready_made",
-    新款: "new",
-    经典: "classic",
-    基础: "basic",
-    升级: "upgraded",
-    豪华: "deluxe",
-    标准: "standard",
-    经济: "economy",
-    专业: "professional",
-    家用: "household",
-    商用: "commercial",
-    户外: "outdoor",
-    室内: "indoor",
-    便携: "portable",
-    折叠: "foldable",
-    可调节: "adjustable",
-    固定: "fixed",
-    手动: "manual",
-    自动: "automatic",
-    电动: "electric",
-    智能: "smart",
-    无线: "wireless",
-    有线: "wired",
-    蓝牙: "bluetooth",
-    USB: "usb",
-    "Type-C": "type_c",
-  };
-
-  if (valueMaps[cleanValue]) return valueMaps[cleanValue];
-
-  for (const [key, value] of Object.entries(valueMaps)) {
+  // 2. 包含匹配（提高匹配率）
+  for (const [key, value] of Object.entries(OPTION_VALUE_MAP)) {
     if (cleanValue.includes(key)) return value;
   }
 
-  // 数字 + 单位
+  // 3. 反向包含匹配
+  for (const [key, value] of Object.entries(OPTION_VALUE_MAP)) {
+    if (key.includes(cleanValue)) return value;
+  }
+
+  // 4. 数字 + 单位（大写）
   const unitMap = {
-    cm: "cm",
-    厘米: "cm",
-    mm: "mm",
-    毫米: "mm",
-    m: "m",
-    米: "m",
-    kg: "kg",
-    千克: "kg",
-    公斤: "kg",
-    g: "g",
-    克: "g",
-    L: "l",
-    升: "l",
-    ml: "ml",
-    毫升: "ml",
-    "cm³": "cm3",
-    立方米: "m3",
-    "㎡": "m2",
-    平方米: "m2",
-    寸: "inch",
-    英寸: "inch",
-    尺: "chi",
-    码: "yard",
-    元: "yuan",
-    "¥": "cny",
-    $: "usd",
-    "€": "eur",
+    cm: "CM",
+    厘米: "CM",
+    mm: "MM",
+    毫米: "MM",
+    m: "M",
+    米: "M",
+    kg: "KG",
+    千克: "KG",
+    公斤: "KG",
+    g: "G",
+    克: "G",
+    L: "L",
+    升: "L",
+    ml: "ML",
+    毫升: "ML",
+    "cm³": "CM3",
+    立方米: "M3",
+    "㎡": "M2",
+    平方米: "M2",
+    寸: "INCH",
+    英寸: "INCH",
+    尺: "CHI",
+    码: "YARD",
+    元: "YUAN",
+    "¥": "CNY",
+    $: "USD",
+    "€": "EUR",
   };
 
   const numUnitMatch = cleanValue.match(
     /^(\d+(?:\.\d+)?)\s*(cm|厘米 |mm|毫米|m|米|kg|千克 | 公斤|g|克|L|升|ml|毫升 | 寸 | 英寸 | 尺 | 码 | 元|¥|\$|€)?$/i,
   );
   if (numUnitMatch) {
-    const num = numUnitMatch[1];
+    let num = parseFloat(numUnitMatch[1]);
     const unit = numUnitMatch[2] || "";
-    const unitEn = unitMap[unit] || unit.toLowerCase();
+    const unitLower = unit.toLowerCase();
+    
+    // 单位转换：厘米转英寸
+    if (unitLower === "cm" || unitLower === "厘米") {
+      const inches = (num / 2.54).toFixed(2);
+      return `${inches}INCH`;
+    }
+    
+    const unitEn = unitMap[unit] || unit.toUpperCase();
     return `${num}${unitEn}`;
   }
 
+  // 5. 默认处理：转大写
   return (
     cleanValue
-      .toLowerCase()
+      .toUpperCase()
       .replace(/[（(][^）)]*[）)]/g, "")
-      .replace(/[^a-z0-9\s\u4e00-\u9fa5]/gi, "")
+      .replace(/[^A-Z0-9\s\u4e00-\u9fa5]/gi, "")
       .replace(/\s+/g, "_")
-      .trim() || "default"
+      .trim() || "DEFAULT"
   );
 }
 

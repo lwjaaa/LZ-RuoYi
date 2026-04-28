@@ -13,13 +13,6 @@ import java.util.List;
  */
 public interface ProductMapper extends BaseMapper<Product>
 {
-    /**
-     * 查询erp商品
-     * 
-     * @param productId erp商品主键
-     * @return erp商品
-     */
-    public Product selectProductByProductId(Long productId);
 
     /**
      * 查询erp商品列表
@@ -28,22 +21,6 @@ public interface ProductMapper extends BaseMapper<Product>
      * @return erp商品集合
      */
     public List<Product> selectProductList(Product product);
-
-    /**
-     * 新增erp商品
-     * 
-     * @param product erp商品
-     * @return 结果
-     */
-    public int insertProduct(Product product);
-
-    /**
-     * 修改erp商品
-     * 
-     * @param product erp商品
-     * @return 结果
-     */
-    public int updateProduct(Product product);
 
     /**
      * 删除erp商品
