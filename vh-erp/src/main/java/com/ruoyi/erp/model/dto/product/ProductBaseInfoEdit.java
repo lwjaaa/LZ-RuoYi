@@ -1,6 +1,8 @@
 package com.ruoyi.erp.model.dto.product;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.ruoyi.erp.model.domain.Media;
 import com.ruoyi.erp.model.domain.Product;
 import com.ruoyi.erp.model.domain.ProductOption;
 import com.ruoyi.erp.model.domain.ProductVariant;
@@ -72,6 +74,8 @@ public class ProductBaseInfoEdit implements Serializable
     private List<ProductVariant> productVariantList;
     /** erp商品媒体信息 */
     private List<Long> mediaIdList;
+
+    private List<Media> mediaList;
 
     /**
      * 对象转封装类

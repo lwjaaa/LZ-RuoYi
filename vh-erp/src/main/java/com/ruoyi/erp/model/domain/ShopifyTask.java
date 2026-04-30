@@ -1,18 +1,17 @@
 package com.ruoyi.erp.model.domain;
 
-import java.io.Serializable;
-import java.util.Map;
-import java.util.Date;
-import java.util.Date;
-import com.fasterxml.jackson.annotation.JsonFormat;
 import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import lombok.Data;
-import com.ruoyi.common.annotation.Excel;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.ruoyi.common.annotation.Excel;
+import lombok.Data;
+
+import java.io.Serializable;
+import java.util.Date;
+import java.util.Map;
 /**
  * Shopify 任务配置对象 erp_shopify_task
  *
@@ -29,20 +28,26 @@ public class ShopifyTask implements Serializable
     @TableId(value = "task_id", type = IdType.ASSIGN_ID)
     private Long taskId;
 
+    /** 关联的店铺ID */
+    private Long storeId;
+
+    /** Shopify 店铺名称 */
+    private String shopName;
+
     /** 任务名称 */
     @Excel(name = "任务名称")
     private String taskName;
 
     /** 任务分组（商品管理/媒体管理） */
-    @Excel(name = "任务分组", readConverterExp = "商=品管理/媒体管理", dictType = "erp_task_group")
+    @Excel(name = "任务分组", readConverterExp = "商品管理/媒体管理", dictType = "erp_task_group")
     private String taskGroup;
 
     /** 任务类型（PRODUCT_CREATE=商品创建，MEDIA_SYNC=媒体同步） */
-    @Excel(name = "任务类型", readConverterExp = "P=RODUCT_CREATE=商品创建，MEDIA_SYNC=媒体同步", dictType = "erp_task_type")
+    @Excel(name = "任务类型", readConverterExp = "PRODUCT_CREATE=商品创建，MEDIA_SYNC=媒体同步", dictType = "erp_task_type")
     private String taskType;
 
     /** 关联业务类型（PRODUCT=商品，MEDIA=媒体） */
-    @Excel(name = "关联业务类型", readConverterExp = "P=RODUCT=商品，MEDIA=媒体", dictType = "erp_task_business_type")
+    @Excel(name = "关联业务类型", readConverterExp = "PRODUCT=商品，MEDIA=媒体", dictType = "erp_task_business_type")
     private String businessType;
 
     /** 关联业务 ID 集合（英文逗号分割，如：123,456） */
@@ -58,12 +63,12 @@ public class ShopifyTask implements Serializable
     private String requestParams;
 
     /** 任务状态（PENDING=待执行，RUNNING=执行中，SUCCESS=成功，FAILED=失败，PARTIAL_SUCCESS=部分成功，CANCELLED=已取消） */
-    @Excel(name = "任务状态", readConverterExp = "P=ENDING=待执行，RUNNING=执行中，SUCCESS=成功，FAILED=失败，PARTIAL_SUCCESS=部分成功，CANCELLED=已取消", dictType = "erp_task_status")
+    @Excel(name = "任务状态", readConverterExp = "PENDING=待执行，RUNNING=执行中，SUCCESS=成功，FAILED=失败，PARTIAL_SUCCESS=部分成功，CANCELLED=已取消", dictType = "erp_task_status")
     private String taskStatus;
 
     /** 执行进度（0-100） */
-    @Excel(name = "执行进度", readConverterExp = "0=-100")
-    private Long progress;
+    @Excel(name = "执行进度", readConverterExp = "0-100")
+    private Integer progress;
 
     /** 错误信息 */
     @Excel(name = "错误信息")
@@ -88,12 +93,24 @@ public class ShopifyTask implements Serializable
     private Date endTime;
 
     /** 父任务 ID（用于任务分解） */
-    @Excel(name = "父任务 ID", readConverterExp = "用=于任务分解")
+    @Excel(name = "父任务 ID", readConverterExp = "用于任务分解")
     private Long parentTaskId;
 
     /** 根任务 ID（用于追踪批量任务） */
-    @Excel(name = "根任务 ID", readConverterExp = "用=于追踪批量任务")
+    @Excel(name = "根任务 ID", readConverterExp = "用于追踪批量任务")
     private Long rootTaskId;
+
+    /** 总数（批量任务总数） */
+    @Excel(name = "总数")
+    private Integer totalCount;
+
+    /** 成功数 */
+    @Excel(name = "成功数")
+    private Integer successCount;
+
+    /** 失败数 */
+    @Excel(name = "失败数")
+    private Integer failedCount;
 
     /** 备注 */
     @Excel(name = "备注")

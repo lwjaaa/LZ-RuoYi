@@ -1,94 +1,128 @@
 <template>
-  <div class="app-container">
-    <el-form
-      :model="queryParams"
-      ref="queryRef"
-      :inline="true"
-      v-show="showSearch"
-      label-width="68px"
-    >
-      <el-form-item label="商品标题" prop="productTitle">
-        <el-input
-          v-model="queryParams.productTitle"
-          placeholder="请输入商品标题"
-          clearable
-          @keyup.enter="handleQuery"
-        />
-      </el-form-item>
-      <el-form-item label="SPU" prop="spu">
-        <el-input
-          v-model="queryParams.spu"
-          placeholder="请输入 SPU"
-          clearable
-          @keyup.enter="handleQuery"
-        />
-      </el-form-item>
-      <el-form-item label="商品类别" prop="category">
-        <el-input
-          v-model="queryParams.category"
-          placeholder="请输入商品类别"
-          clearable
-          @keyup.enter="handleQuery"
-        />
-      </el-form-item>
-      <el-form-item label="商品类型" prop="productType">
-        <el-input
-          v-model="queryParams.productType"
-          placeholder="请输入商品类型"
-          clearable
-          @keyup.enter="handleQuery"
-        />
-      </el-form-item>
-      <el-form-item label="发布状态" prop="status">
-        <el-select
-          v-model="queryParams.status"
-          style="width: 200px"
-          placeholder="请选择发布状态"
-          clearable
-        >
-          <el-option
-            v-for="dict in erp_product_status"
-            :key="dict.value"
-            :label="dict.label"
-            :value="dict.value"
+  <div class="app-container product-list-panel">
+    <!-- 搜索区域 -->
+    <div class="search-section">
+      <el-form
+        :model="queryParams"
+        ref="queryRef"
+        :inline="true"
+        v-show="showSearch"
+        label-width="68px"
+      >
+        <!-- 主要查询条件 - 默认展示 -->
+        <el-form-item label="商品标题" prop="productTitle">
+          <el-input
+            v-model="queryParams.productTitle"
+            placeholder="请输入商品标题"
+            clearable
+            style="width: 150px"
+            @keyup.enter="handleQuery"
           />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="同步状态" prop="syncStatus">
-        <el-select
-          v-model="queryParams.syncStatus"
-          style="width: 200px"
-          placeholder="请选择同步状态"
-          clearable
-        >
-          <el-option
-            v-for="dict in erp_product_sync_status"
-            :key="dict.value"
-            :label="dict.label"
-            :value="dict.value"
+        </el-form-item>
+        <el-form-item label="SPU" prop="spu">
+          <el-input
+            v-model="queryParams.spu"
+            placeholder="请输入 SPU"
+            clearable
+            style="width: 120px"
+            @keyup.enter="handleQuery"
           />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="同步时间" style="width: 308px">
-        <el-date-picker
-          v-model="daterangeLastSyncTime"
-          value-format="YYYY-MM-DD"
-          type="daterange"
-          range-separator="-"
-          start-placeholder="开始日期"
-          end-placeholder="结束日期"
-        ></el-date-picker>
-      </el-form-item>
-      <el-form-item>
-        <el-button type="primary" icon="Search" @click="handleQuery"
-          >搜索</el-button
-        >
-        <el-button icon="Refresh" @click="resetQuery">重置</el-button>
-      </el-form-item>
-    </el-form>
+        </el-form-item>
+        <el-form-item label="发布状态" prop="status">
+          <el-select
+            v-model="queryParams.status"
+            style="width: 140px"
+            placeholder="请选择"
+            clearable
+          >
+            <el-option
+              v-for="dict in erp_product_status"
+              :key="dict.value"
+              :label="dict.label"
+              :value="dict.value"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" icon="Search" @click="handleQuery"
+            >搜索</el-button
+          >
+          <el-button icon="Refresh" @click="resetQuery">重置</el-button>
+          <el-button
+            type="primary"
+            @click="expandSearchVisible = !expandSearchVisible"
+          >
+            {{ expandSearchVisible ? "收起" : "展开" }}
+            <el-icon class="el-icon--right">
+              <ArrowUp v-if="expandSearchVisible" />
+              <ArrowDown v-else />
+            </el-icon>
+          </el-button>
+        </el-form-item>
+      </el-form>
 
-    <el-row :gutter="10" class="mb8">
-      <el-col :span="1.5">
+      <!-- 次要查询条件 - 可折叠 -->
+      <el-collapse-transition>
+        <el-form
+          v-show="expandSearchVisible"
+          :model="queryParams"
+          :inline="true"
+          label-width="68px"
+          class="secondary-search"
+        >
+          <el-form-item label="商品类别" prop="category">
+            <el-input
+              v-model="queryParams.category"
+              placeholder="请输入商品类别"
+              clearable
+              style="width: 120px"
+              @keyup.enter="handleQuery"
+            />
+          </el-form-item>
+          <el-form-item label="商品类型" prop="productType">
+            <el-select
+              v-model="queryParams.productType"
+              style="width: 140px"
+              placeholder="请选择"
+              clearable
+            >
+              <el-option label="普通商品" value="0" />
+              <el-option label="变体商品" value="1" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="同步状态" prop="syncStatus">
+            <el-select
+              v-model="queryParams.syncStatus"
+              style="width: 140px"
+              placeholder="请选择"
+              clearable
+            >
+              <el-option
+                v-for="dict in erp_product_sync_status"
+                :key="dict.value"
+                :label="dict.label"
+                :value="dict.value"
+              />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="同步时间" style="width: 280px">
+            <el-date-picker
+              v-model="daterangeLastSyncTime"
+              value-format="YYYY-MM-DD"
+              type="daterange"
+              range-separator="-"
+              start-placeholder="开始"
+              end-placeholder="结束"
+              style="width: 240px"
+            />
+          </el-form-item>
+        </el-form>
+      </el-collapse-transition>
+    </div>
+
+    <!-- 操作按钮区域 - 固定左侧 -->
+    <el-row :gutter="10" class="mb8 action-bar">
+      <el-col :span="1.5" class="fixed-actions">
         <el-button
           type="primary"
           plain
@@ -98,7 +132,7 @@
           >选品</el-button
         >
       </el-col>
-      <el-col :span="1.5">
+      <el-col :span="1.5" class="fixed-actions">
         <el-button
           type="success"
           plain
@@ -109,7 +143,7 @@
           >修改</el-button
         >
       </el-col>
-      <el-col :span="1.5">
+      <el-col :span="1.5" class="fixed-actions">
         <el-button
           type="danger"
           plain
@@ -120,7 +154,7 @@
           >删除</el-button
         >
       </el-col>
-      <el-col :span="1.5">
+      <el-col :span="1.5" class="fixed-actions">
         <el-button
           type="info"
           plain
@@ -130,7 +164,7 @@
           >导入</el-button
         >
       </el-col>
-      <el-col :span="1.5">
+      <el-col :span="1.5" class="fixed-actions">
         <el-button
           type="warning"
           plain
@@ -140,39 +174,130 @@
           >导出</el-button
         >
       </el-col>
+      <el-col :span="1.5" class="fixed-actions">
+        <el-button
+          type="success"
+          plain
+          icon="Promotion"
+          @click="handlePushToShopify"
+          v-hasPermi="['erp:product:push']"
+          >推送 Shopify</el-button
+        >
+      </el-col>
       <right-toolbar
         v-model:showSearch="showSearch"
         @queryTable="getList"
         :columns="columns"
-      ></right-toolbar>
+      />
     </el-row>
 
+    <!-- 商品表格 -->
     <el-table
       v-loading="loading"
       :data="productList"
       @selection-change="handleSelectionChange"
+      @expand-change="handleExpandChange"
+      :row-key="(row) => row.productId"
+      border
+      style="width: 100%"
+      :header-cell-style="{ background: '#f5f7fa', color: '#606266' }"
     >
-      <el-table-column type="selection" width="55" align="center" />
+      <el-table-column type="selection" width="55" align="center" fixed />
+      <el-table-column type="expand" width="50" fixed>
+        <template #default="props">
+          <div class="variant-expand">
+            <h4>变体信息</h4>
+            <el-table
+              v-if="props.row.variants && props.row.variants.length > 0"
+              :data="props.row.variants"
+              size="small"
+              border
+              style="width: 80%"
+            >
+              <el-table-column
+                label="SKU"
+                align="center"
+                prop="sku"
+                width="150"
+                show-overflow-tooltip
+              />
+              <el-table-column
+                label="规格"
+                align="center"
+                prop="optionValues"
+                width="200"
+                show-overflow-tooltip
+              >
+                <template #default="scope">
+                  {{ formatVariantOptions(scope.row) }}
+                </template>
+              </el-table-column>
+              <el-table-column
+                label="采购价(¥)"
+                align="center"
+                prop="purchasePrice"
+                width="100"
+              />
+              <el-table-column
+                label="销售价($)"
+                align="center"
+                prop="salePrice"
+                width="100"
+              />
+              <el-table-column
+                label="库存"
+                align="center"
+                prop="stock"
+                width="80"
+              />
+              <el-table-column
+                label="重量(kg)"
+                align="center"
+                prop="weight"
+                width="90"
+              />
+              <el-table-column
+                label="状态"
+                align="center"
+                prop="status"
+                width="80"
+              >
+                <template #default="scope">
+                  <el-tag
+                    :type="scope.row.status === '0' ? 'success' : 'info'"
+                    size="small"
+                  >
+                    {{ scope.row.status === "0" ? "启用" : "禁用" }}
+                  </el-tag>
+                </template>
+              </el-table-column>
+            </el-table>
+            <el-empty v-else description="暂无变体数据" />
+          </div>
+        </template>
+      </el-table-column>
       <el-table-column
         label="SPU"
         align="center"
         prop="spu"
-        v-if="columns[0].visible"
-        :show-overflow-tooltip="true"
+        width="120"
+        v-if="colSpu.visible"
+        show-overflow-tooltip
       />
       <el-table-column
         label="商品标题"
-        align="center"
+        align="left"
         prop="productTitle"
-        v-if="columns[1].visible"
-        :show-overflow-tooltip="true"
+        min-width="200"
+        v-if="colProductTitle.visible"
+        show-overflow-tooltip
       />
       <el-table-column
         label="主图"
         align="center"
         prop="mainMediaId"
-        width="100"
-        v-if="columns[2].visible"
+        width="80"
+        v-if="colMainMedia.visible"
       >
         <template #default="scope">
           <image-preview
@@ -183,59 +308,20 @@
         </template>
       </el-table-column>
       <el-table-column
-        label="商品类别"
+        label="类别"
         align="center"
         prop="category"
-        v-if="columns[3].visible"
-        :show-overflow-tooltip="true"
+        width="100"
+        v-if="colCategory.visible"
+        show-overflow-tooltip
       />
-      <el-table-column
-        label="商品类型"
-        align="center"
-        prop="productType"
-        v-if="columns[4].visible"
-        :show-overflow-tooltip="true"
-      />
-      <el-table-column
-        label="来源 URL"
-        align="center"
-        prop="sourceUrl"
-        v-if="columns[5].visible"
-        :show-overflow-tooltip="true"
-      />
-      <el-table-column
-        label="采购链接"
-        align="center"
-        prop="purchaseUrl"
-        v-if="columns[6].visible"
-        :show-overflow-tooltip="true"
-      />
-      <el-table-column
-        label="商品选项"
-        align="center"
-        prop="optionJson"
-        v-if="columns[7].visible"
-        :show-overflow-tooltip="true"
-      />
-      <el-table-column
-        label="创建时间"
-        align="center"
-        prop="createTime"
-        width="180"
-        v-if="columns[9].visible"
-        :show-overflow-tooltip="true"
-      >
-        <template #default="scope">
-          <span>{{
-            parseTime(scope.row.lastSyncTime, "{y}-{m}-{d} {h}:{i}:{s}")
-          }}</span>
-        </template>
-      </el-table-column>
+
       <el-table-column
         label="发布状态"
         align="center"
         prop="status"
-        v-if="columns[10].visible"
+        width="90"
+        v-if="colStatus.visible"
       >
         <template #default="scope">
           <dict-tag :options="erp_product_status" :value="scope.row.status" />
@@ -245,7 +331,8 @@
         label="同步状态"
         align="center"
         prop="syncStatus"
-        v-if="columns[11].visible"
+        width="90"
+        v-if="colSyncStatus.visible"
       >
         <template #default="scope">
           <dict-tag
@@ -258,66 +345,44 @@
         label="同步时间"
         align="center"
         prop="lastSyncTime"
-        width="180"
-        v-if="columns[12].visible"
-        :show-overflow-tooltip="true"
+        width="150"
+        v-if="colLastSyncTime.visible"
       >
         <template #default="scope">
           <span>{{
-            parseTime(scope.row.lastSyncTime, "{y}-{m}-{d} {h}:{i}:{s}")
+            parseTime(scope.row.lastSyncTime, "{y}-{m}-{d} {h}:{i}")
           }}</span>
         </template>
       </el-table-column>
-      // 备注
+      <el-table-column
+        label="采购链接"
+        align="center"
+        prop="purchaseUrl"
+        width="120"
+        v-if="colPurchaseUrl.visible"
+        show-overflow-tooltip
+      />
       <el-table-column
         label="备注"
         align="left"
         prop="remark"
-        width="250"
-        v-if="columns[13].visible"
-        :show-overflow-tooltip="true"
+        min-width="150"
+        v-if="colRemark.visible"
+        show-overflow-tooltip
       />
 
+      <!-- 动态显示的其他列 -->
       <el-table-column
-        label="DESCRIPTION"
-        align="center"
-        prop="description"
-        v-if="columns[14].visible"
-        :show-overflow-tooltip="true"
+        v-for="col in dynamicColumns"
+        :key="col.key"
+        :label="col.label"
+        :align="col.label === 'DESCRIPTION' ? 'left' : 'center'"
+        :prop="col.prop"
+        :width="col.width || 120"
+        show-overflow-tooltip
       />
-      <el-table-column
-        label="SIZE"
-        align="center"
-        prop="size"
-        v-if="columns[15].visible"
-        :show-overflow-tooltip="true"
-      />
-      <el-table-column
-        label="MATERIAL"
-        align="center"
-        prop="material"
-        v-if="columns[16].visible"
-        :show-overflow-tooltip="true"
-      />
-      <el-table-column
-        label="NOTE"
-        align="center"
-        prop="note"
-        v-if="columns[17].visible"
-        :show-overflow-tooltip="true"
-      />
-      <el-table-column
-        label="PACKAGEINCLUDE"
-        align="center"
-        prop="packageInclude"
-        v-if="columns[18].visible"
-        :show-overflow-tooltip="true"
-      />
-      <el-table-column
-        label="操作"
-        align="center"
-        class-name="small-padding fixed-width"
-      >
+
+      <el-table-column label="操作" align="center" width="120" fixed="right">
         <template #default="scope">
           <el-button
             link
@@ -329,7 +394,7 @@
           >
           <el-button
             link
-            type="primary"
+            type="danger"
             icon="Delete"
             @click="handleDelete(scope.row)"
             v-hasPermi="['erp:product:remove']"
@@ -339,22 +404,30 @@
       </el-table-column>
     </el-table>
 
-    <pagination
-      v-show="total > 0"
-      :total="total"
-      v-model:page="queryParams.pageNum"
-      v-model:limit="queryParams.pageSize"
-      @pagination="getList"
-    />
-
-    <!-- 商品创建向导组件 -->
-    <!-- <ProductCreationWizard
-      v-model="wizardVisible"
-      :edit-data="currentEditData"
-      :selected-tag-ids="selectedTagIds"
-      @submit="handleWizardSubmit"
-      @refresh="getList"
-    /> -->
+    <div class="pagination-wrapper">
+      <div
+        class="selected-tags"
+        v-show="selectedTags && selectedTags.length > 0"
+      >
+        <span class="tag-label">已选标签：</span>
+        <el-tag
+          v-for="tag in selectedTags"
+          :key="tag.tagId"
+          size="small"
+          closable
+          @close="handleRemoveTag(tag)"
+        >
+          {{ tag.tagName }}
+        </el-tag>
+      </div>
+      <pagination
+        v-show="total > 0"
+        :total="total"
+        v-model:page="queryParams.pageNum"
+        v-model:limit="queryParams.pageSize"
+        @pagination="getList"
+      />
+    </div>
 
     <!-- erp 商品导入对话框 -->
     <el-dialog
@@ -403,11 +476,18 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, toRefs, onMounted, getCurrentInstance } from "vue";
-import { listProduct, getProduct, delProduct } from "@/api/erp/product";
+import {
+  ref,
+  reactive,
+  toRefs,
+  onMounted,
+  getCurrentInstance,
+  computed,
+} from "vue";
+import { listProduct, getProduct, delProduct, pushBatch, getPushResult } from "@/api/erp/product";
 import { getToken } from "@/utils/auth";
 import { parseTime } from "@/utils/ruoyi";
-import { UploadFilled } from "@element-plus/icons-vue";
+import { UploadFilled, ArrowDown, ArrowUp, Promotion } from "@element-plus/icons-vue";
 import type { Product, PageQuery } from "@/types/erp";
 
 interface ProductQuery extends PageQuery {
@@ -425,7 +505,9 @@ interface ProductQuery extends PageQuery {
 interface ColumnConfig {
   key: number;
   label: string;
+  prop?: string;
   visible: boolean;
+  width?: number;
 }
 
 interface UploadConfig {
@@ -445,6 +527,10 @@ interface SelectedTag {
   tagType?: string;
 }
 
+const emit = defineEmits<{
+  (e: "remove-tag", tag: SelectedTag): void;
+}>();
+
 const props = defineProps<{
   selectedTags?: SelectedTag[];
 }>();
@@ -463,7 +549,7 @@ const single = ref<boolean>(true);
 const multiple = ref<boolean>(true);
 const total = ref<number>(0);
 const daterangeLastSyncTime = ref<string[]>([]);
-const daterangeCreateTime = ref<string[]>([]);
+const expandSearchVisible = ref<boolean>(false);
 
 const creationWizardModal = ref<any>(null);
 
@@ -491,27 +577,83 @@ const data = reactive({
     lastSyncTime: null,
   } as ProductQuery,
   columns: [
-    { key: 0, label: "SPU", visible: true },
-    { key: 1, label: "商品标题", visible: true },
-    { key: 2, label: "主图", visible: true },
-    { key: 3, label: "商品类别", visible: true },
-    { key: 4, label: "商品类型", visible: true },
-    { key: 5, label: "来源 URL", visible: true },
-    { key: 6, label: "采购链接", visible: true },
-    { key: 7, label: "商品选项", visible: true },
-    { key: 8, label: "采购商品选项", visible: true },
-    { key: 9, label: "创建时间", visible: true },
-    { key: 10, label: "发布状态", visible: true },
-    { key: 11, label: "同步状态", visible: true },
-    { key: 12, label: "同步时间", visible: true },
-    { key: 13, label: "备注", visible: true },
-    { key: 14, label: "DESCRIPTION", visible: true },
-    { key: 15, label: "SIZE", visible: true },
-    { key: 16, label: "MATERIAL", visible: true },
-    { key: 17, label: "NOTE", visible: true },
-    { key: 18, label: "PACKAGEINCLUDE", visible: true },
+    { key: 0, label: "SPU", prop: "spu", visible: true },
+    { key: 1, label: "商品标题", prop: "productTitle", visible: true },
+    { key: 2, label: "主图", prop: "mainMediaId", visible: true },
+    { key: 3, label: "商品类别", prop: "category", visible: true },
+    { key: 4, label: "商品类型", prop: "productType", visible: true },
+    { key: 5, label: "来源 URL", prop: "sourceUrl", visible: false },
+    { key: 6, label: "采购链接", prop: "purchaseUrl", visible: true },
+    { key: 7, label: "商品选项", prop: "optionJson", visible: false },
+    {
+      key: 8,
+      label: "采购商品选项",
+      prop: "purchaseOptionJson",
+      visible: false,
+    },
+    { key: 9, label: "创建时间", prop: "createTime", visible: false },
+    { key: 10, label: "发布状态", prop: "status", visible: true },
+    { key: 11, label: "同步状态", prop: "syncStatus", visible: true },
+    { key: 12, label: "同步时间", prop: "lastSyncTime", visible: true },
+    { key: 13, label: "备注", prop: "remark", visible: true },
+    {
+      key: 14,
+      label: "DESCRIPTION",
+      prop: "description",
+      visible: false,
+      width: 150,
+    },
+    { key: 15, label: "SIZE", prop: "size", visible: false },
+    { key: 16, label: "MATERIAL", prop: "material", visible: false },
+    { key: 17, label: "NOTE", prop: "note", visible: false },
+    {
+      key: 18,
+      label: "PACKAGEINCLUDE",
+      prop: "packageInclude",
+      visible: false,
+    },
   ] as ColumnConfig[],
 });
+
+// 动态列 - 只显示配置为可见的且不在主要列中的列
+const dynamicColumns = computed(() => {
+  const mainKeys = [0, 1, 2, 3, 4, 6, 10, 11, 12, 13];
+  return data.columns.filter(
+    (col) => !mainKeys.includes(col.key) && col.visible,
+  );
+});
+
+// 主列可见性 - 使用 computed 安全获取
+const colSpu = computed(
+  () => data.columns.find((c) => c.key === 0) || { visible: false },
+);
+const colProductTitle = computed(
+  () => data.columns.find((c) => c.key === 1) || { visible: false },
+);
+const colMainMedia = computed(
+  () => data.columns.find((c) => c.key === 2) || { visible: false },
+);
+const colCategory = computed(
+  () => data.columns.find((c) => c.key === 3) || { visible: false },
+);
+const colProductType = computed(
+  () => data.columns.find((c) => c.key === 4) || { visible: false },
+);
+const colPurchaseUrl = computed(
+  () => data.columns.find((c) => c.key === 6) || { visible: false },
+);
+const colStatus = computed(
+  () => data.columns.find((c) => c.key === 10) || { visible: false },
+);
+const colSyncStatus = computed(
+  () => data.columns.find((c) => c.key === 11) || { visible: false },
+);
+const colLastSyncTime = computed(
+  () => data.columns.find((c) => c.key === 12) || { visible: false },
+);
+const colRemark = computed(
+  () => data.columns.find((c) => c.key === 13) || { visible: false },
+);
 
 const { queryParams, columns, exportUrl, upload } = toRefs(data);
 const uploadRef = ref<any>();
@@ -528,13 +670,6 @@ function getList(): void {
     queryParams.value.params["endLastSyncTime"] =
       daterangeLastSyncTime.value[1];
   }
-  if (
-    null != daterangeCreateTime.value &&
-    daterangeCreateTime.value.length > 0
-  ) {
-    queryParams.value.params["beginCreateTime"] = daterangeCreateTime.value[0];
-    queryParams.value.params["endCreateTime"] = daterangeCreateTime.value[1];
-  }
   listProduct(queryParams.value as ProductQuery).then((response: any) => {
     productList.value = response.rows;
     total.value = response.total;
@@ -549,8 +684,10 @@ function handleQuery(): void {
 
 function resetQuery(): void {
   daterangeLastSyncTime.value = [];
-  daterangeCreateTime.value = [];
   proxy.resetForm("queryRef");
+  queryParams.value.category = null;
+  queryParams.value.productType = null;
+  queryParams.value.syncStatus = null;
   handleQuery();
 }
 
@@ -558,6 +695,26 @@ function handleSelectionChange(selection: Product[]): void {
   ids.value = selection.map((item) => item.productId);
   single.value = selection.length != 1;
   multiple.value = !selection.length;
+}
+
+function handleExpandChange(row: Product, expanded: boolean): void {
+  console.log("展开行变化:", row.productId, expanded);
+}
+
+function formatVariantOptions(variant: any): string {
+  if (!variant.optionValues) return "-";
+  try {
+    const options = JSON.parse(variant.optionValues);
+    return Object.entries(options)
+      .map(([key, value]) => `${key}: ${value}`)
+      .join(", ");
+  } catch {
+    return variant.optionValues || "-";
+  }
+}
+
+function handleRemoveTag(tagToRemove: SelectedTag): void {
+  emit("remove-tag", tagToRemove);
 }
 
 function handleAdd(): void {
@@ -632,6 +789,51 @@ function importTemplate(): void {
   );
 }
 
+function handlePushToShopify(): void {
+  if (!ids.value.length) {
+    proxy.$modal.msgWarning("请先选择要推送的商品");
+    return;
+  }
+  proxy.$modal.confirm("是否确认推送选中的商品到 Shopify？")
+    .then(() => {
+      return pushBatch({
+        category: null,
+        tagIds: null,
+        syncStatus: null,
+        selectAll: false,
+        productQuery: {
+          pageNum: 1,
+          pageSize: 1000,
+          productTitle: null,
+          spu: null,
+          status: null,
+          syncStatus: null,
+          category: null,
+          productType: null,
+          mainMediaId: null,
+          lastSyncTime: null,
+          params: {}
+        }
+      });
+    })
+    .then((res: any) => {
+      proxy.$modal.msgSuccess("已创建推送任务，任务ID: " + res.data.taskId);
+      // 打开任务进度弹窗
+      openTaskProgress(res.data.taskId);
+    })
+    .catch(() => {});
+}
+
+function openTaskProgress(taskId: number): void {
+  proxy.$prompt("任务ID: " + taskId + "\n\n请在推送任务页面查看进度", "推送任务已创建", {
+    confirmButtonText: "打开任务页面",
+    cancelButtonText: "稍后查看",
+    type: "info",
+  }).then(() => {
+    proxy.$tab.openPage("Shopify 推送任务", "/erp/task");
+  }).catch(() => {});
+}
+
 function handleFileUploadProgress(event: any, file: any, fileList: any): void {
   upload.value.isUploading = true;
 }
@@ -663,4 +865,76 @@ defineExpose({
 });
 </script>
 
-<style scoped></style>
+<style scoped lang="scss">
+.product-list-panel {
+  .search-section {
+    background: #fff;
+    padding: 16px;
+    border-radius: 4px;
+    margin-bottom: 12px;
+  }
+
+  .secondary-search {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px dashed #ebeef5;
+  }
+
+  .action-bar {
+    margin-bottom: 12px;
+    position: sticky;
+    left: 0;
+    background: #fff;
+    z-index: 10;
+    padding: 8px 0;
+  }
+
+  .fixed-actions {
+    flex-shrink: 0;
+  }
+
+  .variant-expand {
+    padding: 12px 20px;
+    background: #fafafa;
+
+    h4 {
+      margin: 0 0 12px 0;
+      font-size: 14px;
+      color: #303133;
+    }
+  }
+
+  :deep(.el-table) {
+    .el-table__header th {
+      font-weight: 600;
+    }
+    .el-table__row:hover {
+      background-color: #f5f7fa;
+    }
+  }
+
+  .pagination-wrapper {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .pagination-wrapper :deep(.pagination-container) {
+    margin-left: auto;
+  }
+
+  .selected-tags {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .tag-label {
+    font-size: 12px;
+    color: #6c757d;
+    white-space: nowrap;
+  }
+}
+</style>

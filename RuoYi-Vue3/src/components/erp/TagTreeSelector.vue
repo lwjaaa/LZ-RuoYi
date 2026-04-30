@@ -257,28 +257,32 @@ defineExpose({
   openAddDialog,
 });
 
-// Lifecycle
-onMounted(async () => {
-  await loadTags();
+// Sync tree checkboxes with selectedTags prop
+const syncTreeSelection = () => {
+  if (!tree.value) return;
   if (props.selectedTags && props.selectedTags.length > 0) {
     const ids = props.selectedTags.map((tag) => tag.tagId);
     tree.value.setCheckedKeys(ids);
     selectedTagIds.value = ids;
+  } else {
+    tree.value.setCheckedKeys([]);
+    selectedTagIds.value = [];
   }
+};
+
+// Lifecycle
+onMounted(async () => {
+  await loadTags();
+  await nextTick();
+  syncTreeSelection();
 });
 
 // Watch for changes in selectedTags prop
 watch(
   () => props.selectedTags,
-  (newSelectedTags) => {
-    if (newSelectedTags && newSelectedTags.length > 0) {
-      const ids = newSelectedTags.map((tag) => tag.tagId);
-      tree.value.setCheckedKeys(ids);
-      selectedTagIds.value = ids;
-    } else {
-      tree.value.setCheckedKeys([]);
-      selectedTagIds.value = [];
-    }
+  async () => {
+    await nextTick();
+    syncTreeSelection();
   },
   { deep: true },
 );

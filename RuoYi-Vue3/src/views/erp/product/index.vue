@@ -14,7 +14,11 @@
         </div>
       </div>
       <div class="panel-content" v-show="!isCollapsed">
-        <TagTreeSelector ref="tagTree" @selection-change="handleTagSelection" />
+        <TagTreeSelector
+          ref="tagTree"
+          :selected-tags="selectedTags"
+          @selection-change="handleTagSelection"
+        />
       </div>
     </div>
 
@@ -48,24 +52,11 @@
 
     <!-- 右侧内容区域 -->
     <div class="right-panel" :class="{ 'is-collapsed': isCollapsed }">
-      <div class="content-header">
-        <h3 class="content-title">商品管理</h3>
-        <div class="selected-tags" v-if="selectedTags.length > 0">
-          <span class="tag-label">已选标签：</span>
-          <el-tag
-            v-for="tag in selectedTags"
-            :key="tag.tagId"
-            size="small"
-            closable
-            @close="removeTag(tag)"
-          >
-            {{ tag.tagName }}
-          </el-tag>
-        </div>
-      </div>
-      <div class="content-body">
-        <ProductListPanel ref="productList" :selected-tags="selectedTags" />
-      </div>
+      <ProductListPanel
+        ref="productList"
+        :selected-tags="selectedTags"
+        @remove-tag="removeTag"
+      />
     </div>
   </div>
 </template>
@@ -380,18 +371,6 @@ onBeforeUnmount(() => {
   font-weight: 500;
   color: #212529;
   margin: 0;
-}
-
-.selected-tags {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.tag-label {
-  font-size: 12px;
-  color: #6c757d;
-  white-space: nowrap;
 }
 
 .content-body {

@@ -7,6 +7,7 @@ import com.ruoyi.common.core.page.TableDataInfo;
 import com.ruoyi.common.enums.BusinessType;
 import com.ruoyi.common.utils.poi.ExcelUtil;
 import com.ruoyi.erp.model.domain.Product;
+import com.ruoyi.erp.model.dto.product.ProductPushRequest;
 import com.ruoyi.erp.model.dto.product.ProductQuery;
 import com.ruoyi.erp.model.vo.product.ProductVo;
 import com.ruoyi.erp.service.IProductService;
@@ -104,53 +105,31 @@ public class ProductController extends BaseController {
     }
 
     /**
-     * 批量推送任务
+     * 批量推送商品到 Shopify
+     * POST /erp/product/push-batch
      */
     @PreAuthorize("@ss.hasPermi('erp:product:push')")
     @Log(title = "批量推送", businessType = BusinessType.OTHER)
-    @PostMapping("/erp/product/push-batch")
-    public AjaxResult pushBatch(@RequestBody List<Long> productIds) {
-        Long taskId = productService.pushBatchAsync(productIds);
+    @PostMapping("/push-batch")
+    public AjaxResult pushBatch(@RequestBody ProductPushRequest request) {
+        Long taskId = productService.pushBatchByCondition(
+                request.getCategory(),
+                request.getTagIds(),
+                request.getSyncStatus(),
+                request.getSelectAll(),
+                request.getProductQuery()
+        );
         return success().put("taskId", taskId);
     }
 
     /**
      * 查询推送结果
+     * GET /erp/product/push-result/{taskId}
      */
     @PreAuthorize("@ss.hasPermi('erp:product:push')")
     @GetMapping("/push-result/{taskId}")
     public AjaxResult pushResult(@PathVariable Long taskId) {
         return success(productService.getPushResult(taskId));
     }
-/*
-
-    */
-/**
-     * 编辑/新增 选品信息
-     *//*
-
-    @PreAuthorize("@ss.hasPermi('erp:product:add')")
-    @Log(title = "编辑/新增 选品信息", businessType = BusinessType.INSERT)
-    @PostMapping("/selectionInfo")
-    public AjaxResult saveSelectionInfo(@RequestBody ProductSelectionEdit productSelectionEdit) {
-        // 事务控制：保存 SPU -> 更新 Tag 流水号 -> 保存 Variants -> 保存 Media
-        Product product = ProductSelectionEdit.editToObj(productSelectionEdit);
-        return success(productWizardService.saveProductWithWizard(product,1));
-    }
-
-    */
-/**
-     * 编辑 商品其他信息16:03:02.718 16:03:02.914
-     *//*
-
-    @PreAuthorize("@ss.hasPermi('erp:product:edit')")
-    @Log(title = "编辑/新增 商品其他信息", businessType = BusinessType.UPDATE)
-    @PostMapping("/baseInfo")
-    public AjaxResult saveProductBaseInfo(@RequestBody ProductBaseInfoEdit productSelectionEdit) {
-        // 事务控制：保存 SPU -> 更新 Tag 流水号 -> 保存 Variants -> 保存 Media
-        Product product = ProductBaseInfoEdit.editToObj(productSelectionEdit);
-        return success(productWizardService.saveProductWithWizard(product,2));
-    }
-*/
 
 }

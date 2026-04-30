@@ -141,11 +141,19 @@ export interface Task {
   taskId: number
   taskName?: string
   taskGroup?: string
-  invokeTarget?: string
-  cronExpression?: string
-  misfirePolicy?: string
-  concurrent?: string
-  status?: string
+  taskType?: string
+  businessType?: string
+  businessIds?: string
+  taskStatus?: string
+  progress?: number
+  errorMessage?: string
+  resultData?: string
+  executionTime?: number
+  startTime?: Date
+  endTime?: Date
+  totalCount?: number
+  successCount?: number
+  failedCount?: number
   createBy?: string
   createTime?: Date
   updateBy?: string

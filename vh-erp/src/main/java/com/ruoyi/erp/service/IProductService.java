@@ -84,6 +84,18 @@ public interface IProductService extends IService<Product>
     public Long pushBatchAsync(List<Long> productIds);
 
     /**
+     * 按条件批量推送商品到Shopify
+     *
+     * @param category 分类
+     * @param tagIds 标签ID列表
+     * @param syncStatus 同步状态
+     * @param selectAll 是否全量
+     * @param productQuery 自定义查询条件
+     * @return 任务ID
+     */
+    public Long pushBatchByCondition(String category, String tagIds, String syncStatus, Boolean selectAll, ProductQuery productQuery);
+
+    /**
      * 获取推送结果
      *
      * @param taskId 任务ID

@@ -5,11 +5,14 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.ruoyi.common.exception.ServiceException;
 import com.ruoyi.common.utils.DateUtils;
 import com.ruoyi.common.utils.StringUtils;
+import com.ruoyi.erp.constant.ShopifyTaskContants;
+import com.ruoyi.erp.executor.ShopifySyncExecutor;
 import com.ruoyi.erp.mapper.ProductMapper;
 import com.ruoyi.erp.mapper.TagDictMapper;
 import com.ruoyi.erp.model.domain.Media;
 import com.ruoyi.erp.model.domain.Product;
 import com.ruoyi.erp.model.domain.ProductVariant;
+import com.ruoyi.erp.model.domain.ShopifyTask;
 import com.ruoyi.erp.model.dto.product.ProductQuery;
 import com.ruoyi.erp.model.vo.media.MediaVo;
 import com.ruoyi.erp.model.vo.product.ProductVo;
@@ -17,6 +20,7 @@ import com.ruoyi.erp.service.IMediaService;
 import com.ruoyi.erp.service.IProductService;
 import com.ruoyi.erp.service.IProductTagRelService;
 import com.ruoyi.erp.service.IProductVariantService;
+import com.ruoyi.erp.service.IShopifyTaskService;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,8 +47,10 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
     private IProductVariantService productVariantService;
     @Resource
     private IMediaService mediaService;
-
-    //region mybatis代码
+    @Resource
+    private IShopifyTaskService shopifyTaskService;
+    @Resource
+    private ShopifySyncExecutor shopifySyncExecutor;
 
     /**
      * 查询erp商品
@@ -77,7 +83,7 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
      */
     @Override
     public List<ProductVo> selectProductList(Product product) {
-        List<Product> list = productMapper.selectProductList(product);
+        List<Product> list = baseMapper.selectProductList(product);
         List<ProductVo> listVo = list.stream().map(ProductVo::objToVo).collect(Collectors.toList());
         listVo.forEach(vo -> {
             vo.setTagCodeList(productTagRelService.selectTagCodeListByProductId(vo.getProductId()));
@@ -213,11 +219,79 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
 
     @Override
     public Long pushBatchAsync(List<Long> productIds) {
-        return 0L;
+        if (productIds == null || productIds.isEmpty()) {
+            return null;
+        }
+
+        // 创建 ShopifyTask
+        ShopifyTask task = new ShopifyTask();
+        task.setTaskName("批量推送商品-" + DateUtils.getNowDate());
+        task.setTaskGroup(ShopifyTaskContants.TASK_GROUP_PRODUCT);
+        task.setTaskType(ShopifyTaskContants.TASK_TYPE_PRODUCT_SYNC_BATCH);
+        task.setBusinessType(ShopifyTaskContants.TASK_BUSINESS_TYPE_PRODUCT);
+        task.setBusinessIds(String.join(",", productIds.stream().map(String::valueOf).toList()));
+        task.setTaskStatus(ShopifyTaskContants.TASK_STATUS_PENDING);
+        task.setProgress(0);
+        task.setTotalCount(productIds.size());
+        task.setSuccessCount(0);
+        task.setFailedCount(0);
+        task.setCreateTime(new Date());
+        shopifyTaskService.insertShopifyTask(task);
+
+        // 异步执行
+        shopifySyncExecutor.execute(task.getTaskId(), productIds);
+
+        return task.getTaskId();
+    }
+
+    @Override
+    public Long pushBatchByCondition(String category, String tagIds, String syncStatus, Boolean selectAll, ProductQuery productQuery) {
+        // 构建查询条件
+        Product product = new Product();
+        if (productQuery != null) {
+            product = ProductQuery.queryToObj(productQuery);
+        }
+        if (StringUtils.isNotEmpty(category)) {
+            product.setCategory(category);
+        }
+        if (StringUtils.isNotEmpty(syncStatus)) {
+            product.setSyncStatus(syncStatus);
+        }
+
+        // 查询商品列表
+        List<Product> productList = this.baseMapper.selectProductList(product);
+        List<Long> productIds = productList.stream().map(Product::getProductId).toList();
+
+        if (productIds.isEmpty()) {
+            return null;
+        }
+
+        // 创建 ShopifyTask
+        ShopifyTask task = new ShopifyTask();
+        task.setTaskName("批量推送商品(条件)-" + DateUtils.getNowDate());
+        task.setTaskGroup("0");
+        task.setTaskType("PRODUCT_CREATE_BATCH");
+        task.setBusinessType("PRODUCT");
+        task.setBusinessIds(String.join(",", productIds.stream().map(String::valueOf).toList()));
+        task.setTaskStatus("PENDING");
+        task.setProgress(0);
+        task.setTotalCount(productIds.size());
+        task.setSuccessCount(0);
+        task.setFailedCount(0);
+        task.setCreateTime(new Date());
+        shopifyTaskService.insertShopifyTask(task);
+
+        // 异步执行
+        shopifySyncExecutor.execute(task.getTaskId(), productIds);
+
+        return task.getTaskId();
     }
 
     @Override
     public Object getPushResult(Long taskId) {
-        return null;
+        if (taskId == null) {
+            return null;
+        }
+        return shopifyTaskService.selectShopifyTaskByTaskId(taskId);
     }
 }

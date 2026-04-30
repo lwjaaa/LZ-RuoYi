@@ -163,7 +163,20 @@
           <dict-tag :options="dict.type.erp_task_status" :value="scope.row.taskStatus"/>
         </template>
       </el-table-column>
-        <el-table-column label="执行进度" :show-overflow-tooltip="true" align="center" v-if="columns[9].visible" prop="progress" />
+        <el-table-column label="执行进度" :show-overflow-tooltip="true" align="center" v-if="columns[9].visible" prop="progress">
+        <template slot-scope="scope">
+          <el-progress :percentage="scope.row.progress || 0" :color="getProgressColor(scope.row.taskStatus)" />
+        </template>
+      </el-table-column>
+        <el-table-column label="统计" align="center" width="120" v-if="columns[18].visible">
+        <template slot-scope="scope">
+          <span class="task-stats">
+            <span class="success">{{ scope.row.successCount || 0 }}</span> /
+            <span class="total">{{ scope.row.totalCount || 0 }}</span> /
+            <span class="failed">{{ scope.row.failedCount || 0 }}</span>
+          </span>
+        </template>
+      </el-table-column>
         <el-table-column label="错误信息" :show-overflow-tooltip="true" align="center" v-if="columns[10].visible" prop="errorMessage" />
         <el-table-column label="执行结果数据" :show-overflow-tooltip="true" align="center" v-if="columns[11].visible" prop="resultData" />
         <el-table-column label="执行耗时" :show-overflow-tooltip="true" align="center" v-if="columns[12].visible" prop="executionTime" />
@@ -333,19 +346,20 @@ export default {
           { key: 2, label: '任务分组', visible: true },
           { key: 3, label: '任务类型', visible: true },
           { key: 4, label: '关联业务类型', visible: true },
-          { key: 5, label: '关联业务 ID 集合', visible: true },
-          { key: 6, label: '请求地址', visible: true },
-          { key: 7, label: '请求参数', visible: true },
+          { key: 5, label: '关联业务 ID 集合', visible: false },
+          { key: 6, label: '请求地址', visible: false },
+          { key: 7, label: '请求参数', visible: false },
           { key: 8, label: '任务状态', visible: true },
           { key: 9, label: '执行进度', visible: true },
+          { key: 18, label: '统计', visible: true },
           { key: 10, label: '错误信息', visible: true },
-          { key: 11, label: '执行结果数据', visible: true },
-          { key: 12, label: '执行耗时', visible: true },
-          { key: 13, label: '开始执行时间', visible: true },
-          { key: 14, label: '结束时间', visible: true },
-          { key: 15, label: '父任务 ID', visible: true },
-          { key: 16, label: '根任务 ID', visible: true },
-          { key: 17, label: '备注', visible: true },
+          { key: 11, label: '执行结果数据', visible: false },
+          { key: 12, label: '执行耗时', visible: false },
+          { key: 13, label: '开始执行时间', visible: false },
+          { key: 14, label: '结束时间', visible: false },
+          { key: 15, label: '父任务 ID', visible: false },
+          { key: 16, label: '根任务 ID', visible: false },
+          { key: 17, label: '备注', visible: false },
         ],
       // 遮罩层
       loading: true,
@@ -559,7 +573,33 @@ export default {
     // 提交上传文件
     submitFileForm() {
       this.$refs.upload.submit();
+    },
+    /** 获取进度条颜色 */
+    getProgressColor(status) {
+      const colorMap = {
+        'SUCCESS': '#67C23A',
+        'FAILED': '#F56C6C',
+        'PARTIAL_SUCCESS': '#E6A23C',
+        'RUNNING': '#409EFF',
+        'PENDING': '#909399'
+      };
+      return colorMap[status] || '#909399';
     }
   }
 };
 </script>
+
+<style scoped>
+.task-stats {
+  font-size: 12px;
+}
+.task-stats .success {
+  color: #67C23A;
+}
+.task-stats .failed {
+  color: #F56C6C;
+}
+.task-stats .total {
+  color: #909399;
+}
+</style>

@@ -1,15 +1,19 @@
 # ==================== VH-ERP 测试环境配置 ====================
 
-# ERP 业务配置
-erp:
-  shop-url: https://test-shop.myshopify.com
-  api-key: test_api_key_123
-  api-secret: test_api_secret_456
-
 # Shopify 测试环境
 shopify:
-  base-url: https://test-shop.myshopify.com
-  admin-api-endpoint: https://test-shop.myshopify.com/admin/api/2024-01
+  base-url: https://aaaa.myshopify.com/admin/api/2026-04/graphql.json
+  # Private App 模式 - 使用固定 access-token
+  access-token: your-access-token-here
+  # OAuth 模式配置 (注释掉则使用 Private App 模式)
+  # oauth-mode: true
+  # shop-name: your-shop-name
+  # api-key: your-api-key
+  # api-secret: your-api-secret
+  # oauth-access-token: your-oauth-token
+  # refresh-token-url: https://{shop}.myshopify.com/admin/oauth/token
+  # token 刷新阈值 (提前多少秒刷新, 默认 300 秒)
+  # token-refresh-threshold-seconds: 300
 
 # 业务参数（测试环境）
 business:

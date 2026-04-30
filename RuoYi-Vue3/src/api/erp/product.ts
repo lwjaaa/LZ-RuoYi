@@ -13,6 +13,14 @@ export interface ProductQuery extends PageQuery {
   lastSyncTime?: string | null
 }
 
+export interface ProductPushRequest {
+  category?: string
+  tagIds?: string
+  syncStatus?: string
+  selectAll?: boolean
+  productQuery?: ProductQuery
+}
+
 export function listProduct(query: ProductQuery): Promise<ApiResponse<Product[]>> {
   return request({
     url: '/erp/product/list',
@@ -59,10 +67,17 @@ export function importTemplateProduct(): Promise<Blob> {
   })
 }
 
-export function pushBatch(productIds: number[]): Promise<ApiResponse<void>> {
+export function pushBatch(request: ProductPushRequest): Promise<ApiResponse<{ taskId: number }>> {
   return request({
-    url: '/erp/product/pushBatch',
+    url: '/erp/product/push-batch',
     method: 'post',
-    data: productIds
+    data: request
+  })
+}
+
+export function getPushResult(taskId: number): Promise<ApiResponse<any>> {
+  return request({
+    url: '/erp/product/push-result/' + taskId,
+    method: 'get'
   })
 }

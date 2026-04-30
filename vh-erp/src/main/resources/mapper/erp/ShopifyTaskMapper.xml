@@ -22,6 +22,9 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="endTime"    column="end_time"    />
         <result property="parentTaskId"    column="parent_task_id"    />
         <result property="rootTaskId"    column="root_task_id"    />
+        <result property="totalCount"    column="total_count"    />
+        <result property="successCount"    column="success_count"    />
+        <result property="failedCount"    column="failed_count"    />
         <result property="remark"    column="remark"    />
         <result property="createBy"    column="create_by"    />
         <result property="createTime"    column="create_time"    />
@@ -31,7 +34,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     </resultMap>
 
     <sql id="selectShopifyTaskVo">
-        select task_id, task_name, task_group, task_type, business_type, business_ids, request_path, request_params, task_status, progress, error_message, result_data, execution_time, start_time, end_time, parent_task_id, root_task_id, remark, create_by, create_time, update_by, update_time, del_flag from erp_shopify_task
+        select task_id, task_name, task_group, task_type, business_type, business_ids, request_path, request_params, task_status, progress, error_message, result_data, execution_time, start_time, end_time, parent_task_id, root_task_id, total_count, success_count, failed_count, remark, create_by, create_time, update_by, update_time, del_flag from erp_shopify_task
     </sql>
 
     <select id="selectShopifyTaskList" parameterType="ShopifyTask" resultMap="ShopifyTaskResult">
@@ -74,6 +77,9 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="endTime != null">end_time,</if>
             <if test="parentTaskId != null">parent_task_id,</if>
             <if test="rootTaskId != null">root_task_id,</if>
+            <if test="totalCount != null">total_count,</if>
+            <if test="successCount != null">success_count,</if>
+            <if test="failedCount != null">failed_count,</if>
             <if test="remark != null">remark,</if>
             <if test="createBy != null">create_by,</if>
             <if test="createTime != null">create_time,</if>
@@ -99,6 +105,9 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="endTime != null">#{endTime},</if>
             <if test="parentTaskId != null">#{parentTaskId},</if>
             <if test="rootTaskId != null">#{rootTaskId},</if>
+            <if test="totalCount != null">#{totalCount},</if>
+            <if test="successCount != null">#{successCount},</if>
+            <if test="failedCount != null">#{failedCount},</if>
             <if test="remark != null">#{remark},</if>
             <if test="createBy != null">#{createBy},</if>
             <if test="createTime != null">#{createTime},</if>
@@ -127,6 +136,9 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="endTime != null">end_time = #{endTime},</if>
             <if test="parentTaskId != null">parent_task_id = #{parentTaskId},</if>
             <if test="rootTaskId != null">root_task_id = #{rootTaskId},</if>
+            <if test="totalCount != null">total_count = #{totalCount},</if>
+            <if test="successCount != null">success_count = #{successCount},</if>
+            <if test="failedCount != null">failed_count = #{failedCount},</if>
             <if test="remark != null">remark = #{remark},</if>
             <if test="createBy != null">create_by = #{createBy},</if>
             <if test="createTime != null">create_time = #{createTime},</if>
