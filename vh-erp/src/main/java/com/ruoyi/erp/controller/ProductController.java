@@ -115,7 +115,8 @@ public class ProductController extends BaseController {
     public AjaxResult pushBatch(@RequestBody ProductPushRequest request) {
         Long taskId = productService.pushBatchByCondition(
                 request.getProductQuery(),
-                request.getProductIds()
+                request.getProductIds(),
+                request.getStoreId()
         );
         return success().put("taskId", taskId);
     }

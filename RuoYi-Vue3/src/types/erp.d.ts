@@ -139,6 +139,8 @@ export interface Media {
 
 export interface Task {
   taskId: number
+  storeId?: number
+  shopName?: string
   taskName?: string
   taskGroup?: string
   taskType?: string
@@ -160,6 +162,54 @@ export interface Task {
   updateTime?: Date
   remark?: string
   params?: Record<string, unknown>
+}
+
+export interface ShopifyStore {
+  storeId?: number
+  storeName: string
+  shopName: string
+  apiVersion: string
+  apiKey?: string
+  apiSecret?: string
+  accessToken?: string
+  refreshToken?: string
+  hasApiSecret?: boolean
+  hasAccessToken?: boolean
+  hasRefreshToken?: boolean
+  tokenExpiresAt?: string | Date | null
+  baseUrl?: string
+  inventoryLocationId?: string
+  inventoryLocationName?: string
+  inventoryTracked?: string
+  defaultInventoryQuantity?: number
+  inventoryPolicy?: string
+  publishPublicationIds?: string
+  publishPublicationNames?: string
+  isActive?: string
+  isDefault?: string
+  authMode?: string
+  status?: string
+  lastSyncTime?: string | Date | null
+  syncCount?: number
+  createBy?: string
+  createTime?: string | Date
+  updateBy?: string
+  updateTime?: string | Date
+  remark?: string
+}
+
+export interface ShopifyStoreQuery extends PageQuery {
+  storeName?: string
+  shopName?: string
+  isActive?: string
+  isDefault?: string
+  authMode?: string
+  status?: string
+}
+
+export interface ShopifyResourceOption {
+  id: string
+  name: string
 }
 
 export interface ProductTag {

@@ -131,7 +131,7 @@ public class ShopifySyncExecutor {
         // 更新店铺同步统计
         if (store != null) {
             store.setLastSyncTime(new Date());
-            store.setSyncCount(store.getSyncCount() + 1);
+            store.setSyncCount((store.getSyncCount() == null ? 0 : store.getSyncCount()) + 1);
             shopifyStoreMapper.updateById(store);
         }
 
@@ -317,6 +317,10 @@ public class ShopifySyncExecutor {
      */
     private void syncVariants(Long storeId, String shopifyProductId, List<ProductVariant> variants, StringBuilder result) {
         List<ShopifyGraphQLClient.VariantInput> variantInputs = new ArrayList<>();
+        ShopifyStore store = shopifyStoreMapper.selectById(storeId);
+        if (store == null) {
+            throw new RuntimeException("店铺不存在: " + storeId);
+        }
 
         for (ProductVariant variant : variants) {
             BigDecimal price = PriceUtil.fenToYuan(variant.getPrice());
@@ -336,13 +340,10 @@ public class ShopifySyncExecutor {
                     .price(price)
                     .mediaSrc(shopifyMediaUrl)
                     .compareAtPrice(compareAtPrice)
-                    .inventoryPolicy("DENY")
+                    .inventoryPolicy(resolveInventoryPolicy(store))
                     .optionValues(parseOptionValuesAsList(variant.getOptionValues()))
-                    .inventoryItem(ShopifyGraphQLClient.InventoryItemInput.builder()
-                            .sku(variant.getSku())
-                            .tracked(false)
-                            .quantity(100)
-                            .build())
+                    .inventoryItem(buildInventoryItem(store, variant))
+                    .inventoryQuantities(buildInventoryQuantities(store))
                     .build();
 
             variantInputs.add(input);
@@ -367,6 +368,30 @@ public class ShopifySyncExecutor {
     /**
      * 保存 media ID 到数据库
      */
+    private ShopifyGraphQLClient.InventoryItemInput buildInventoryItem(ShopifyStore store, ProductVariant variant) {
+        return ShopifyGraphQLClient.InventoryItemInput.builder()
+                .sku(variant.getSku())
+                .tracked("1".equals(store.getInventoryTracked()))
+                .build();
+    }
+
+    private List<ShopifyGraphQLClient.InventoryQuantity> buildInventoryQuantities(ShopifyStore store) {
+        if (!"1".equals(store.getInventoryTracked())) {
+            return null;
+        }
+        if (StringUtils.isEmpty(store.getInventoryLocationId())) {
+            throw new RuntimeException("店铺启用库存跟踪但未配置库存仓库 Location ID");
+        }
+        return List.of(ShopifyGraphQLClient.InventoryQuantity.builder()
+                .locationId(store.getInventoryLocationId())
+                .availableQuantity(store.getDefaultInventoryQuantity() == null ? 100 : store.getDefaultInventoryQuantity())
+                .build());
+    }
+
+    private String resolveInventoryPolicy(ShopifyStore store) {
+        return StringUtils.isEmpty(store.getInventoryPolicy()) ? "DENY" : store.getInventoryPolicy();
+    }
+
     private void saveMediaIdsToDatabase(List<Media> uploadMediaList, List<String> shopifyMediaIds) {
         if (uploadMediaList == null || uploadMediaList.isEmpty() || shopifyMediaIds.isEmpty()) {
             return;

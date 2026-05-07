@@ -172,6 +172,13 @@ public class ShopifyGraphQLClient {
     }
 
     /**
+     * 清除指定店铺的 WebClient 缓存。
+     */
+    public void invalidateStoreCache(Long storeId) {
+        invalidateCache(storeId);
+    }
+
+    /**
      * 执行 GraphQL 查询 (指定店铺)
      *
      * @param storeId 店铺 ID
@@ -532,6 +539,55 @@ public class ShopifyGraphQLClient {
     }
 
     /**
+     * 测试店铺 GraphQL 连接。
+     */
+    public void testConnection(Long storeId) {
+        execute(storeId, ShopifyGraphQLQueries.SHOP_INFO.getQuery(), Map.of());
+    }
+
+    /**
+     * 查询可用的库存仓库 Location。
+     */
+    public List<LocationInfo> getLocations(Long storeId) {
+        String query = ShopifyGraphQLQueries.LOCATIONS.getQuery();
+        JsonNode data = execute(storeId, query, Map.of("first", 100));
+
+        List<LocationInfo> locations = new ArrayList<>();
+        JsonNode edges = data.path("locations").path("edges");
+        if (edges.isArray()) {
+            for (JsonNode edge : edges) {
+                JsonNode node = edge.path("node");
+                locations.add(LocationInfo.builder()
+                        .id(node.path("id").asText())
+                        .name(node.path("name").asText())
+                        .build());
+            }
+        }
+        return locations;
+    }
+
+    /**
+     * 查询可发布的 Publication。
+     */
+    public List<PublicationInfo> getPublications(Long storeId) {
+        String query = ShopifyGraphQLQueries.PUBLICATIONS.getQuery();
+        JsonNode data = execute(storeId, query, Map.of("first", 100));
+
+        List<PublicationInfo> publications = new ArrayList<>();
+        JsonNode edges = data.path("publications").path("edges");
+        if (edges.isArray()) {
+            for (JsonNode edge : edges) {
+                JsonNode node = edge.path("node");
+                publications.add(PublicationInfo.builder()
+                        .id(node.path("id").asText())
+                        .name(node.path("name").asText())
+                        .build());
+            }
+        }
+        return publications;
+    }
+
+    /**
      * 查询可用的销售渠道
      */
     public List<ChannelInfo> getChannels(Long storeId) {
@@ -580,6 +636,28 @@ public class ShopifyGraphQLClient {
             }
         }
         return results;
+    }
+
+    /**
+     * 使用 Publication ID 发布商品。
+     */
+    public List<PublicationResult> publishProduct(Long storeId, String shopifyProductId, List<PublicationInput> publications) {
+        String mutation = ShopifyGraphQLQueries.PUBLISHABLE_PUBLISH.getQuery();
+
+        Map<String, Object> variables = Map.of(
+                "id", shopifyProductId,
+                "input", publications
+        );
+
+        JsonNode data = execute(storeId, mutation, variables);
+        checkUserErrors(data, "publishablePublish");
+
+        return publications.stream()
+                .map(input -> PublicationResult.builder()
+                        .publicationId(input.getPublicationId())
+                        .isPublished(true)
+                        .build())
+                .toList();
     }
 
     // ==================== 内部类定义 ====================
@@ -726,7 +804,7 @@ public class ShopifyGraphQLClient {
         private String imageId;
         private String mediaSrc;
         private InventoryItemInput inventoryItem;
-        private InventoryQuantity inventoryQuantities;
+        private List<InventoryQuantity> inventoryQuantities;
     }
 
     @Data
@@ -769,6 +847,16 @@ public class ShopifyGraphQLClient {
     }
 
     public enum ShopifyGraphQLQueries {
+        SHOP_INFO("""
+            query shopInfo {
+              shop {
+                id
+                name
+                myshopifyDomain
+              }
+            }
+            """),
+
         STAGED_UPLOADS_CREATE("""
             mutation stagedUploadsCreate($input: [StagedUploadInput!]!) {
               stagedUploadsCreate(input: $input) {
@@ -843,6 +931,32 @@ public class ShopifyGraphQLClient {
             }
             """),
 
+        LOCATIONS("""
+            query locations($first: Int!) {
+              locations(first: $first) {
+                edges {
+                  node {
+                    id
+                    name
+                  }
+                }
+              }
+            }
+            """),
+
+        PUBLICATIONS("""
+            query publications($first: Int!) {
+              publications(first: $first) {
+                edges {
+                  node {
+                    id
+                    name
+                  }
+                }
+              }
+            }
+            """),
+
         CHANNELS("""
             query channels($first: Int!) {
               channels(first: $first) {
@@ -851,6 +965,19 @@ public class ShopifyGraphQLClient {
                     id
                     name
                     isPublished
+                  }
+                }
+              }
+            }
+            """),
+
+        PUBLISHABLE_PUBLISH("""
+            mutation publishablePublish($id: ID!, $input: [PublicationInput!]!) {
+              publishablePublish(id: $id, input: $input) {
+                userErrors { field message }
+                publishable {
+                  ... on Product {
+                    id
                   }
                 }
               }
@@ -913,13 +1040,39 @@ public class ShopifyGraphQLClient {
     }
 
     /**
+     * 库存仓库信息
+     */
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class LocationInfo {
+        private String id;
+        private String name;
+    }
+
+    /**
+     * 发布渠道信息
+     */
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class PublicationInfo {
+        private String id;
+        private String name;
+    }
+
+    /**
      * 发布渠道输入
      */
     @Data
     @Builder
     @NoArgsConstructor
     @AllArgsConstructor
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     public static class PublicationInput {
+        private String publicationId;
         private String channelId;
         private Boolean isPublished;
     }
@@ -932,6 +1085,7 @@ public class ShopifyGraphQLClient {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class PublicationResult {
+        private String publicationId;
         private String channelId;
         private String channelName;
         private Boolean isPublished;

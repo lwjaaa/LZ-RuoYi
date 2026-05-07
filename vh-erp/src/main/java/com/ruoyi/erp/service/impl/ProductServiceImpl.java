@@ -218,12 +218,20 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
 
     @Override
     public Long pushBatchAsync(List<Long> productIds) {
+        return pushBatchAsync(productIds, null);
+    }
+
+    public Long pushBatchAsync(List<Long> productIds, Long storeId) {
         if (productIds == null || productIds.isEmpty()) {
             return null;
         }
 
         // 创建 ShopifyTask
+        ShopifyStore store = resolvePublishStore(storeId);
+
         ShopifyTask task = new ShopifyTask();
+        task.setStoreId(store.getStoreId());
+        task.setShopName(store.getShopName());
         task.setTaskName("批量推送商品-" + DateUtils.getNowDate());
         task.setTaskGroup(ShopifyTaskContants.TASK_GROUP_PRODUCT);
         task.setTaskType(ShopifyTaskContants.TASK_TYPE_PRODUCT_SYNC_BATCH);
@@ -244,7 +252,7 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
     }
 
     @Override
-    public Long pushBatchByCondition(ProductQuery productQuery, Long[] productIds) {
+    public Long pushBatchByCondition(ProductQuery productQuery, Long[] productIds, Long storeId) {
         List<Long> productIdList;
 
         // 优先使用传入的 productIds
@@ -261,9 +269,13 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
             return null;
         }
 
+        ShopifyStore store = resolvePublishStore(storeId);
+
         // 创建 ShopifyTask
         ShopifyTask task = new ShopifyTask();
         task.setTaskName("批量推送商品-" + DateUtils.getNowDate());
+        task.setStoreId(store.getStoreId());
+        task.setShopName(store.getShopName());
         task.setTaskGroup("0");
         task.setTaskType("PRODUCT_CREATE_BATCH");
         task.setBusinessType("PRODUCT");
@@ -297,27 +309,18 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
         }
 
         // 获取店铺
-        ShopifyStore store;
-        if (storeId != null) {
-            store = shopifyStoreService.selectByStoreId(storeId);
-        } else {
-            store = shopifyStoreService.selectDefaultStore();
-        }
-        if (store == null) {
-            throw new ServiceException("未找到可用的店铺");
+        ShopifyStore store = resolvePublishStore(storeId);
+
+        // 使用店铺配置的 Publication ID，避免误发布到所有渠道。
+        List<String> publicationIds = parseCsv(store.getPublishPublicationIds());
+        if (publicationIds.isEmpty()) {
+            throw new ServiceException("店铺未配置发布渠道 Publication ID");
         }
 
-        // 获取所有可用渠道
-        List<ShopifyGraphQLClient.ChannelInfo> channels = shopifyGraphQLClient.getChannels(store.getStoreId());
-        if (channels.isEmpty()) {
-            throw new ServiceException("未找到可用的销售渠道");
-        }
-
-        // 构建发布列表（所有渠道设为发布状态）
-        List<ShopifyGraphQLClient.PublicationInput> publications = channels.stream()
-                .map(channel -> ShopifyGraphQLClient.PublicationInput.builder()
-                        .channelId(channel.getId())
-                        .isPublished(true)
+        // 构建发布列表。
+        List<ShopifyGraphQLClient.PublicationInput> publications = publicationIds.stream()
+                .map(publicationId -> ShopifyGraphQLClient.PublicationInput.builder()
+                        .publicationId(publicationId)
                         .build())
                 .toList();
 
@@ -326,7 +329,7 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
         result.setFailedCount(0);
         result.setFailedChannels(new ArrayList<>());
 
-        // 遍历每个商品发布到所有渠道
+        // 遍历每个商品发布到配置渠道。
         for (Long productId : productIds) {
             Product product = this.getById(productId);
             if (product == null || StringUtils.isEmpty(product.getShopifyProductId())) {
@@ -340,8 +343,8 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
             }
 
             try {
-                // 发布到所有渠道
-                shopifyGraphQLClient.setProductPublications(store.getStoreId(), product.getShopifyProductId(), publications);
+                // 发布到配置渠道。
+                shopifyGraphQLClient.publishProduct(store.getStoreId(), product.getShopifyProductId(), publications);
 
                 // 更新商品状态为 ACTIVE
                 product.setStatus(ShopifyProductStatusEnum.ACTIVE.getCode());
@@ -360,5 +363,29 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
         }
 
         return result;
+    }
+
+    private ShopifyStore resolvePublishStore(Long storeId) {
+        ShopifyStore store = storeId != null
+                ? shopifyStoreService.selectByStoreId(storeId)
+                : shopifyStoreService.selectDefaultStore();
+        if (store == null) {
+            throw new ServiceException("未找到可用的店铺");
+        }
+        if ("0".equals(store.getIsActive())) {
+            throw new ServiceException("店铺已禁用");
+        }
+        return store;
+    }
+
+    private List<String> parseCsv(String value) {
+        if (StringUtils.isEmpty(value)) {
+            return List.of();
+        }
+        return Arrays.stream(value.split(","))
+                .map(String::trim)
+                .filter(StringUtils::isNotEmpty)
+                .distinct()
+                .toList();
     }
 }

@@ -16,6 +16,7 @@ export interface ProductQuery extends PageQuery {
 export interface ProductPushRequest {
   productQuery?: ProductQuery
   productIds?: number[]
+  storeId?: number
 }
 
 export interface PublishRequest {

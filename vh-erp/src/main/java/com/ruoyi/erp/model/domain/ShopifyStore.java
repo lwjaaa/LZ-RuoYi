@@ -55,6 +55,34 @@ public class ShopifyStore implements Serializable {
     /** 自定义 API 端点 */
     private String baseUrl;
 
+    /** Shopify 库存仓库 Location ID */
+    @Excel(name = "库存仓库ID")
+    private String inventoryLocationId;
+
+    /** Shopify 库存仓库名称 */
+    @Excel(name = "库存仓库名称")
+    private String inventoryLocationName;
+
+    /** 是否跟踪库存 (0:否, 1:是) */
+    @Excel(name = "是否跟踪库存", readConverterExp = "0=否,1=是")
+    private String inventoryTracked;
+
+    /** 默认库存数量 */
+    @Excel(name = "默认库存数量")
+    private Integer defaultInventoryQuantity;
+
+    /** 缺货销售策略: DENY, CONTINUE */
+    @Excel(name = "缺货销售策略")
+    private String inventoryPolicy;
+
+    /** 默认发布 Publication ID，英文逗号分隔 */
+    @Excel(name = "发布渠道ID")
+    private String publishPublicationIds;
+
+    /** 默认发布渠道名称，英文逗号分隔 */
+    @Excel(name = "发布渠道名称")
+    private String publishPublicationNames;
+
     /** 是否启用 (0:禁用, 1:启用) */
     @Excel(name = "是否启用", readConverterExp = "0=禁用,1=启用")
     private String isActive;

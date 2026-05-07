@@ -90,7 +90,7 @@ public interface IProductService extends IService<Product>
      * @param productIds 要推送的商品ID列表
      * @return 任务ID
      */
-    public Long pushBatchByCondition(ProductQuery productQuery, Long[] productIds);
+    public Long pushBatchByCondition(ProductQuery productQuery, Long[] productIds, Long storeId);
 
     /**
      * 获取推送结果

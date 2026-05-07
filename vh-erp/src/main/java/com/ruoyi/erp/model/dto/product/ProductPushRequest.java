@@ -16,4 +16,7 @@ public class ProductPushRequest implements Serializable {
 
     /** 要推送的商品ID列表 */
     private Long[] productIds;
+
+    /** 店铺ID */
+    private Long storeId;
 }

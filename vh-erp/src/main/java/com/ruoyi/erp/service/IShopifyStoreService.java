@@ -2,6 +2,9 @@ package com.ruoyi.erp.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.ruoyi.erp.model.domain.ShopifyStore;
+import com.ruoyi.erp.model.dto.shopifyStore.ShopifyStoreQuery;
+import com.ruoyi.erp.model.vo.shopifyStore.ShopifyResourceOptionVo;
+import com.ruoyi.erp.model.vo.shopifyStore.ShopifyStoreVo;
 
 import java.util.List;
 
@@ -9,6 +12,31 @@ import java.util.List;
  * Shopify 店铺配置Service接口
  */
 public interface IShopifyStoreService extends IService<ShopifyStore> {
+
+    /**
+     * 查询店铺列表
+     */
+    List<ShopifyStore> selectShopifyStoreList(ShopifyStoreQuery query);
+
+    /**
+     * 新增店铺
+     */
+    int insertShopifyStore(ShopifyStore store);
+
+    /**
+     * 修改店铺
+     */
+    int updateShopifyStore(ShopifyStore store);
+
+    /**
+     * 批量软删除店铺
+     */
+    int deleteShopifyStoreByStoreIds(Long[] storeIds);
+
+    /**
+     * 转换店铺响应列表
+     */
+    List<ShopifyStoreVo> convertVoList(List<ShopifyStore> storeList);
 
     /**
      * 查询默认店铺
@@ -55,4 +83,19 @@ public interface IShopifyStoreService extends IService<ShopifyStore> {
      * 检查店铺是否已连接
      */
     boolean isConnected(Long storeId);
+
+    /**
+     * 测试店铺连接
+     */
+    boolean testConnection(Long storeId);
+
+    /**
+     * 拉取店铺库存仓库
+     */
+    List<ShopifyResourceOptionVo> fetchLocations(Long storeId);
+
+    /**
+     * 拉取店铺发布渠道
+     */
+    List<ShopifyResourceOptionVo> fetchPublications(Long storeId);
 }

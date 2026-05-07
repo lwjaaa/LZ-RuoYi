@@ -9,6 +9,15 @@ package com.ruoyi.erp.constant;
 public interface StoreConstants {
     String STATUS_DISCONNECTED = "DISCONNECTED";
     String STATUS_CONNECTED = "CONNECTED";
+    String STATUS_EXPIRED = "EXPIRED";
+
+    String YES = "1";
+    String NO = "0";
+    String DEL_FLAG_NORMAL = "0";
+    String DEL_FLAG_DELETED = "2";
+
+    String INVENTORY_POLICY_DENY = "DENY";
+    String INVENTORY_POLICY_CONTINUE = "CONTINUE";
 
     /**
      * OAuth 模式
