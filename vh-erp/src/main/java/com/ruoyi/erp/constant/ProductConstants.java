@@ -26,6 +26,7 @@ public interface ProductConstants {
      */
     String DEFAULT_PRODUCT_VENDER = "VELART HOME";
     String SEO_TITTLE_SUFFIX = " | VELART HOME";
+    String PRODUCT_MEDIA_SUFFIX = " - VELART HOME";
 
     /**
      * 商品同步状态

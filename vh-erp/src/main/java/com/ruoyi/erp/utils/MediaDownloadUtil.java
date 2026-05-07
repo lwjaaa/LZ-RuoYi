@@ -122,6 +122,13 @@ public class MediaDownloadUtil {
                                 sequence++;
                             }
                         }
+                        String newNasUrl = MediaFileUtil.generateNasUrl(filefolder, filename);
+                        Media mediaUpdate = new Media();
+                        mediaUpdate.setMediaId(media.getMediaId());
+                        mediaUpdate.setFilename(filename);
+                        mediaUpdate.setNasMediaUrl(newNasUrl);
+                        mediaService.updateById(mediaUpdate); // Updated line
+
                         toRenameList.add(new MediaRenameVo(media, filename));
                         
                         downloadedMedias.add(media);
@@ -156,6 +163,7 @@ public class MediaDownloadUtil {
             log.error("下载媒体文件整体流程异常，文件夹: {}, 错误信息: {}", filefolder, e.getMessage());
             log.debug("详细错误信息:", e);
         }
+        // 只会修改磁盘文件
         mediaService.doRenameMediaFiles(toRenameList);
         return downloadedMedias;
     }
@@ -291,9 +299,6 @@ public class MediaDownloadUtil {
         // 设置商品ID
         media.setProductId(product.getProductId());
         
-        // 构建 NAS URL: /profile/media/SPU/filename
-        String safeSpu = (StringUtils.isNotBlank(product.getSpu()) ? product.getSpu() : product.getProductId().toString())
-                .replaceAll("[^a-zA-Z0-9.-_]", "_");
         media.setNasMediaUrl(MediaFileUtil.generateNasUrl(result.filePath));
 
         // 设置文件名

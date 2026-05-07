@@ -5,6 +5,7 @@ import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.ruoyi.common.utils.DateUtils;
 import com.ruoyi.common.utils.StringUtils;
+import com.ruoyi.erp.constant.StoreConstants;
 import com.ruoyi.erp.exception.ShopifyApiException;
 import com.ruoyi.erp.mapper.ShopifyStoreMapper;
 import com.ruoyi.erp.model.domain.ShopifyStore;
@@ -64,16 +65,17 @@ public class ShopifyStoreServiceImpl extends ServiceImpl<ShopifyStoreMapper, Sho
             return false;
         }
 
+        // OAuth 模式：调用 Shopify OAuth API 刷新 token
+        if (StoreConstants.AUTH_MODE_OAUTH.equals(store.getAuthMode())) {
+            return refreshOAuthToken(store);
+        }
+
         // Private App 模式：token 是永久的，不需要刷新
-        if ("PRIVATE_APP".equals(store.getAuthMode())) {
+        if (StoreConstants.AUTH_MODE_PRIVATE.equals(store.getAuthMode())) {
             log.debug("Private App 模式，token 不需要刷新: storeId={}", storeId);
             return true;
         }
 
-        // OAuth 模式：调用 Shopify OAuth API 刷新 token
-        if ("OAUTH".equals(store.getAuthMode())) {
-            return refreshOAuthToken(store);
-        }
 
         log.warn("未知的认证模式: authMode={}, storeId={}", store.getAuthMode(), storeId);
         return false;
@@ -86,7 +88,7 @@ public class ShopifyStoreServiceImpl extends ServiceImpl<ShopifyStoreMapper, Sho
         if (StringUtils.isEmpty(store.getShopName())
                 || StringUtils.isEmpty(store.getApiKey())
                 || StringUtils.isEmpty(store.getApiSecret())
-                || StringUtils.isEmpty(store.getRefreshToken())) {
+                || StringUtils.isEmpty(store.getApiVersion())) {
             log.error("OAuth 刷新 token 失败：缺少必要配置, storeId={}", store.getStoreId());
             updateStatus(store.getStoreId(), STATUS_DISCONNECTED);
             return false;
@@ -98,7 +100,7 @@ public class ShopifyStoreServiceImpl extends ServiceImpl<ShopifyStoreMapper, Sho
             Map<String, String> requestBody = Map.of(
                     "client_id", store.getApiKey(),
                     "client_secret", store.getApiSecret(),
-                    "refresh_token", store.getRefreshToken()
+                    "grant_type", "client_credentials"
             );
 
             String response = WebClient.builder()
@@ -131,7 +133,6 @@ public class ShopifyStoreServiceImpl extends ServiceImpl<ShopifyStoreMapper, Sho
 
             // 更新 token 信息
             updateTokenInfo(store.getStoreId(), newAccessToken, expiresIn != null ? Long.valueOf(expiresIn) : null);
-            updateStatus(store.getStoreId(), STATUS_CONNECTED);
 
             log.info("OAuth token 刷新成功: storeId={}, expiresIn={}s", store.getStoreId(), expiresIn);
             return true;
@@ -152,6 +153,7 @@ public class ShopifyStoreServiceImpl extends ServiceImpl<ShopifyStoreMapper, Sho
             store.setTokenExpiresAt(new Date(System.currentTimeMillis() + expiresInSeconds * 1000));
         }
         store.setUpdateTime(DateUtils.getNowDate());
+        store.setStatus(STATUS_CONNECTED);
         baseMapper.updateById(store);
         log.info("更新店铺 token 成功: storeId={}, expiresIn={}s", storeId, expiresInSeconds);
     }

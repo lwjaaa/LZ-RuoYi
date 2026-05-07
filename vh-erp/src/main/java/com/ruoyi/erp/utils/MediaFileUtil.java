@@ -22,6 +22,37 @@ import java.util.List;
 @Slf4j
 public class MediaFileUtil {
 
+    /**
+     * 将 URL 转换为文件路径
+     *
+     * @param nasMediaUrl NAS 媒体 URL
+     * @return 文件绝对路径
+     */
+    public static String convertUrlToFilePath(String nasMediaUrl) {
+        if (StringUtils.isEmpty(nasMediaUrl)) {
+            return null;
+        }
+
+        // 如果已经是相对路径（以 /profile/ 开头）
+        if (nasMediaUrl.startsWith(Constants.RESOURCE_PREFIX)) {
+            String relativePath = nasMediaUrl.substring(Constants.RESOURCE_PREFIX.length());
+            return RuoYiConfig.getProfile() + relativePath;
+        }
+
+        // 如果是完整 URL，提取路径部分
+        if (nasMediaUrl.startsWith("http://") || nasMediaUrl.startsWith("https://")) {
+            // 提取 /profile/ 后面的路径
+            int profileIndex = nasMediaUrl.indexOf(Constants.RESOURCE_PREFIX);
+            if (profileIndex >= 0) {
+                String relativePath = nasMediaUrl.substring(profileIndex + Constants.RESOURCE_PREFIX.length());
+                return RuoYiConfig.getProfile() + relativePath;
+            }
+        }
+
+        // 否则直接返回
+        return nasMediaUrl;
+    }
+
 
     /**
      * 将文件路径转换为可访问的 URL
@@ -62,6 +93,18 @@ public class MediaFileUtil {
         }
 
         return filePath;
+    }
+
+    /**
+     * 获取NAS 媒体 URL
+     *
+     * @param folder    文件夹
+     * @param filename  文件名
+     * @return java.lang.String
+     * @author lwj
+     **/
+    public static String generateNasUrl(String folder, String filename) {
+        return Constants.RESOURCE_PREFIX + "/media/" + folder + "/" + filename;
     }
 
     /**

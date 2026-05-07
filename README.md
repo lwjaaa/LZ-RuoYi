@@ -7,7 +7,6 @@
 ## ⚠️ 重要声明 (AI Coding 核心上下文)
 
 1. **前端项目说明**：
-   - 🚫 **`ruoyi-ui` 是已弃用的前端项目**，仅作为历史代码归档或参考，**请勿在此目录下进行任何功能开发或代码修改**。
    - ✅ **真正的前端项目是 `RuoYi-Vue3`**，所有前端相关的新需求、Bug 修复和代码生成请严格在 `RuoYi-Vue3` 目录下进行。
 2. **后端项目说明**：
    - 后端依然沿用标准的若依 Spring Boot 多模块架构。
@@ -53,6 +52,7 @@
 
 ```text
 LZ-RuoYi/
+├── Purchase-x/ 获取商品信息的chrome插件
 ├── ruoyi-admin/ # 主启动模块（入口）
 │ └── src/main/
 │ ├── java/ # Java 源码
@@ -217,9 +217,9 @@ VUE_APP_BASE_API = 'http://localhost:8080'
 ```text
 bash
 开发模式
-npm run dev
-或
 yarn dev
+或
+npm run dev
 ```
 
 4. **访问前端**
@@ -469,69 +469,24 @@ export function addProduct(data) {
 }
 ```
 
-### Shopify GraphQL 集成
-
-```java
-@Configuration
-public class ShopifyGraphQlConfig {
-
-    @Bean
-    public GraphQlClient shopifyGraphQlClient(WebClient.Builder webClientBuilder) {
-        WebClient webClient = webClientBuilder
-            .baseUrl("https://{shop}.myshopify.com/admin/api/2024-01/graphql.json")
-            .defaultHeader("X-Shopify-Access-Token", accessToken)
-            .build();
-
-        return GraphQlClient.create(webClient);
-    }
-}
-```
-
 ---
 
 ## 📊 数据库设计
 
 ### 核心表结构
-
-- **erp_product**: 商品主表
-- **erp_product_variant**: 商品变体表
-- **erp_tag**: 标签表
-- **erp_product_tag**: 商品标签关联表
-- **erp_media**: 媒体资源表
-
-详细表结构请参考 `sql/20260324_erp.sql`
+详细表结构请参考 `sql/*.sql`
 
 ---
 
-## 🔒 安全说明
-
-- 使用 Spring Security + JWT 进行身份认证
-- 密码加密存储（BCrypt）
-- XSS 攻击防护
-- SQL 注入防护（参数化查询）
-- CSRF 防护
-- 数据权限控制（基于角色和部门）
-
----
 
 ## 📝 常见问题
 
-### Q1: 前端页面空白？
-
-检查浏览器控制台是否有跨域错误，确保后端 CORS 配置正确。
-
-### Q2: 登录失败？
-
-1. 检查 Redis 是否正常运行
-2. 检查数据库连接配置
-3. 确认账号密码是否正确（默认 admin/admin123）
-
-### Q3: Shopify API 调用失败？
+### Q1: Shopify API 调用失败？
 
 1. 检查 Access Token 是否正确
 2. 确认 Shop 域名格式
 3. 查看 API 速率限制
 
-### Q4: 图片无法显示？
+### Q2: 图片无法显示？
 
 检查文件上传路径配置和 Nginx 静态资源配置。

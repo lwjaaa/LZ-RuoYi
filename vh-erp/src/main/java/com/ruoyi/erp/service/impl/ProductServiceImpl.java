@@ -2,26 +2,22 @@ package com.ruoyi.erp.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.ruoyi.common.enums.ShopifyProductStatusEnum;
 import com.ruoyi.common.exception.ServiceException;
 import com.ruoyi.common.utils.DateUtils;
 import com.ruoyi.common.utils.StringUtils;
+import com.ruoyi.erp.config.ShopifyGraphQLClient;
 import com.ruoyi.erp.constant.ShopifyTaskContants;
 import com.ruoyi.erp.executor.ShopifySyncExecutor;
 import com.ruoyi.erp.mapper.ProductMapper;
-import com.ruoyi.erp.mapper.TagDictMapper;
-import com.ruoyi.erp.model.domain.Media;
-import com.ruoyi.erp.model.domain.Product;
-import com.ruoyi.erp.model.domain.ProductVariant;
-import com.ruoyi.erp.model.domain.ShopifyTask;
+import com.ruoyi.erp.model.domain.*;
 import com.ruoyi.erp.model.dto.product.ProductQuery;
 import com.ruoyi.erp.model.vo.media.MediaVo;
 import com.ruoyi.erp.model.vo.product.ProductVo;
-import com.ruoyi.erp.service.IMediaService;
-import com.ruoyi.erp.service.IProductService;
-import com.ruoyi.erp.service.IProductTagRelService;
-import com.ruoyi.erp.service.IProductVariantService;
-import com.ruoyi.erp.service.IShopifyTaskService;
+import com.ruoyi.erp.model.vo.product.PublishResultVo;
+import com.ruoyi.erp.service.*;
 import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,6 +30,7 @@ import java.util.stream.Collectors;
  * @author lwj
  * @date 2026-03-26
  */
+@Slf4j
 @Service
 public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> implements IProductService {
 
@@ -42,8 +39,6 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
     @Resource
     private IProductTagRelService productTagRelService;
     @Resource
-    private TagDictMapper tagDictMapper;
-    @Resource
     private IProductVariantService productVariantService;
     @Resource
     private IMediaService mediaService;
@@ -51,6 +46,10 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
     private IShopifyTaskService shopifyTaskService;
     @Resource
     private ShopifySyncExecutor shopifySyncExecutor;
+    @Resource
+    private ShopifyGraphQLClient shopifyGraphQLClient;
+    @Resource
+    private IShopifyStoreService shopifyStoreService;
 
     /**
      * 查询erp商品
@@ -245,44 +244,40 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
     }
 
     @Override
-    public Long pushBatchByCondition(String category, String tagIds, String syncStatus, Boolean selectAll, ProductQuery productQuery) {
-        // 构建查询条件
-        Product product = new Product();
-        if (productQuery != null) {
-            product = ProductQuery.queryToObj(productQuery);
-        }
-        if (StringUtils.isNotEmpty(category)) {
-            product.setCategory(category);
-        }
-        if (StringUtils.isNotEmpty(syncStatus)) {
-            product.setSyncStatus(syncStatus);
+    public Long pushBatchByCondition(ProductQuery productQuery, Long[] productIds) {
+        List<Long> productIdList;
+
+        // 优先使用传入的 productIds
+        if (productIds != null && productIds.length > 0) {
+            productIdList = Arrays.asList(productIds);
+        } else {
+            // 使用 productQuery 按条件查询
+            Product product = ProductQuery.queryToObj(productQuery);
+            List<Product> productList = this.baseMapper.selectProductList(product);
+            productIdList = productList.stream().map(Product::getProductId).toList();
         }
 
-        // 查询商品列表
-        List<Product> productList = this.baseMapper.selectProductList(product);
-        List<Long> productIds = productList.stream().map(Product::getProductId).toList();
-
-        if (productIds.isEmpty()) {
+        if (productIdList.isEmpty()) {
             return null;
         }
 
         // 创建 ShopifyTask
         ShopifyTask task = new ShopifyTask();
-        task.setTaskName("批量推送商品(条件)-" + DateUtils.getNowDate());
+        task.setTaskName("批量推送商品-" + DateUtils.getNowDate());
         task.setTaskGroup("0");
         task.setTaskType("PRODUCT_CREATE_BATCH");
         task.setBusinessType("PRODUCT");
-        task.setBusinessIds(String.join(",", productIds.stream().map(String::valueOf).toList()));
+        task.setBusinessIds(String.join(",", productIdList.stream().map(String::valueOf).toList()));
         task.setTaskStatus("PENDING");
         task.setProgress(0);
-        task.setTotalCount(productIds.size());
+        task.setTotalCount(productIdList.size());
         task.setSuccessCount(0);
         task.setFailedCount(0);
         task.setCreateTime(new Date());
-        shopifyTaskService.insertShopifyTask(task);
+        shopifyTaskService.save(task);
 
         // 异步执行
-        shopifySyncExecutor.execute(task.getTaskId(), productIds);
+        shopifySyncExecutor.execute(task.getTaskId(), productIdList);
 
         return task.getTaskId();
     }
@@ -293,5 +288,77 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
             return null;
         }
         return shopifyTaskService.selectShopifyTaskByTaskId(taskId);
+    }
+
+    @Override
+    public Object publishToChannels(Long[] productIds, Long storeId) {
+        if (productIds == null || productIds.length == 0) {
+            throw new ServiceException("商品ID列表不能为空");
+        }
+
+        // 获取店铺
+        ShopifyStore store;
+        if (storeId != null) {
+            store = shopifyStoreService.selectByStoreId(storeId);
+        } else {
+            store = shopifyStoreService.selectDefaultStore();
+        }
+        if (store == null) {
+            throw new ServiceException("未找到可用的店铺");
+        }
+
+        // 获取所有可用渠道
+        List<ShopifyGraphQLClient.ChannelInfo> channels = shopifyGraphQLClient.getChannels(store.getStoreId());
+        if (channels.isEmpty()) {
+            throw new ServiceException("未找到可用的销售渠道");
+        }
+
+        // 构建发布列表（所有渠道设为发布状态）
+        List<ShopifyGraphQLClient.PublicationInput> publications = channels.stream()
+                .map(channel -> ShopifyGraphQLClient.PublicationInput.builder()
+                        .channelId(channel.getId())
+                        .isPublished(true)
+                        .build())
+                .toList();
+
+        PublishResultVo result = new PublishResultVo();
+        result.setSuccessCount(0);
+        result.setFailedCount(0);
+        result.setFailedChannels(new ArrayList<>());
+
+        // 遍历每个商品发布到所有渠道
+        for (Long productId : productIds) {
+            Product product = this.getById(productId);
+            if (product == null || StringUtils.isEmpty(product.getShopifyProductId())) {
+                // 商品不存在或未同步到Shopify
+                PublishResultVo.ChannelPublishFailed failed = new PublishResultVo.ChannelPublishFailed();
+                failed.setProductId(productId);
+                failed.setError("商品未同步到Shopify");
+                result.getFailedChannels().add(failed);
+                result.setFailedCount(result.getFailedCount() + 1);
+                continue;
+            }
+
+            try {
+                // 发布到所有渠道
+                shopifyGraphQLClient.setProductPublications(store.getStoreId(), product.getShopifyProductId(), publications);
+
+                // 更新商品状态为 ACTIVE
+                product.setStatus(ShopifyProductStatusEnum.ACTIVE.getCode());
+                product.setUpdateTime(DateUtils.getNowDate());
+                this.updateById(product);
+
+                result.setSuccessCount(result.getSuccessCount() + 1);
+            } catch (Exception e) {
+                log.error("发布商品到渠道失败: productId={}, error={}", productId, e.getMessage());
+                PublishResultVo.ChannelPublishFailed failed = new PublishResultVo.ChannelPublishFailed();
+                failed.setProductId(productId);
+                failed.setError(e.getMessage());
+                result.getFailedChannels().add(failed);
+                result.setFailedCount(result.getFailedCount() + 1);
+            }
+        }
+
+        return result;
     }
 }

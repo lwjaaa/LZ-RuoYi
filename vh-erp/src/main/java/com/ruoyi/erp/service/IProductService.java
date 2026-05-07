@@ -86,14 +86,11 @@ public interface IProductService extends IService<Product>
     /**
      * 按条件批量推送商品到Shopify
      *
-     * @param category 分类
-     * @param tagIds 标签ID列表
-     * @param syncStatus 同步状态
-     * @param selectAll 是否全量
      * @param productQuery 自定义查询条件
+     * @param productIds 要推送的商品ID列表
      * @return 任务ID
      */
-    public Long pushBatchByCondition(String category, String tagIds, String syncStatus, Boolean selectAll, ProductQuery productQuery);
+    public Long pushBatchByCondition(ProductQuery productQuery, Long[] productIds);
 
     /**
      * 获取推送结果
@@ -102,4 +99,13 @@ public interface IProductService extends IService<Product>
      * @return 结果
      */
     public Object getPushResult(Long taskId);
+
+    /**
+     * 发布商品到所有渠道
+     *
+     * @param productIds 商品ID列表
+     * @param storeId 店铺ID（可选）
+     * @return 发布结果
+     */
+    Object publishToChannels(Long[] productIds, Long storeId);
 }

@@ -16,7 +16,7 @@ CREATE TABLE `erp_product`
     `body_html`            text          DEFAULT NULL COMMENT '商品详情描述 (HTML)',
     `main_media_id`        bigint(20)    DEFAULT NULL COMMENT '主图ID，仅用户erp后台展示',
     `sync_status`          char(1)       DEFAULT '0' COMMENT '同步状态 (0:未同步, 1:同步成功, 2:同步失败, 3:同步中)',
-    `sync_message`         varchar(500)  DEFAULT NULL COMMENT '最后一次同步错误信息或结果',
+    `sync_message`         text         DEFAULT NULL COMMENT '最后一次同步错误信息或结果',
     `last_sync_time`       datetime      DEFAULT NULL COMMENT '最后同步时间',
     `version`              int(11)       DEFAULT 0 COMMENT '乐观锁版本号',
     `description`          varchar(1000) DEFAULT NULL COMMENT '描述',

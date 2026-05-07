@@ -1,54 +1,24 @@
-# ==================== VH-ERP 测试环境配置 ====================
-
-# Shopify 测试环境
-shopify:
-  base-url: https://aaaa.myshopify.com/admin/api/2026-04/graphql.json
-  # Private App 模式 - 使用固定 access-token
-  access-token: your-access-token-here
-  # OAuth 模式配置 (注释掉则使用 Private App 模式)
-  # oauth-mode: true
-  # shop-name: your-shop-name
-  # api-key: your-api-key
-  # api-secret: your-api-secret
-  # oauth-access-token: your-oauth-token
-  # refresh-token-url: https://{shop}.myshopify.com/admin/oauth/token
-  # token 刷新阈值 (提前多少秒刷新, 默认 300 秒)
-  # token-refresh-threshold-seconds: 300
-
-# 业务参数（测试环境）
-business:
-  # 订单同步间隔（秒）
-  order-sync-interval: 30
-  # 库存同步间隔（秒）
-  inventory-sync-interval: 60
-  # 是否启用自动同步
-  auto-sync-enabled: true
-  # 测试模式
-  test-mode: true
-  # 模拟数据生成
-  mock-data-enabled: true
-
-# 日志配置（测试环境开启详细日志）
-logging:
-  level:
-    com.ruoyi.erp: debug
-    graphql: debug
+## 日志配置（测试环境开启详细日志）
+#logging:
+#  level:
+#    com.ruoyi.erp: debug
+#    graphql: debug
 
 
-# 项目相关配置
-ruoyi:
-  # 文件路径 示例（ Windows配置D:/ruoyi/uploadPath，Linux配置 /home/ruoyi/uploadPath）
-  profile: C:/velarthome
+## 项目相关配置
+#ruoyi:
+#  # 文件路径 示例（ Windows配置D:/ruoyi/uploadPath，Linux配置 /home/ruoyi/uploadPath）
+#  profile: C:/velarthome
 
-exchange-rate:
-  api-key: 74d001f87bf041459e68fd9b
-  base-url: https://v6.exchangerate-api.com/v6
-  connect-timeout: 5000
-  read-timeout: 10000
-  default-base-currency: USD
-  target-currencies: CNY
+#exchange-rate:
+#  api-key: 74d001f87bf041459e68fd9b
+#  base-url: https://v6.exchangerate-api.com/v6
+#  connect-timeout: 5000
+#  read-timeout: 10000
+#  default-base-currency: USD
+#  target-currencies: CNY
 
-fpx:
-  api:
-    appKey: 29d36ce5-1e53-4559-b233-78385be39acb
-    appSecret: 60f9b9e6-1129-4842-bbf1-507ef83ffea2
+#fpx:
+#  api:
+#    appKey: 29d36ce5-1e53-4559-b233-78385be39acb
+#    appSecret: 60f9b9e6-1129-4842-bbf1-507ef83ffea2

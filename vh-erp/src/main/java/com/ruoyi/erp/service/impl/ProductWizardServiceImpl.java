@@ -3,6 +3,7 @@ package com.ruoyi.erp.service.impl;
 import cn.hutool.core.collection.CollectionUtil;
 import com.alibaba.fastjson2.JSON;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.ruoyi.common.core.redis.RedisCache;
 import com.ruoyi.common.exception.ServiceException;
 import com.ruoyi.common.utils.DateUtils;
@@ -15,6 +16,7 @@ import com.ruoyi.erp.model.dto.shipping.ShippingFeeQuery;
 import com.ruoyi.erp.model.vo.shipping.ShippingFeeVo;
 import com.ruoyi.erp.service.*;
 import com.ruoyi.erp.utils.MediaDownloadUtil;
+import graphql.com.google.common.collect.Lists;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
@@ -113,6 +115,9 @@ public class ProductWizardServiceImpl implements IProductWizardService {
 
             // 商品编辑的第二步，
             if (WIZARD_STEP_SECOND.equals(step)) {
+                if (StringUtils.isBlank(product.getImageSearchKeyword())) {
+                    throw new ServiceException("图片搜索关键词不能为空");
+                }
                 // 已提前获生成图片列表，所以在此校验图片信息
                 Set<Long> keepMediaIds = new HashSet<>();
                 if (CollectionUtil.isNotEmpty(product.getMediaList())) {
@@ -132,6 +137,13 @@ public class ProductWizardServiceImpl implements IProductWizardService {
                 }
                 if (product.getMainMediaId() != null && !keepMediaIds.contains(product.getMainMediaId()))
                     throw new ServiceException("主图不存在！");
+
+                if(CollectionUtil.isNotEmpty(product.getMediaList())){
+                    product.setMainMediaId(product.getMediaList().get(0).getMediaId());
+                }else{
+                    product.setMainMediaId(null);
+                }
+
             }
 
         }
@@ -485,10 +497,6 @@ public class ProductWizardServiceImpl implements IProductWizardService {
     protected void asyncDownloadMediaFiles(Product product, List<String> mediaUrlList, Map<String, ProductVariant> mediaUrlVarianMap) {
         String spu = product.getSpu();
         String imageSearchKeyword = product.getImageSearchKeyword();
-        if (StringUtils.isBlank(imageSearchKeyword)) {
-            imageSearchKeyword = StringUtils.isBlank(spu) ? product.getProductId().toString() : product.getSpu();
-            product.setImageSearchKeyword(imageSearchKeyword);
-        }
         log.info("开始异步下载媒体文件，spu: {}, 文件夹: {}, 文件数量: {}",
                 spu, product.getImageSearchKeyword(), mediaUrlList.size());
 
@@ -537,15 +545,32 @@ public class ProductWizardServiceImpl implements IProductWizardService {
             if (StringUtils.isBlank(product.getPurchaseUrl())) {
                 product.setPurchaseUrl(product.getSourceUrl());
             }
+            String imageSearchKeyword = product.getImageSearchKeyword();
+            if (StringUtils.isBlank(imageSearchKeyword)) {
+                imageSearchKeyword = StringUtils.isBlank(product.getSpu()) ? product.getProductId().toString() : product.getSpu();
+                product.setImageSearchKeyword(imageSearchKeyword);
+            }
             // 新增逻辑
+            product.setImageSearchKeyword(product.getSpu());
             product.setCreateTime(DateUtils.getNowDate());
             product.setImageSearchKeyword(product.getSpu());
             productService.save(product);
             productId = product.getProductId();
+            if (StringUtils.isBlank(imageSearchKeyword)) {
+                productService.update(new LambdaUpdateWrapper<>(Product.class)
+                        .eq(Product::getProductId, productId)
+                        .set(Product::getImageSearchKeyword, productId.toString()));
+                product.setImageSearchKeyword(productId.toString());
+            }
             log.info("商品主表新增成功，商品ID: {}", productId);
         } else {
             // 编辑逻辑
             product.setUpdateTime(DateUtils.getNowDate());
+            productService.updateById(product);
+            if(WIZARD_STEP_SECOND.equals(wizardStep)){
+                product.setSpu(oldProduct.getSpu());
+            }
+            log.info("商品主表更新成功，商品ID: {}", productId);
         }
 
         // ==================== 3. 处理商品标签关联 新增/向导第一步====================
@@ -567,8 +592,6 @@ public class ProductWizardServiceImpl implements IProductWizardService {
 
         // ==================== 5. 处理媒体文件（仅编辑时需要） ====================
         if (CollectionUtil.isNotEmpty(product.getMediaList())) {
-            // 设置主图ID
-            product.setMainMediaId(product.getMediaList().get(0).getMediaId());
 
             // 更新商品媒体（表和磁盘文件），根据主图和规格图重命名（表和磁盘文件），更新顺序
             mediaService.updateProductMedia(product);
@@ -584,11 +607,6 @@ public class ProductWizardServiceImpl implements IProductWizardService {
             this.asyncDownloadMediaFiles(product, product.getMediaUrlList(), mediaUrlVariantMap);
         }
 
-        // ==================== 7. 更新商品主表（编辑时） ====================
-        if (!isInsert) {
-            productService.updateById(product);
-            log.info("商品主表更新成功，商品ID: {}", productId);
-        }
 
         // ==================== 8. 更新表单提示词 ====================
         if(wizardStep != null){
@@ -676,13 +694,6 @@ public class ProductWizardServiceImpl implements IProductWizardService {
             ProductVariant variant = productVariantList.get(i);
             Long variantId = variant.getVariantId();
 
-            // 生成 SKU（如果未提供）
-            if (StringUtils.isEmpty(variant.getSku())) {
-                String sku = this.generateSku(product, i);
-                variant.setSku(sku);
-                log.debug("为变体生成 SKU: {}, 变体索引: {}", sku, i);
-            }
-
             if (variantId != null) {
                 // 更新操作
                 existList.add(variantId);
@@ -692,6 +703,12 @@ public class ProductWizardServiceImpl implements IProductWizardService {
                 // 新增操作
                 if (StringUtils.isBlank(variant.getPurchaseUrl())) {
                     variant.setPurchaseUrl(product.getPurchaseUrl());
+                }
+                // 生成 SKU（如果未提供）
+                if (StringUtils.isEmpty(variant.getSku())) {
+                    String sku = this.generateSku(product, i);
+                    variant.setSku(sku);
+                    log.debug("为变体生成 SKU: {}, 变体索引: {}", sku, i);
                 }
                 variant.setProductId(productId);
                 variant.setCreateBy(currentUsername);
@@ -710,10 +727,22 @@ public class ProductWizardServiceImpl implements IProductWizardService {
 
         // 如果不是新增，删除不在当前列表中的变体
         if (!isInsert && !existList.isEmpty()) {
-            productVariantService.remove(new LambdaQueryWrapper<ProductVariant>()
+            List<ProductVariant> deleteList = productVariantService.list(new LambdaQueryWrapper<ProductVariant>()
                     .eq(ProductVariant::getProductId, productId)
                     .notIn(ProductVariant::getVariantId, existList));
-            log.info("删除其他变体成功，商品 ID: {}, 保留变体ID：{}", productId, existList);
+            if (CollectionUtil.isNotEmpty(deleteList)) {
+                List<Long> mediaIdList = Lists.newArrayList();
+                for (ProductVariant productVariant : deleteList) {
+                    productVariantService.removeById(productVariant.getVariantId());
+                    if(productVariant.getMediaId() != null){
+                        mediaIdList.add(productVariant.getMediaId());
+                    }
+                }
+                List<Media> media = mediaService.listByIds(mediaIdList);
+                mediaService.removeByIds(media);
+                mediaService.deleteMediaFilesFromDisk(media);
+                log.info("删除其他变体成功，商品 ID: {}, 保留变体ID：{}", productId, existList);
+            }
         }
 
         // 批量插入或更新变体数据
@@ -736,9 +765,9 @@ public class ProductWizardServiceImpl implements IProductWizardService {
      * @return 生成的 SKU
      */
     private String generateSku(Product product, int index) {
-        String profix = product.getSpu();
+        String profix = product.getImageSearchKeyword();
         if (StringUtils.isEmpty(profix)) {
-            // 如果 SPU 为空，使用时间戳作为前缀
+            // 如果 SPU 为空，使用时间商品ID
             profix = String.valueOf(product.getProductId());
         }
 
@@ -755,7 +784,6 @@ public class ProductWizardServiceImpl implements IProductWizardService {
      * </p>
      *
      * @param product  商品对象
-     * @param isInsert 是否为新增操作
      */
     private void updateFormSuggestions(Product product, Product oldProduct, Integer wizardStep) {
         try {

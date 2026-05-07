@@ -100,6 +100,9 @@ public interface IMediaService extends IService<Media>
     List<Media> scanMediaToProduct(String dirPath, String productId);
 
     void updateProductMedia(Product product);
+
+    void deleteMediaFilesFromDisk(List<Media> medias);
+
     /**
      * 执行媒体文件重命名
      *

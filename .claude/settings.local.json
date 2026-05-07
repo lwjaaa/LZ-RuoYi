@@ -2,7 +2,10 @@
   "permissions": {
     "allow": [
       "Bash(npm run *)",
-      "Bash(JAVA_HOME=\"/c/dev tool/Java/jdk-17\" \"/c/dev tool/apache-maven-3.8.5/bin/mvn\" compile -pl vh-erp -am -q)"
+      "Bash(JAVA_HOME=\"/c/dev tool/Java/jdk-17\" \"/c/dev tool/apache-maven-3.8.5/bin/mvn\" compile -pl vh-erp -am -q)",
+      "WebSearch",
+      "WebFetch(domain:shopify.dev)",
+      "Bash(java *)"
     ]
   }
 }

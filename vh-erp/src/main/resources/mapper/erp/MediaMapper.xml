@@ -4,7 +4,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.ruoyi.erp.mapper.MediaMapper">
     
-    <resultMap type="Media" id="MediaResult">
+    <resultMap type="com.ruoyi.erp.model.domain.Media" id="MediaResult">
         <result property="mediaId"    column="media_id"    />
         <result property="productId"    column="product_id"    />
         <result property="shopifyMediaId"    column="shopify_media_id"    />

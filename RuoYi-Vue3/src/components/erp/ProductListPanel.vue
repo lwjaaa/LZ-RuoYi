@@ -184,6 +184,16 @@
           >推送 Shopify</el-button
         >
       </el-col>
+      <el-col :span="1.5" class="fixed-actions">
+        <el-button
+          type="primary"
+          plain
+          icon="Upload"
+          @click="handlePublish"
+          v-hasPermi="['erp:product:push']"
+          >发布</el-button
+        >
+      </el-col>
       <right-toolbar
         v-model:showSearch="showSearch"
         @queryTable="getList"
@@ -484,7 +494,7 @@ import {
   getCurrentInstance,
   computed,
 } from "vue";
-import { listProduct, getProduct, delProduct, pushBatch, getPushResult } from "@/api/erp/product";
+import { listProduct, getProduct, delProduct, pushBatch, getPushResult, publishProducts } from "@/api/erp/product";
 import { getToken } from "@/utils/auth";
 import { parseTime } from "@/utils/ruoyi";
 import { UploadFilled, ArrowDown, ArrowUp, Promotion } from "@element-plus/icons-vue";
@@ -790,36 +800,24 @@ function importTemplate(): void {
 }
 
 function handlePushToShopify(): void {
-  if (!ids.value.length) {
-    proxy.$modal.msgWarning("请先选择要推送的商品");
-    return;
-  }
-  proxy.$modal.confirm("是否确认推送选中的商品到 Shopify？")
+  const isSelected = ids.value.length > 0;
+  const count = isSelected ? ids.value.length : total.value;
+  const desc = isSelected ? `已勾选的 ${count} 个商品` : `当前筛选的 ${count} 个商品`;
+
+  proxy.$modal.confirm(`即将推送：${desc}\n\n是否继续？`)
     .then(() => {
       return pushBatch({
-        category: null,
-        tagIds: null,
-        syncStatus: null,
-        selectAll: false,
-        productQuery: {
-          pageNum: 1,
-          pageSize: 1000,
-          productTitle: null,
-          spu: null,
-          status: null,
-          syncStatus: null,
-          category: null,
-          productType: null,
-          mainMediaId: null,
-          lastSyncTime: null,
-          params: {}
-        }
+        productQuery: isSelected ? undefined : queryParams.value,
+        productIds: isSelected ? ids.value : undefined
       });
     })
     .then((res: any) => {
-      proxy.$modal.msgSuccess("已创建推送任务，任务ID: " + res.data.taskId);
-      // 打开任务进度弹窗
-      openTaskProgress(res.data.taskId);
+      if (res.data && res.data.taskId) {
+        proxy.$modal.msgSuccess("已创建推送任务，任务ID: " + res.data.taskId);
+        openTaskProgress(res.data.taskId);
+      } else {
+        proxy.$modal.msgWarning("没有可推送的商品");
+      }
     })
     .catch(() => {});
 }
@@ -832,6 +830,30 @@ function openTaskProgress(taskId: number): void {
   }).then(() => {
     proxy.$tab.openPage("Shopify 推送任务", "/erp/task");
   }).catch(() => {});
+}
+
+function handlePublish(): void {
+  if (ids.value.length === 0) {
+    proxy.$modal.msgWarning("请先勾选要发布的商品");
+    return;
+  }
+  const count = ids.value.length;
+  const desc = `已勾选的 ${count} 个商品`;
+
+  proxy.$modal.confirm(`即将发布到所有渠道：${desc}\n\n是否继续？`)
+    .then(() => {
+      return publishProducts({
+        productIds: ids.value
+      });
+    })
+    .then((res: any) => {
+      if (res.data) {
+        const { successCount, failedCount } = res.data;
+        proxy.$modal.msgSuccess(`发布完成：成功 ${successCount}，失败 ${failedCount}`);
+        getList();
+      }
+    })
+    .catch(() => {});
 }
 
 function handleFileUploadProgress(event: any, file: any, fileList: any): void {

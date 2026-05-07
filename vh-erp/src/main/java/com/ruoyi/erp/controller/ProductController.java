@@ -9,6 +9,7 @@ import com.ruoyi.common.utils.poi.ExcelUtil;
 import com.ruoyi.erp.model.domain.Product;
 import com.ruoyi.erp.model.dto.product.ProductPushRequest;
 import com.ruoyi.erp.model.dto.product.ProductQuery;
+import com.ruoyi.erp.model.dto.product.PublishRequest;
 import com.ruoyi.erp.model.vo.product.ProductVo;
 import com.ruoyi.erp.service.IProductService;
 import com.ruoyi.erp.service.IProductWizardService;
@@ -113,11 +114,8 @@ public class ProductController extends BaseController {
     @PostMapping("/push-batch")
     public AjaxResult pushBatch(@RequestBody ProductPushRequest request) {
         Long taskId = productService.pushBatchByCondition(
-                request.getCategory(),
-                request.getTagIds(),
-                request.getSyncStatus(),
-                request.getSelectAll(),
-                request.getProductQuery()
+                request.getProductQuery(),
+                request.getProductIds()
         );
         return success().put("taskId", taskId);
     }
@@ -130,6 +128,17 @@ public class ProductController extends BaseController {
     @GetMapping("/push-result/{taskId}")
     public AjaxResult pushResult(@PathVariable Long taskId) {
         return success(productService.getPushResult(taskId));
+    }
+
+    /**
+     * 发布商品到所有渠道
+     * POST /erp/product/publish
+     */
+    @PreAuthorize("@ss.hasPermi('erp:product:push')")
+    @Log(title = "发布商品", businessType = BusinessType.OTHER)
+    @PostMapping("/publish")
+    public AjaxResult publish(@RequestBody PublishRequest request) {
+        return success(productService.publishToChannels(request.getProductIds(), request.getStoreId()));
     }
 
 }

@@ -73,4 +73,5 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
                  left join erp_tag_dict d on r.tag_id = d.tag_id
         where r.product_id = #{productId}
     </select>
+
 </mapper>

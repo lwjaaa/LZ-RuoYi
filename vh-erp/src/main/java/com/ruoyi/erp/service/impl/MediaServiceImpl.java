@@ -4,10 +4,10 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.ruoyi.common.config.RuoYiConfig;
-import com.ruoyi.common.constant.Constants;
 import com.ruoyi.common.exception.ServiceException;
 import com.ruoyi.common.utils.DateUtils;
 import com.ruoyi.common.utils.StringUtils;
+import com.ruoyi.common.utils.bean.BeanUtils;
 import com.ruoyi.erp.mapper.MediaMapper;
 import com.ruoyi.erp.mapper.ProductMapper;
 import com.ruoyi.erp.model.domain.Media;
@@ -227,33 +227,75 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, Media> implements
         // 收集需要保留的媒体 ID
         Set<Long> keepMediaIds = new HashSet<>();
 
-        // ==================== 2. 处理新媒体列表（根据下标设置 position） ====================
+        // ==================== 2. 先收集所有需要重命名的媒体文件（在实际更新数据库之前） ====================
+        List<MediaRenameVo> toRenameList = new ArrayList<>();
+
+        // 收集所有被变体绑定的媒体ID
+        List<ProductVariant> variantList = product.getProductVariantList();
+        Set<Long> variantMediaIds = new HashSet<>();
+        if (!CollectionUtils.isEmpty(variantList)) {
+            variantList.stream()
+                    .map(ProductVariant::getMediaId)
+                    .filter(Objects::nonNull)
+                    .forEach(variantMediaIds::add);
+        }
+
+        // 提前计算所有媒体的新文件名
+        this.collectAllMediaRenameTasks(newMediaList, variantList, variantMediaIds, spu, toRenameList);
+
+        // ==================== 3. 处理新媒体列表（根据下标设置 position，同时更新文件名和URL） ====================
         if (!CollectionUtils.isEmpty(newMediaList)) {
+            // 构建重命名任务的映射，方便快速查找
+            Map<Long, MediaRenameVo> renameTaskMap = toRenameList.stream()
+                    .filter(task -> task.getMedia().getMediaId() != null)
+                    .collect(Collectors.toMap(
+                            task -> task.getMedia().getMediaId(),
+                            task -> task
+                    ));
+
             for (int i = 0; i < newMediaList.size(); i++) {
                 Media media = newMediaList.get(i);
                 Long mediaId = media.getMediaId();
+                Media editMedia = new  Media();
+                BeanUtils.copyBeanProp(editMedia,media);
 
                 // 设置 position（从 0 开始）
-                media.setPosition(i);
+                editMedia.setPosition(i);
+
+                // 检查是否有对应的重命名任务
+                MediaRenameVo renameTask = renameTaskMap.get(mediaId);
+                if (renameTask != null) {
+                    // 使用计算好的新文件名和URL
+                    String newFilename = renameTask.getNewFilename();
+                    String oldFilePath = MediaFileUtil.convertUrlToFilePath(editMedia.getNasMediaUrl());
+                    File oldFile = new File(oldFilePath);
+                    String newFilePath = MediaFileUtil.fixFileSeparator(oldFile.getParent() + "/" + newFilename);
+                    String newNasUrl = MediaFileUtil.generateNasUrl(newFilePath);
+
+                    editMedia.setFilename(newFilename);
+                    editMedia.setNasMediaUrl(newNasUrl);
+
+                    log.debug("媒体 {} 将使用新文件名: {}, 新URL: {}", mediaId, newFilename, newNasUrl);
+                }
 
                 if (mediaId != null && existingMediaMap.containsKey(mediaId)) {
                     // 已存在的媒体，更新
-                    media.setUpdateTime(DateUtils.getNowDate());
-                    this.updateById(media);
+                    editMedia.setUpdateTime(DateUtils.getNowDate());
+                    this.updateById(editMedia);
                     keepMediaIds.add(mediaId);
                     log.debug("更新媒体记录，ID: {}, Position: {}", mediaId, i);
                 } else {
                     // 新增媒体
-                    media.setProductId(productId);
-                    media.setCreateTime(DateUtils.getNowDate());
-                    this.save(media);
-                    keepMediaIds.add(media.getMediaId());
-                    log.debug("新增媒体记录，ID: {}, Position: {}", media.getMediaId(), i);
+                    editMedia.setProductId(productId);
+                    editMedia.setCreateTime(DateUtils.getNowDate());
+                    this.save(editMedia);
+                    keepMediaIds.add(editMedia.getMediaId());
+                    log.debug("新增媒体记录，ID: {}, Position: {}", editMedia.getMediaId(), i);
                 }
             }
         }
 
-        // ==================== 3. 删除不在新媒体列表中的媒体记录和文件 ====================
+        // ==================== 4. 删除不在新媒体列表中的媒体记录和文件 ====================
         Set<Long> toDeleteMediaIds = existingMediaMap.keySet().stream()
                 .filter(id -> !keepMediaIds.contains(id))
                 .collect(Collectors.toSet());
@@ -269,45 +311,49 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, Media> implements
             log.info("删除媒体数据库记录，数量: {}, IDs: {}", toDeleteMediaIds.size(), toDeleteMediaIds);
 
             // 删除磁盘文件
-            deleteMediaFilesFromDisk(toDeleteMedias, spu);
+            deleteMediaFilesFromDisk(toDeleteMedias);
         }
 
-        // 第一步：收集需要重命名的媒体文件
-        List<MediaRenameVo> toRenameList = new ArrayList<>();
-
-
-        // ==================== 4. 获取 SKU 绑定的规格图的文件名称 ====================
-        String fileNamePrefix = StringUtils.isNotBlank(spu) ? spu : productId.toString();
-
-        List<ProductVariant> variantList = product.getProductVariantList();
-        this.renameVariantMediaFiles(variantList, newMediaList, fileNamePrefix, toRenameList);
-
-
-        // ==================== 5. 获取 非主图和规格图的文件名称 ====================
-        // 收集所有被变体绑定的媒体ID
-        Set<Long> variantMediaIds = new HashSet<>();
-        if (!CollectionUtils.isEmpty(variantList)) {
-            variantList.stream()
-                    .map(ProductVariant::getMediaId)
-                    .filter(Objects::nonNull)
-                    .forEach(variantMediaIds::add);
-        }
-        // 重命名非主图和非规格图的媒体文件 这个入口肯定有spu了，已spu为文件名前缀
-        renameOtherMediaAndMainMediaFiles(newMediaList, variantMediaIds, spu, toRenameList);
-
-        // ==================== 6. 执行文件重命名 ====================
+        // ==================== 5. 执行文件重命名 ====================
         this.doRenameMediaFiles(toRenameList);
-        log.info("商品媒体更新完成，商品ID: {}, 保留媒体数: {}, 删除媒体数: {}",
-                productId, keepMediaIds.size(), toDeleteMediaIds.size());
+
+        log.info("商品媒体更新完成，商品ID: {}, 保留媒体数: {}, 删除媒体数: {}, 重命名数: {}",
+                productId, keepMediaIds.size(), toDeleteMediaIds.size(), toRenameList.size());
+    }
+
+    /**
+     * 收集所有媒体的重命名任务
+     * 统一计算所有媒体应该使用的新文件名
+     *
+     * @param mediaList       媒体列表
+     * @param variantList     变体列表
+     * @param variantMediaIds 变体绑定的媒体ID集合
+     * @param spu             商品SPU
+     * @param toRenameList    重命名任务列表（输出参数）
+     */
+    private void collectAllMediaRenameTasks(List<Media> mediaList,
+                                            List<ProductVariant> variantList,
+                                            Set<Long> variantMediaIds,
+                                            String spu,
+                                            List<MediaRenameVo> toRenameList) {
+        if (CollectionUtils.isEmpty(mediaList)) {
+            return;
+        }
+
+        // 收集变体媒体的重命名任务
+        this.renameVariantMediaFiles(variantList, mediaList, spu, toRenameList);
+
+        // 收集主图和其他媒体的重命名任务
+        this.renameOtherMediaAndMainMediaFiles(mediaList, variantMediaIds, spu, toRenameList);
     }
 
     /**
      * 从磁盘删除媒体文件
      *
      * @param medias 要删除的媒体列表
-     * @param spu    商品 SPU（用于定位文件夹）
      */
-    private void deleteMediaFilesFromDisk(List<Media> medias, String spu) {
+    @Override
+    public void deleteMediaFilesFromDisk(List<Media> medias) {
         if (CollectionUtils.isEmpty(medias)) {
             return;
         }
@@ -321,7 +367,7 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, Media> implements
 
             try {
                 // 将 URL 转换为文件路径
-                String filePath = convertUrlToFilePath(nasMediaUrl);
+                String filePath = MediaFileUtil.convertUrlToFilePath(nasMediaUrl);
                 File file = new File(filePath);
 
                 if (file.exists() && file.isFile()) {
@@ -387,8 +433,6 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, Media> implements
             }
         }
     }
-
-
 
     /**
      * 重命名主图和非规格图的媒体文件
@@ -469,7 +513,7 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, Media> implements
                 Media media = task.getMedia();
                 String newFilename = task.getNewFilename();
 
-                String oldFilePath = convertUrlToFilePath(media.getNasMediaUrl());
+                String oldFilePath = MediaFileUtil.convertUrlToFilePath(media.getNasMediaUrl());
                 File oldFile = new File(oldFilePath);
 
                 if (!oldFile.exists() || !oldFile.isFile()) {
@@ -524,64 +568,6 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, Media> implements
             }
         }
 
-    }
-
-
-
-    /**
-     * 获取文件扩展名
-     *
-     * @param mediaId 媒体ID
-     * @return 扩展名（不含点）
-     */
-    private String getFileExtension(Long mediaId) {
-        if (mediaId == null) {
-            return null;
-        }
-
-        Media media = this.getById(mediaId);
-        if (media == null || StringUtils.isEmpty(media.getFilename())) {
-            return null;
-        }
-
-        int lastDotIndex = media.getFilename().lastIndexOf('.');
-        if (lastDotIndex > 0 && lastDotIndex < media.getFilename().length() - 1) {
-            return media.getFilename().substring(lastDotIndex + 1);
-        }
-
-        return null;
-    }
-
-
-    /**
-     * 将 URL 转换为文件路径
-     *
-     * @param nasMediaUrl NAS 媒体 URL
-     * @return 文件绝对路径
-     */
-    private String convertUrlToFilePath(String nasMediaUrl) {
-        if (StringUtils.isEmpty(nasMediaUrl)) {
-            return null;
-        }
-
-        // 如果是完整 URL，提取路径部分
-        if (nasMediaUrl.startsWith("http://") || nasMediaUrl.startsWith("https://")) {
-            // 提取 /profile/ 后面的路径
-            int profileIndex = nasMediaUrl.indexOf(Constants.RESOURCE_PREFIX);
-            if (profileIndex >= 0) {
-                String relativePath = nasMediaUrl.substring(profileIndex + Constants.RESOURCE_PREFIX.length());
-                return RuoYiConfig.getProfile() + relativePath;
-            }
-        }
-
-        // 如果已经是相对路径（以 /profile/ 开头）
-        if (nasMediaUrl.startsWith(Constants.RESOURCE_PREFIX)) {
-            String relativePath = nasMediaUrl.substring(Constants.RESOURCE_PREFIX.length());
-            return RuoYiConfig.getProfile() + relativePath;
-        }
-
-        // 否则直接返回
-        return nasMediaUrl;
     }
 
     @Override

@@ -208,13 +208,11 @@ onMounted(() => getList());
 ## Important Notes
 
 1. **API Proxy**: Frontend dev server proxies `/dev-api/*` to `http://localhost:8080/*`
-
 2. **Default Credentials**: admin / admin123
-
 3. **File Upload Path**: Configured via `ruoyi.profile` in `application-dev.yml` (default: `C:/velarthome`)
-
 4. **Active Profiles**: Backend uses `dev,erp-dev` profiles by default
-
 5. **Port Configuration**:
    - Backend: 8080
    - Frontend dev server: 80
+6. 确保每次开发的功能都是完整的，不要留一个todo。
+7. 对接shopify的时候，请确保对接的shopify的2026-04版本的接口。

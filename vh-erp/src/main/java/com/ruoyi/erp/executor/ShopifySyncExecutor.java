@@ -2,6 +2,7 @@ package com.ruoyi.erp.executor;
 
 import com.alibaba.fastjson2.JSON;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.ruoyi.common.enums.ShopifyProductStatusEnum;
 import com.ruoyi.common.utils.DateUtils;
 import com.ruoyi.common.utils.StringUtils;
 import com.ruoyi.erp.config.ShopifyGraphQLClient;
@@ -11,19 +12,18 @@ import com.ruoyi.erp.exception.ShopifyApiException;
 import com.ruoyi.erp.mapper.ProductMapper;
 import com.ruoyi.erp.mapper.ShopifyStoreMapper;
 import com.ruoyi.erp.model.domain.*;
-import com.ruoyi.erp.service.IMediaService;
-import com.ruoyi.erp.service.IProductVariantService;
-import com.ruoyi.erp.service.IShopifyTaskService;
-import com.ruoyi.erp.service.ITagDictService;
+import com.ruoyi.erp.service.*;
+import com.ruoyi.erp.utils.MediaFileUtil;
 import com.ruoyi.erp.utils.PriceUtil;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.math.BigDecimal;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -34,10 +34,6 @@ import java.util.stream.Collectors;
 @Slf4j
 @Component
 public class ShopifySyncExecutor {
-
-    private static final String TASK_TYPE_BATCH = "PRODUCT_CREATE_BATCH";
-    private static final String TASK_TYPE_PRODUCT = "PRODUCT_CREATE";
-    private static final String TASK_GROUP_PRODUCT = "0";
 
     @Resource
     private ShopifyGraphQLClient shopifyGraphQLClient;
@@ -50,6 +46,8 @@ public class ShopifySyncExecutor {
     @Resource
     private ITagDictService tagDictService;
     @Resource
+    private IProductTagRelService productTagRelService;
+    @Resource
     private ShopifyStoreMapper shopifyStoreMapper;
     @Resource
     private ProductMapper productMapper;
@@ -57,7 +55,7 @@ public class ShopifySyncExecutor {
     /**
      * 异步执行批量推送
      */
-    @Async("shopifySyncThreadPool")
+    @Async("threadPoolTaskExecutor")
     public void execute(Long taskId, List<Long> productIds) {
         long startTime = System.currentTimeMillis();
         ShopifyTask task = shopifyTaskService.selectShopifyTaskByTaskId(taskId);
@@ -192,23 +190,37 @@ public class ShopifySyncExecutor {
         result.append(String.format("[商品「%s」] 第 %d/%d 个\n", product.getProductTitle(), index, total));
 
         // 1. 上传媒体
-        List<Media> uploadMediaList = uploadMedia(storeId, productId, product.getMediaList(), result);
+        log.info("[商品「{}」] 上传媒体", product.getProductTitle());
+        List<Media> uploadMediaList = uploadMedia(storeId, productId, result);
+        log.info("[商品「{}」] 上传媒体完成", product.getProductTitle());
 
         // 2. 获取标签名称
-        List<String> tagNames = getTagNames(product.getTagIds());
+        List<String> tagNames = productTagRelService.selectTagCodeListByProductId(productId);
 
-        // 3. 构建商品输入
+        // 3. 构建商品输入和媒体列表
         ShopifyGraphQLClient.ProductInput productInput = buildProductInput(product, uploadMediaList, tagNames);
+        List<ShopifyGraphQLClient.CreateMediaInput> mediaInputs = buildMediaInputs(uploadMediaList, product);
 
         // 4. 创建/更新商品
         String shopifyProductId;
+        List<String> shopifyMediaIds = new ArrayList<>();
+        log.info("[商品「{}」] 创建/更新商品", product.getProductTitle());
         if (StringUtils.isNotEmpty(product.getShopifyProductId())) {
             shopifyProductId = shopifyGraphQLClient.updateProduct(storeId, product.getShopifyProductId(), productInput);
             result.append("✅ 商品更新成功 → PID: ").append(shopifyProductId).append("\n");
         } else {
-            shopifyProductId = shopifyGraphQLClient.createProduct(storeId, productInput);
+            ShopifyGraphQLClient.ProductCreateResult createResult = shopifyGraphQLClient.createProduct(storeId, productInput, mediaInputs);
+            shopifyProductId = createResult.getProductId();
+            shopifyMediaIds = createResult.getMediaIds();
             result.append("✅ 商品创建成功 → PID: ").append(shopifyProductId).append("\n");
+            
+            // 保存 media ID 到数据库
+            if (!shopifyMediaIds.isEmpty() && uploadMediaList != null) {
+                saveMediaIdsToDatabase(uploadMediaList, shopifyMediaIds);
+                result.append("✅ 已保存 ").append(shopifyMediaIds.size()).append(" 个媒体 ID\n");
+            }
         }
+        log.info("[商品「{}」] 创建/更新商品完成", product.getProductTitle());
 
         // 更新商品的 Shopify ID
         Product updateProduct = new Product();
@@ -219,7 +231,9 @@ public class ShopifySyncExecutor {
         // 5. 批量创建变体
         List<ProductVariant> variants = productVariantService.selectListByProductId(productId);
         if (!variants.isEmpty()) {
+            log.info("[商品「{}」] 批量创建变体", product.getProductTitle());
             syncVariants(storeId, shopifyProductId, variants, result);
+            log.info("[商品「{}」] 批量创建变体完成", product.getProductTitle());
         }
 
         return result.toString();
@@ -228,8 +242,10 @@ public class ShopifySyncExecutor {
     /**
      * 上传媒体文件
      */
-    private List<Media> uploadMedia(Long storeId, Long productId, List<Media> mediaList, StringBuilder result) {
+    private List<Media> uploadMedia(Long storeId, Long productId, StringBuilder result) {
         List<Media> uploadMediaList = new ArrayList<>();
+
+        List<Media> mediaList = mediaService.listByProductId(productId);
         if (mediaList == null || mediaList.isEmpty()) {
             return uploadMediaList;
         }
@@ -239,7 +255,7 @@ public class ShopifySyncExecutor {
 
             try {
                 // 如果已经有 Shopify media ID，跳过上传
-                if (StringUtils.isNotEmpty(media.getShopifyMediaId()) && StringUtils.isNotEmpty(media.getShopifyMediaUrl())) {
+                if (StringUtils.isNotEmpty(media.getShopifyMediaUrl())) {
                     uploadMediaList.add(media);
                     result.append("⚠️ 图片「").append(media.getFilename()).append("」已存在，跳过\n");
                     continue;
@@ -261,13 +277,14 @@ public class ShopifySyncExecutor {
                 }
 
                 // 读取文件并上传
-                java.io.File file = new java.io.File(localPath);
+                String oldFilePath = MediaFileUtil.convertUrlToFilePath(media.getNasMediaUrl());
+                File file = new File(oldFilePath);
                 if (!file.exists()) {
                     result.append("❌ 图片「").append(media.getFilename()).append("」文件不存在: ").append(localPath).append("\n");
                     continue;
                 }
 
-                try (java.io.FileInputStream fis = new java.io.FileInputStream(file)) {
+                try (FileInputStream fis = new FileInputStream(file)) {
                     ShopifyGraphQLClient.StagedUploadResult uploadResult = shopifyGraphQLClient.stagedUploadMedia(
                             storeId,
                             media.getFilename(),
@@ -276,13 +293,10 @@ public class ShopifySyncExecutor {
                             file.length()
                     );
 
-                    // 注册媒体到 Shopify
-                    String shopifyMediaId = shopifyGraphQLClient.createMediaImage(storeId, uploadResult.resourceUrl(), media.getAlt());
 
                     // 更新 media 表的 shopify media ID
                     Media updateMedia = new Media();
                     updateMedia.setMediaId(media.getMediaId());
-                    updateMedia.setShopifyMediaId(shopifyMediaId);
                     updateMedia.setShopifyMediaUrl(uploadResult.resourceUrl());
                     mediaService.updateMedia(updateMedia);
                     media.setShopifyMediaUrl(uploadResult.resourceUrl());
@@ -291,6 +305,7 @@ public class ShopifySyncExecutor {
                     result.append("✅ 图片「").append(media.getFilename()).append("」上传成功\n");
                 }
             } catch (Exception e) {
+                log.error("图片「" + media.getFilename() + "」上传失败", e);
                 result.append("❌ 图片「").append(media.getFilename()).append("」上传失败: ").append(e.getMessage()).append("\n");
             }
         }
@@ -308,25 +323,25 @@ public class ShopifySyncExecutor {
             BigDecimal compareAtPrice = PriceUtil.fenToYuan(variant.getCompareAtPrice());
 
             Long mediaId = variant.getMediaId();
-            String shopifyMediaId = null;
+            String shopifyMediaUrl = null;
             if (mediaId != null) {
                 Media media = mediaService.getOne(new LambdaQueryWrapper<>(Media.class)
                         .select(Media::getShopifyMediaId).eq(Media::getMediaId, mediaId));
                 if (media != null) {
-                    shopifyMediaId = media.getShopifyMediaId();
+                    shopifyMediaUrl = media.getShopifyMediaUrl();
                 }
             }
 
             ShopifyGraphQLClient.VariantInput input = ShopifyGraphQLClient.VariantInput.builder()
                     .price(price)
-                    .mediaId(shopifyMediaId)
+                    .mediaSrc(shopifyMediaUrl)
                     .compareAtPrice(compareAtPrice)
-                    .inventoryQuantity(100)
                     .inventoryPolicy("DENY")
-                    .selectedOptions(parseOptionValuesAsList(variant.getOptionValues()))
+                    .optionValues(parseOptionValuesAsList(variant.getOptionValues()))
                     .inventoryItem(ShopifyGraphQLClient.InventoryItemInput.builder()
                             .sku(variant.getSku())
                             .tracked(false)
+                            .quantity(100)
                             .build())
                     .build();
 
@@ -350,10 +365,58 @@ public class ShopifySyncExecutor {
     }
 
     /**
-     * 解析 optionValues JSON 为 List<SelectedOptionInput>
+     * 保存 media ID 到数据库
      */
-    private List<ShopifyGraphQLClient.SelectedOptionInput> parseOptionValuesAsList(String optionValuesJson) {
-        List<ShopifyGraphQLClient.SelectedOptionInput> options = new ArrayList<>();
+    private void saveMediaIdsToDatabase(List<Media> uploadMediaList, List<String> shopifyMediaIds) {
+        if (uploadMediaList == null || uploadMediaList.isEmpty() || shopifyMediaIds.isEmpty()) {
+            return;
+        }
+
+        // 按顺序匹配 media 和 mediaId
+        for (int i = 0; i < Math.min(uploadMediaList.size(), shopifyMediaIds.size()); i++) {
+            Media media = uploadMediaList.get(i);
+            String shopifyMediaId = shopifyMediaIds.get(i);
+
+            if (media != null && StringUtils.isNotEmpty(shopifyMediaId)) {
+                try {
+                    Media updateMedia = new Media();
+                    updateMedia.setMediaId(media.getMediaId());
+                    updateMedia.setShopifyMediaId(shopifyMediaId);
+                    mediaService.updateMedia(updateMedia);
+                    log.info("已保存 media ID: mediaId={}, shopifyMediaId={}", media.getMediaId(), shopifyMediaId);
+                } catch (Exception e) {
+                    log.error("保存 media ID 失败: mediaId={}", media.getMediaId(), e);
+                }
+            }
+        }
+    }
+
+    /**
+     * 构建媒体输入列表
+     */
+    private List<ShopifyGraphQLClient.CreateMediaInput> buildMediaInputs(List<Media> uploadMediaList, Product product) {
+        List<ShopifyGraphQLClient.CreateMediaInput> mediaInputs = new ArrayList<>();
+        
+        if (uploadMediaList != null && !uploadMediaList.isEmpty()) {
+            for (Media media : uploadMediaList) {
+                if (media != null && StringUtils.isNotEmpty(media.getShopifyMediaUrl())) {
+                    mediaInputs.add(ShopifyGraphQLClient.CreateMediaInput.builder()
+                            .originalSource(media.getShopifyMediaUrl())
+                            .alt(product.getProductTitle() + ProductConstants.PRODUCT_MEDIA_SUFFIX)
+                            .mediaContentType(media.getMediaContentType())
+                            .build());
+                }
+            }
+        }
+        
+        return mediaInputs;
+    }
+
+    /**
+     * 解析 optionValues JSON 为 List<OptionValueInput>
+     */
+    private List<ShopifyGraphQLClient.OptionValueInput> parseOptionValuesAsList(String optionValuesJson) {
+        List<ShopifyGraphQLClient.OptionValueInput> options = new ArrayList<>();
         if (StringUtils.isEmpty(optionValuesJson)) {
             return options;
         }
@@ -362,27 +425,14 @@ public class ShopifySyncExecutor {
 
         try {
             for (ProductVariantOption opt : optionValueList) {
-                options.add(ShopifyGraphQLClient.SelectedOptionInput.builder()
-                        .name(opt.getEnglishName())
-                        .value(opt.getEnglishValue())
+                options.add(ShopifyGraphQLClient.OptionValueInput.builder()
+                        .name(opt.getEnglishValue())
                         .build());
             }
         } catch (Exception e) {
             log.warn("解析 optionValues 失败: {}", optionValuesJson, e);
         }
         return options;
-    }
-
-    /**
-     * 获取标签名称列表
-     */
-    private List<String> getTagNames(List<Long> tagIds) {
-        if (tagIds == null || tagIds.isEmpty()) {
-            return Collections.emptyList();
-        }
-        return tagDictService.listByIds(tagIds).stream()
-                .map(TagDict::getTagName)
-                .collect(Collectors.toList());
     }
 
     /**
@@ -400,41 +450,44 @@ public class ShopifySyncExecutor {
                         .description(product.getDescription())
                         .build())
                 .tags(tagNames)
+                .status(ShopifyProductStatusEnum.DRAFT.name())
                 .build();
 
-        // 处理图片 - 使用 src 字段传入图片 URL
-        if (uploadMediaList != null && !uploadMediaList.isEmpty()) {
-            List<ShopifyGraphQLClient.ProductImageInput> images = new ArrayList<>();
-            for (Media media : uploadMediaList) {
-                if (media != null && StringUtils.isNotEmpty(media.getShopifyMediaUrl())) {
-                    images.add(ShopifyGraphQLClient.ProductImageInput.builder()
-                            .src(media.getShopifyMediaUrl())
-                            .altText(media.getAlt())
-                            .build());
-                }
-            }
-            if (!images.isEmpty()) {
-                input.setImages(images);
-            }
-        }
-
-        // 处理选项
+        // 处理选项 - 根据 Shopify 2026-04 API，values 需要是 OptionValueInput 对象数组
         if (StringUtils.isNotEmpty(product.getOptionJson())) {
             try {
                 List<ProductOption> optionList = JSON.parseArray(product.getOptionJson(), ProductOption.class);
                 List<ShopifyGraphQLClient.ProductOptionInput> options = new ArrayList<>();
-                for (ProductOption opt : optionList) {
+                for (int i = 0; i < optionList.size(); i++) {
+                    ProductOption opt = optionList.get(i);
+                    // 将字符串值转换为 OptionValueInput 对象
+                    List<ShopifyGraphQLClient.OptionValueInput> valueInputs = opt.getValues().stream()
+                            .map(value -> ShopifyGraphQLClient.OptionValueInput.builder()
+                                    .name(value.getEnglishValue())
+                                    .build())
+                            .collect(Collectors.toList());
+                    
                     options.add(ShopifyGraphQLClient.ProductOptionInput.builder()
                             .name(opt.getEnglishName())
-                            .values(opt.getValues().stream().map(ProductOptionValue::getEnglishValue).collect(Collectors.toList()))
+                            .position(i + 1)
+                            .values(valueInputs)
                             .build());
                 }
-                input.setOptions(options);
+                input.setProductOptions(options);
             } catch (Exception e) {
                 log.warn("解析 optionJson 失败: {}", product.getOptionJson(), e);
             }
         }
-
+        
+        if(StringUtils.isNotBlank(product.getSpu())){
+            List<ShopifyGraphQLClient.ProductMetafield> metafieldInput = new ArrayList<>();
+            metafieldInput.add(ShopifyGraphQLClient.ProductMetafield.builder()
+                    .key("SPU")
+                    .namespace("custom")
+                    .value(product.getSpu())
+                    .build());
+            input.setMetafields(metafieldInput);
+        }
         return input;
     }
 }

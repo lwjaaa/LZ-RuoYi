@@ -136,6 +136,7 @@ logging:
     level:
         com.ruoyi: debug
         org.springframework: warn
+        graphql: debug
 
 # 用户配置
 user:
@@ -160,8 +161,9 @@ token:
 springdoc:
     api-docs:
         path: /v3/api-docs
+        enabled: false
     swagger-ui:
-        enabled: true
+        enabled: false
         path: /swagger-ui.html
         tags-sorter: alpha
     group-configs:
@@ -189,7 +191,7 @@ xss:
 # ExchangeRate-API配置
 exchange-rate:
     # API Key (从 https://www.exchangerate-api.com/ 获取)
-    api-key: YOUR_API_KEY_HERE
+    api-key: 74d001f87bf041459e68fd9b
     # API基础URL
     base-url: https://v6.exchangerate-api.com/v6
     # 连接超时时间（毫秒）
@@ -200,3 +202,8 @@ exchange-rate:
     default-base-currency: USD
     # 目标货币列表，多个用英文逗号隔开
     target-currencies: CNY
+
+fpx:
+    api:
+        appKey: 29d36ce5-1e53-4559-b233-78385be39acb
+        appSecret: 60f9b9e6-1129-4842-bbf1-507ef83ffea2

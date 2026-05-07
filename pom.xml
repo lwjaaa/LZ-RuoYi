@@ -38,6 +38,7 @@
         <lombok.version>1.18.36</lombok.version>
         <mybatis-plus.version>3.5.9</mybatis-plus.version>
         <hutool.version>5.8.38</hutool.version>
+        <redisson.version>3.27.0</redisson.version>
     </properties>
 
     <!-- 依赖声明 -->
@@ -201,6 +202,12 @@
                 <groupId>cn.hutool</groupId>
                 <artifactId>hutool-all</artifactId>
                 <version>${hutool.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.redisson</groupId>
+                <artifactId>redisson-spring-boot-starter</artifactId>
+                <version>${redisson.version}</version>
             </dependency>
 
         </dependencies>

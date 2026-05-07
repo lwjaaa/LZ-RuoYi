@@ -2,27 +2,37 @@ package com.ruoyi.erp.config;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.ruoyi.common.core.redis.RedisCache;
 import com.ruoyi.common.utils.StringUtils;
 import com.ruoyi.erp.exception.ShopifyApiException;
+import com.ruoyi.erp.exception.ShopifyTokenExpiredException;
 import com.ruoyi.erp.model.domain.ShopifyStore;
 import com.ruoyi.erp.service.IShopifyStoreService;
 import jakarta.annotation.Resource;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
-import reactor.util.retry.Retry;
+import reactor.core.publisher.Mono;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
-import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Shopify GraphQL API 客户端
@@ -71,10 +81,41 @@ public class ShopifyGraphQLClient {
     @Resource
     private IShopifyStoreService shopifyStoreService;
 
+    @Resource
+    private RedisCache redisCache;
+
+    @Resource
+    private RedissonClient redissonClient;
+
     /**
      * 每个店铺独立的 WebClient 缓存 (避免每次创建)
      */
     private final ConcurrentMap<Long, WebClient> webClientCache = new ConcurrentHashMap<>();
+
+    /**
+     * Token 刷新锁的 Key 前缀
+     */
+    private static final String TOKEN_REFRESH_LOCK_KEY = "shopify:token_refresh_lock:";
+
+    /**
+     * Token 刷新锁的过期时间（秒）
+     */
+    private static final int TOKEN_REFRESH_LOCK_EXPIRE = 10;
+
+    /**
+     * 重试次数的 Redis Key 前缀
+     */
+    private static final String RETRY_COUNT_KEY = "shopify:retry_count:";
+
+    /**
+     * 最大重试次数（Token 刷新后）
+     */
+    private static final int MAX_RETRY_AFTER_REFRESH = 1;
+
+    /**
+     * 重试计数过期时间（秒）
+     */
+    private static final int RETRY_COUNT_EXPIRE = 60;
 
     /**
      * 根据 storeId 获取 WebClient
@@ -140,32 +181,142 @@ public class ShopifyGraphQLClient {
      */
     public JsonNode execute(Long storeId, String query, Object variables) {
         Map<String, Object> requestBody = buildRequestBody(query, variables);
-
+        log.info("执行 GraphQL 查询: storeId={}, query={}, requestBody={}", storeId, query, requestBody);
+        // 第一次尝试
         try {
-            JsonNode response = getWebClient(storeId).post()
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .bodyValue(requestBody)
-                    .retrieve()
-                    .bodyToMono(JsonNode.class)
-                    .retryWhen(Retry.backoff(RETRY_MAX_ATTEMPTS, Duration.ofSeconds(RETRY_BACKOFF_SECONDS))
-                        .onRetryExhaustedThrow((spec, e) -> new ShopifyApiException("GraphQL 请求失败: " + e.failure().getMessage(), e.failure())))
-                    .block();
-
-            return processResponse(response);
-        } catch (WebClientResponseException e) {
-            return handleError(storeId, e, requestBody);
+            JsonNode jsonNode = doExecute(storeId, requestBody);
+            log.info("GraphQL 响应: storeId={}, response={}", storeId, jsonNode);
+            return jsonNode;
+        } catch (ShopifyTokenExpiredException e) {
+            // Token 过期，刷新后重试一次
+            log.warn("检测到 Token 过期，刷新后重试: storeId={}", storeId);
+            refreshTokenIfNeeded(storeId);
+            
+            // 第二次尝试（最后一次）
+            JsonNode jsonNode = doExecute(storeId, requestBody);
+            log.info("GraphQL 响应: storeId={}, response={}", storeId, jsonNode);
+            return jsonNode;
         }
     }
 
     /**
-     * 执行 GraphQL 查询 (指定 shopName)
+     * 实际执行 GraphQL 请求
      */
-    public JsonNode execute(String shopName, String query, Object variables) {
-        ShopifyStore store = shopifyStoreService.selectByShopName(shopName);
-        if (store == null) {
-            throw new ShopifyApiException("店铺不存在: shopName=" + shopName);
+    private JsonNode doExecute(Long storeId, Map<String, Object> requestBody) {
+        // 对于网络异常，最多重试2次
+        int maxRetries = 2;
+        int retryCount = 0;
+        
+        while (true) {
+            try {
+                JsonNode response = getWebClient(storeId).post()
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .bodyValue(requestBody)
+                        .retrieve()
+                        .onStatus(status -> status.value() == HttpStatus.UNAUTHORIZED.value(), clientResponse -> {
+                            // 401 时抛出特殊异常，触发 token 刷新
+                            return Mono.error(new ShopifyTokenExpiredException("Token 已过期"));
+                        })
+                        .bodyToMono(JsonNode.class)
+                        .block();
+
+                return processResponse(response);
+            } catch (Exception e) {
+                Throwable cause = e.getCause();
+                
+                // 如果是 WebClientResponseException，直接抛出
+                if (cause instanceof WebClientResponseException webException) {
+                    log.error("GraphQL 请求失败，状态码: {}, 响应: {}",
+                        webException.getStatusCode(), webException.getResponseBodyAsString());
+                    throw new ShopifyApiException(
+                        "Shopify API HTTP 错误: " + webException.getStatusCode() + " " + webException.getResponseBodyAsString(),
+                        webException
+                    );
+                }
+                
+                // 如果是 Token 过期异常，直接抛出
+                if (e instanceof ShopifyTokenExpiredException) {
+                    throw e;
+                }
+                
+                // 检查是否是网络连接异常（可重试）
+                boolean isNetworkError = isRetryableNetworkError(e);
+                
+                if (isNetworkError && retryCount < maxRetries) {
+                    retryCount++;
+                    long backoffTime = (long) Math.pow(2, retryCount) * 1000; // 指数退避：2s, 4s
+                    log.warn("检测到网络异常，第{}次重试（{}ms后）: storeId={}, 错误: {}", 
+                        retryCount, backoffTime, storeId, e.getMessage());
+                    
+                    try {
+                        Thread.sleep(backoffTime);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        throw new ShopifyApiException("重试被中断", ie);
+                    }
+                    continue; // 继续重试
+                }
+                
+                // 其他异常或超过最大重试次数，直接抛出
+                throw new ShopifyApiException("GraphQL 请求异常: " + e.getMessage(), e);
+            }
         }
-        return execute(store.getStoreId(), query, variables);
+    }
+    
+    /**
+     * 判断是否为可重试的网络异常
+     */
+    private boolean isRetryableNetworkError(Exception e) {
+        String message = e.getMessage();
+        if (message == null) {
+            return false;
+        }
+        
+        // 常见的可重试网络异常
+        return message.contains("Connection reset") ||
+               message.contains("Connection refused") ||
+               message.contains("Read timed out") ||
+               message.contains("Connect timed out") ||
+               message.contains("Broken pipe") ||
+               e instanceof java.net.SocketException ||
+               e instanceof java.net.SocketTimeoutException ||
+               e instanceof java.io.IOException;
+    }
+
+    /**
+     * 刷新 Token（带分布式锁）
+     */
+    private void refreshTokenIfNeeded(Long storeId) {
+        String lockKey = TOKEN_REFRESH_LOCK_KEY + storeId;
+        RLock lock = redissonClient.getLock(lockKey);
+        
+        boolean locked = false;
+        try {
+            locked = lock.tryLock(5, TOKEN_REFRESH_LOCK_EXPIRE, TimeUnit.SECONDS);
+            
+            if (locked) {
+                // 获取锁，执行刷新
+                boolean refreshed = shopifyStoreService.refreshToken(storeId);
+                if (refreshed) {
+                    invalidateCache(storeId);
+                    log.info("Token 刷新成功: storeId={}", storeId);
+                } else {
+                    log.error("Token 刷新失败: storeId={}", storeId);
+                    throw new ShopifyApiException("Token 刷新失败");
+                }
+            } else {
+                // 未获取到锁，等待其他线程刷新完成
+                log.info("等待其他线程刷新 Token: storeId={}", storeId);
+                Thread.sleep(1000);
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new ShopifyApiException("Token 刷新过程中断", e);
+        } finally {
+            if (locked && lock.isHeldByCurrentThread()) {
+                lock.unlock();
+            }
+        }
     }
 
     /**
@@ -181,41 +332,6 @@ public class ShopifyGraphQLClient {
         }
 
         return response.get(FIELD_DATA);
-    }
-
-    /**
-     * 处理 HTTP 错误，包括 401 Token 过期
-     */
-    private JsonNode handleError(Long storeId, WebClientResponseException e, Map<String, Object> requestBody) {
-        if (e.getStatusCode().value() == 401) {
-            log.warn("Shopify API 返回 401 (Unauthorized)，尝试刷新 Token: storeId={}", storeId);
-
-            // 刷新 Token
-            boolean refreshed = shopifyStoreService.refreshToken(storeId);
-            if (refreshed) {
-                // 清除缓存，重试请求
-                invalidateCache(storeId);
-                ShopifyStore store = shopifyStoreService.selectByStoreId(storeId);
-
-                JsonNode response = WebClient.builder()
-                        .baseUrl(store.getFullGraphQLUrl())
-                        .defaultHeader("Content-Type", "application/json")
-                        .defaultHeader("X-Shopify-Access-Token", store.getAccessToken())
-                        .build()
-                        .post()
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .bodyValue(requestBody)
-                        .retrieve()
-                        .bodyToMono(JsonNode.class)
-                        .retryWhen(Retry.backoff(RETRY_MAX_ATTEMPTS, Duration.ofSeconds(RETRY_BACKOFF_SECONDS))
-                            .onRetryExhaustedThrow((spec, ex) -> new ShopifyApiException("GraphQL 请求失败: " + ex.failure().getMessage(), ex.failure())))
-                        .block();
-
-                return processResponse(response);
-            }
-        }
-
-        throw new ShopifyApiException("Shopify API HTTP 错误: " + e.getStatusCode() + " " + e.getResponseBodyAsString(), e);
     }
 
     /**
@@ -236,6 +352,7 @@ public class ShopifyGraphQLClient {
      * 上传媒体文件并返回 Shopify 媒体信息 (指定店铺)
      */
     public StagedUploadResult stagedUploadMedia(Long storeId, String filename, String mimeType, InputStream inputStream, long fileSize) {
+        log.info("获取媒体文件上传地址: storeId={}, filename={}, mimeType={}, fileSize={}", storeId, filename, mimeType, fileSize);
         String mutation = ShopifyGraphQLQueries.STAGED_UPLOADS_CREATE.getQuery();
 
         StagedUploadInput input = StagedUploadInput.builder()
@@ -248,6 +365,7 @@ public class ShopifyGraphQLClient {
 
         JsonNode data = execute(storeId, mutation, Map.of("input", List.of(input)));
         checkUserErrors(data, MUTATION_STAGED_UPLOADS_CREATE);
+        log.info("获取媒体文件上传地址成功: storeId={}, data={}", storeId, data);
 
         JsonNode target = data.path(MUTATION_STAGED_UPLOADS_CREATE).path(PATH_STAGED_TARGETS).get(0);
         String uploadUrl = target.path(PATH_URL).asText();
@@ -268,12 +386,13 @@ public class ShopifyGraphQLClient {
      * 上传文件到 staged target URL (指定店铺)
      */
     private void uploadToStagedTarget(Long storeId, String uploadUrl, List<Parameter> parameters, byte[] fileData, String mimeType) {
+        log.info("上传文件到 staged target URL: storeId={}, uploadUrl={}, parameters={}", storeId, uploadUrl, parameters);
         ShopifyStore store = getStore(storeId);
         String boundary = MULTIPART_BOUNDARY_PREFIX + System.currentTimeMillis();
         byte[] body = buildMultipartBody(parameters, fileData, boundary);
 
         WebClient.create(uploadUrl)
-                .put()
+                .post()
                 .header("Content-Type", "multipart/form-data; boundary=" + boundary)
                 .header("Content-Length", String.valueOf(body.length))
                 .header("X-Shopify-Access-Token", store.getAccessToken())
@@ -281,6 +400,7 @@ public class ShopifyGraphQLClient {
                 .retrieve()
                 .toBodilessEntity()
                 .block();
+        log.info("文件上传成功");
     }
 
     private Map<String, Object> buildRequestBody(String query, Object variables) {
@@ -322,35 +442,50 @@ public class ShopifyGraphQLClient {
 
     /**
      * 注册媒体到 Shopify (指定店铺)
+     * @deprecated Shopify API 2024-07+ 已移除 mediaCreate mutation
+     * 现在应该在创建/更新产品时直接使用 images 字段，src 使用 staged upload 的 resourceUrl
      */
+    @Deprecated
     public String createMediaImage(Long storeId, String imageUrl, String alt) {
-        String mutation = ShopifyGraphQLQueries.MEDIA_CREATE.getQuery();
-
-        MediaInput input = MediaInput.builder()
-                .mediaUrl(imageUrl)
-                .alt(alt != null ? alt : "")
-                .build();
-
-        JsonNode data = execute(storeId, mutation, Map.of("input", input));
-        checkUserErrors(data, MUTATION_MEDIA_CREATE);
-
-        return data.path(MUTATION_MEDIA_CREATE).path(PATH_MEDIA).path(PATH_ID).asText();
+        log.warn("createMediaImage 已废弃，请在创建/更新产品时直接使用 images 字段");
+        // 直接返回 imageUrl，实际上应该在使用此方法的地方改为使用 ProductInput.images
+        return imageUrl;
     }
 
     /**
      * 创建 Shopify 商品 (指定店铺)
      */
-    public String createProduct(Long storeId, ProductInput input) {
+    public ProductCreateResult createProduct(Long storeId, ProductInput productInput, List<CreateMediaInput> mediaInputs) {
         String mutation = ShopifyGraphQLQueries.PRODUCT_CREATE.getQuery();
 
-        JsonNode data = execute(storeId, mutation, Map.of("input", input));
+        Map<String, Object> variables = new HashMap<>();
+        variables.put("product", productInput);
+        if (mediaInputs != null && !mediaInputs.isEmpty()) {
+            variables.put("media", mediaInputs);
+        }
+
+        JsonNode data = execute(storeId, mutation, variables);
         checkUserErrors(data, MUTATION_PRODUCT_CREATE);
 
-        String productId = data.path(MUTATION_PRODUCT_CREATE).path(PATH_PRODUCT).path(PATH_ID).asText();
+        JsonNode productNode = data.path(MUTATION_PRODUCT_CREATE).path(PATH_PRODUCT);
+        String productId = productNode.path(PATH_ID).asText();
         if (StringUtils.isEmpty(productId)) {
             throw new ShopifyApiException("商品创建成功但未返回 ID");
         }
-        return productId;
+
+        // 解析 media ID 列表
+        List<String> mediaIds = new ArrayList<>();
+        JsonNode mediaEdges = productNode.path("media").path("edges");
+        if (mediaEdges.isArray()) {
+            for (JsonNode edge : mediaEdges) {
+                String mediaId = edge.path("node").path(PATH_ID).asText();
+                if (StringUtils.isNotEmpty(mediaId)) {
+                    mediaIds.add(mediaId);
+                }
+            }
+        }
+
+        return new ProductCreateResult(productId, mediaIds);
     }
 
     /**
@@ -359,8 +494,10 @@ public class ShopifyGraphQLClient {
     public String updateProduct(Long storeId, String shopifyProductId, ProductInput input) {
         String mutation = ShopifyGraphQLQueries.PRODUCT_UPDATE.getQuery();
 
+        // Shopify API 不允许在更新时包含 productOptions 字段
         ProductInput inputWithId = ProductInput.builderFrom(input)
                 .id(shopifyProductId)
+                .productOptions(null)  // 清空 productOptions
                 .build();
 
         JsonNode data = execute(storeId, mutation, Map.of("input", inputWithId));
@@ -383,6 +520,7 @@ public class ShopifyGraphQLClient {
                 "productId", shopifyProductId,
                 "variants", variants
         ));
+        log.info("批量创建变体成功: storeId={}, shopifyProductId={}, data={}", storeId, shopifyProductId, data);
         checkUserErrors(data, MUTATION_PRODUCT_VARIANTS_BULK_CREATE);
 
         JsonNode variantsNode = data.path(MUTATION_PRODUCT_VARIANTS_BULK_CREATE).path(PATH_PRODUCT_VARIANTS);
@@ -393,12 +531,63 @@ public class ShopifyGraphQLClient {
         return variantIds;
     }
 
+    /**
+     * 查询可用的销售渠道
+     */
+    public List<ChannelInfo> getChannels(Long storeId) {
+        String query = ShopifyGraphQLQueries.CHANNELS.getQuery();
+        JsonNode data = execute(storeId, query, Map.of("first", 50));
+
+        List<ChannelInfo> channels = new ArrayList<>();
+        JsonNode edges = data.path("channels").path("edges");
+        if (edges.isArray()) {
+            for (JsonNode edge : edges) {
+                JsonNode node = edge.path("node");
+                channels.add(ChannelInfo.builder()
+                        .id(node.path("id").asText())
+                        .name(node.path("name").asText())
+                        .isPublished(node.path("isPublished").asBoolean())
+                        .build());
+            }
+        }
+        return channels;
+    }
+
+    /**
+     * 设置产品在多个渠道的发布状态
+     */
+    public List<PublicationResult> setProductPublications(Long storeId, String shopifyProductId, List<PublicationInput> publications) {
+        String mutation = ShopifyGraphQLQueries.RESOURCE_PUBLICATION_SET.getQuery();
+
+        Map<String, Object> variables = Map.of(
+                "resourceId", shopifyProductId,
+                "publications", publications
+        );
+
+        JsonNode data = execute(storeId, mutation, variables);
+        checkUserErrors(data, "resourcePublicationSet");
+
+        List<PublicationResult> results = new ArrayList<>();
+        JsonNode pubs = data.path("resourcePublicationSet").path("resourcePublications");
+        if (pubs.isArray()) {
+            for (JsonNode pub : pubs) {
+                results.add(PublicationResult.builder()
+                        .channelId(pub.path("publication").path("channel").path("id").asText())
+                        .channelName(pub.path("publication").path("channel").path("name").asText())
+                        .isPublished(pub.path("isPublished").asBoolean())
+                        .publishDate(pub.path("publishDate").asText(null))
+                        .build());
+            }
+        }
+        return results;
+    }
+
     // ==================== 内部类定义 ====================
 
-    @lombok.Data
-    @lombok.Builder
-    @lombok.NoArgsConstructor
-    @lombok.AllArgsConstructor
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public static class StagedUploadInput {
         private String resource;
@@ -408,33 +597,34 @@ public class ShopifyGraphQLClient {
         private String fileSize;
     }
 
-    @lombok.Data
-    @lombok.Builder
-    @lombok.NoArgsConstructor
-    @lombok.AllArgsConstructor
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public static class MediaInput {
         private String mediaUrl;
         private String alt;
     }
 
-    @lombok.Data
-    @lombok.Builder
-    @lombok.NoArgsConstructor
-    @lombok.AllArgsConstructor
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public static class ProductInput {
         private String id;
         private String title;
         private String bodyHtml;
         private String descriptionHtml;
-        private List<ProductImageInput> images;
-        private List<ProductOptionInput> options;
+        private List<ProductOptionInput> productOptions;
         private String productType;
         private String vendor;
         private String category;
         private SeoInput seo;
+        private String status;
         private List<String> tags;
+        private List<ProductMetafield> metafields;
 
         public static ProductInputBuilder builderFrom(ProductInput other) {
             return builder()
@@ -442,86 +632,137 @@ public class ShopifyGraphQLClient {
                     .title(other.title)
                     .bodyHtml(other.bodyHtml)
                     .descriptionHtml(other.descriptionHtml)
-                    .images(other.images)
-                    .options(other.options)
+                    .productOptions(other.productOptions)
                     .productType(other.productType)
                     .vendor(other.vendor)
                     .category(other.category)
                     .seo(other.seo)
+                    .metafields(other.metafields)
                     .tags(other.tags);
         }
     }
 
-    @lombok.Data
-    @lombok.Builder
-    @lombok.NoArgsConstructor
-    @lombok.AllArgsConstructor
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    public static class ProductImageInput {
-        private String src;
-        private String altText;
+    public static class ProductMetafield {
+        /**
+         * The unique ID of the metafield. Using namespace and key is preferred for creating and updating.
+         */
+        private String id;
+        private String key;
+        private String namespace;
+        private String type;
+        private String value;
     }
 
-    @lombok.Data
-    @lombok.Builder
-    @lombok.NoArgsConstructor
-    @lombok.AllArgsConstructor
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public static class CreateMediaInput {
+        private String originalSource;
+        private String alt;
+        private String mediaContentType;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public static class ProductImageInput {
+        private String originalSource;
+        private String alt;
+        private String mediaContentType;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public static class SeoInput {
         private String title;
         private String description;
     }
 
-    @lombok.Data
-    @lombok.Builder
-    @lombok.NoArgsConstructor
-    @lombok.AllArgsConstructor
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public static class ProductOptionInput {
         private String name;
-        private List<String> values;
+        private Integer position;
+        private List<OptionValueInput> values;
     }
 
-    @lombok.Data
-    @lombok.Builder
-    @lombok.NoArgsConstructor
-    @lombok.AllArgsConstructor
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    public static class InventoryItemInput {
-        private String sku;
-        private Boolean tracked;
+    public static class OptionValueInput {
+        private String name;
     }
 
-    @lombok.Data
-    @lombok.Builder
-    @lombok.NoArgsConstructor
-    @lombok.AllArgsConstructor
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public static class VariantInput {
         private String sku;
         private BigDecimal price;
         private String mediaId;
         private BigDecimal compareAtPrice;
-        private Integer inventoryQuantity;
         private String inventoryPolicy;
-        private List<SelectedOptionInput> selectedOptions;
+        private List<OptionValueInput> optionValues;
         private String imageId;
+        private String mediaSrc;
         private InventoryItemInput inventoryItem;
+        private InventoryQuantity inventoryQuantities;
     }
 
-    @lombok.Data
-    @lombok.Builder
-    @lombok.NoArgsConstructor
-    @lombok.AllArgsConstructor
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public static class InventoryItemInput {
+        private String sku;
+        private Boolean tracked;
+        private Integer quantity;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public static class InventoryQuantity {
+        private String locationId;
+        private Integer availableQuantity;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public static class SelectedOptionInput {
         private String name;
         private String value;
     }
 
-    @lombok.Data
-    @lombok.NoArgsConstructor
-    @lombok.AllArgsConstructor
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class Parameter {
         private String name;
         private String value;
@@ -555,12 +796,25 @@ public class ShopifyGraphQLClient {
             """),
 
         PRODUCT_CREATE("""
-            mutation productCreate($input: ProductInput!) {
-              productCreate(input: $input) {
+            mutation productCreate($product: ProductCreateInput!, $media: [CreateMediaInput!]) {
+              productCreate(product: $product, media: $media) {
                 userErrors { field message }
                 product {
                   id
                   title
+                  media(first: 50) {
+                    edges {
+                      node {
+                        id
+                        alt
+                        ... on MediaImage {
+                          image {
+                            originalSrc
+                          }
+                        }
+                      }
+                    }
+                  }
                 }
               }
             }
@@ -587,6 +841,38 @@ public class ShopifyGraphQLClient {
                 }
               }
             }
+            """),
+
+        CHANNELS("""
+            query channels($first: Int!) {
+              channels(first: $first) {
+                edges {
+                  node {
+                    id
+                    name
+                    isPublished
+                  }
+                }
+              }
+            }
+            """),
+
+        RESOURCE_PUBLICATION_SET("""
+            mutation resourcePublicationSet($resourceId: ID!, $publications: [PublicationInput!]!) {
+              resourcePublicationSet(resourceId: $resourceId, publications: $publications) {
+                userErrors { field message }
+                resourcePublications {
+                  isPublished
+                  publishDate
+                  publication {
+                    channel {
+                      id
+                      name
+                    }
+                  }
+                }
+              }
+            }
             """);
 
         private final String query;
@@ -601,4 +887,54 @@ public class ShopifyGraphQLClient {
     }
 
     public record StagedUploadResult(String url, String resourceUrl) {}
+
+    /**
+     * 商品创建结果
+     */
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class ProductCreateResult {
+        private String productId;
+        private List<String> mediaIds;
+    }
+
+    /**
+     * 销售渠道信息
+     */
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class ChannelInfo {
+        private String id;
+        private String name;
+        private Boolean isPublished;
+    }
+
+    /**
+     * 发布渠道输入
+     */
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class PublicationInput {
+        private String channelId;
+        private Boolean isPublished;
+    }
+
+    /**
+     * 发布结果
+     */
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class PublicationResult {
+        private String channelId;
+        private String channelName;
+        private Boolean isPublished;
+        private String publishDate;
+    }
 }
