@@ -7,7 +7,7 @@ CREATE TABLE `erp_shopify_store` (
     `store_id`          bigint(20)      NOT NULL AUTO_INCREMENT COMMENT '店铺主键',
     `store_name`        varchar(100)    NOT NULL COMMENT '店铺名称 (用于展示)',
     `shop_name`         varchar(100)    NOT NULL COMMENT 'Shop 名称 (myshopify.com 前的名称)',
-    `api_version`       varchar(20)     NOT NULL DEFAULT '2024-04' COMMENT 'API 版本 (如: 2024-04)',
+    `api_version`       varchar(20)     NOT NULL DEFAULT '2026-04' COMMENT 'API 版本 (如: 2026-04)',
     `api_key`           varchar(255)    DEFAULT NULL COMMENT 'API Key (用于 OAuth 或 Private App)',
     `api_secret`        varchar(255)    DEFAULT NULL COMMENT 'API Secret (用于 OAuth)',
     `access_token`      varchar(1024)   DEFAULT NULL COMMENT 'Access Token (Private App 或 OAuth 存储)',

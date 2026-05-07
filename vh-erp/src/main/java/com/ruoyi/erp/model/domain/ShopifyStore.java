@@ -31,7 +31,7 @@ public class ShopifyStore implements Serializable {
     @Excel(name = "店铺标识")
     private String shopName;
 
-    /** API 版本 (如: 2024-04) */
+    /** API 版本 (如: 2026-04) */
     @Excel(name = "API版本")
     private String apiVersion;
 
