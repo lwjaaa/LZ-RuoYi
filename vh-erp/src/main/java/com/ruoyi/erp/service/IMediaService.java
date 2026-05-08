@@ -92,12 +92,14 @@ public interface IMediaService extends IService<Media>
      */
     public String importMediaData(List<Media> mediaList, Boolean isUpdateSupport, String operName);
 
+    String buildFileKeyWord(Long productId, String spu);
+
     /**
      * 扫描服务器指定路径返回媒体列表
      *
      * @return 媒体VO列表
      */
-    List<Media> scanMediaToProduct(String dirPath, String productId);
+    List<Media> scanMediaToProduct(Long productId);
 
     void updateProductMedia(Product product);
 

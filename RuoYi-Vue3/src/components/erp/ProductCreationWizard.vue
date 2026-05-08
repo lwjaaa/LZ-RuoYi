@@ -752,6 +752,18 @@
                       getMediaTypeLabel(media)
                     }}</span>
                   </div>
+                  <el-tooltip content="删除媒体" placement="top">
+                    <el-button
+                      type="danger"
+                      icon="Close"
+                      circle
+                      size="small"
+                      class="image-remove-button"
+                      aria-label="删除媒体"
+                      @mousedown.stop
+                      @click.stop="removeImageWithConfirm(media, index)"
+                    />
+                  </el-tooltip>
                 </div>
                 <div
                   class="image-placeholder"
@@ -877,6 +889,18 @@
                       preview-teleported
                       fit="cover"
                     />
+                    <el-tooltip content="解除绑定" placement="top">
+                      <el-button
+                        type="danger"
+                        icon="Close"
+                        circle
+                        size="small"
+                        class="variant-image-unbind-button"
+                        aria-label="解除规格图绑定"
+                        @mousedown.stop
+                        @click.stop="unbindVariantImageWithConfirm(row)"
+                      />
+                    </el-tooltip>
                   </template>
                   <span v-else class="drop-hint">无规格图</span>
                 </div>
@@ -3116,6 +3140,50 @@ function removeImage(index) {
   step2FormData.mediaList.splice(index, 1);
 }
 
+function removeImageItem(media: Media, fallbackIndex: number): void {
+  const currentIndex = step2FormData.mediaList.indexOf(media);
+  const targetIndex = currentIndex > -1 ? currentIndex : fallbackIndex;
+  if (targetIndex > -1) {
+    step2FormData.mediaList.splice(targetIndex, 1);
+  }
+}
+
+async function removeImageWithConfirm(
+  media: Media,
+  fallbackIndex: number,
+): Promise<void> {
+  try {
+    await ElMessageBox.confirm("确定要删除这张图片吗？", "删除确认", {
+      confirmButtonText: "确定",
+      cancelButtonText: "取消",
+      type: "warning",
+    });
+    removeImageItem(media, fallbackIndex);
+  } catch {
+    // 用户取消删除时保持当前媒体列表不变
+  }
+}
+
+function unbindVariantImage(row: ProductVariant): void {
+  row.mediaId = undefined;
+  row.media = undefined;
+}
+
+async function unbindVariantImageWithConfirm(
+  row: ProductVariant,
+): Promise<void> {
+  try {
+    await ElMessageBox.confirm("确定要取消绑定这张规格图吗？", "确认取消绑定", {
+      confirmButtonText: "确定",
+      cancelButtonText: "取消",
+      type: "warning",
+    });
+    unbindVariantImage(row);
+  } catch {
+    // 用户取消解绑时保持当前规格图绑定不变
+  }
+}
+
 // 变体图片拖拽开始
 function handleVariantImageDragStart(
   event: DragEvent,
@@ -3181,8 +3249,7 @@ function handleVariantImageDragEnd(event: DragEvent): void {
           if (draggedId !== undefined) {
             step2Variants.value.forEach((row) => {
               if (row.variantId === draggedId) {
-                row.mediaId = undefined;
-                row.media = undefined;
+                unbindVariantImage(row);
               }
             });
           }
@@ -3314,10 +3381,7 @@ function handleImageDragEnd(event) {
         .then(() => {
           const draggedImg = draggedImage.value;
           if (draggedImg) {
-            const index = step2FormData.mediaList.indexOf(draggedImg);
-            if (index > -1) {
-              step2FormData.mediaList.splice(index, 1);
-            }
+            removeImageItem(draggedImg, -1);
           }
         })
         .catch(() => {})
@@ -4466,6 +4530,42 @@ defineExpose({
   opacity: 1;
 }
 
+.image-remove-button,
+.variant-image-unbind-button {
+  position: absolute;
+  z-index: 3;
+  opacity: 0;
+  pointer-events: none;
+  color: #dc2626;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(220, 38, 38, 0.18);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.16);
+  backdrop-filter: blur(8px);
+  transition: opacity 0.18s ease, transform 0.18s ease,
+    background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+}
+
+.image-remove-button:hover,
+.variant-image-unbind-button:hover {
+  color: #ffffff;
+  background: #dc2626;
+  border-color: #dc2626;
+}
+
+.image-remove-button {
+  top: 8px;
+  right: 8px;
+  transform: translate(4px, -4px) scale(0.92);
+}
+
+.image-item:hover .image-remove-button,
+.image-item:focus-within .image-remove-button,
+.image-remove-button:focus-visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(0, 0) scale(1);
+}
+
 .media-type-badge {
   display: inline-flex;
   align-items: center;
@@ -4567,6 +4667,22 @@ defineExpose({
 
 .variant-image-item:hover .variant-thumb {
   transform: scale(1.06);
+}
+
+.variant-image-unbind-button {
+  top: 4px;
+  right: 4px;
+  width: 26px;
+  height: 26px;
+  transform: translate(3px, -3px) scale(0.9);
+}
+
+.variant-image-item:hover .variant-image-unbind-button,
+.variant-image-item:focus-within .variant-image-unbind-button,
+.variant-image-unbind-button:focus-visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(0, 0) scale(1);
 }
 
 .drop-hint {
@@ -4933,6 +5049,8 @@ defineExpose({
   .option-row,
   .image-item,
   .variant-image-item,
+  .image-remove-button,
+  .variant-image-unbind-button,
   .header-action-btn,
   .video-play-button,
   :deep(.step-form .el-button),

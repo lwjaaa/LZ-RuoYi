@@ -121,7 +121,7 @@ public class Product implements Serializable
     @Excel(name = "PACKAGEINCLUDE")
     private String packageInclude;
 
-    /** 图片搜索关键字 */
+    /** 图片搜索关键字(文件夹) */
     private String imageSearchKeyword;
 
     /** 创建者 */

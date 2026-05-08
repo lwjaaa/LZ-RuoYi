@@ -591,6 +591,7 @@ public class ProductWizardServiceImpl implements IProductWizardService {
         List<ProductVariant> productVariants = handleProductVariants(product, productId, isInsert);
 
         // ==================== 5. 处理媒体文件（仅编辑时需要） ====================
+
         if (CollectionUtil.isNotEmpty(product.getMediaList())) {
 
             // 更新商品媒体（表和磁盘文件），根据主图和规格图重命名（表和磁盘文件），更新顺序

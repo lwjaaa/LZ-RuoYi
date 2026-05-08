@@ -102,6 +102,13 @@ public class MediaDownloadUtil {
                         }
                         String filename;
 
+                        if (i == 0) {
+                            // 第一张图为主图, 绑定到商品
+                            Product productUpdate = new Product();
+                            productUpdate.setProductId(product.getProductId());
+                            productUpdate.setMainMediaId(media.getMediaId());
+                            productMapper.updateById(productUpdate);
+                        }
                         if(variant != null){
                             // 如果是规格图，绑定到变体
                             filename = MediaFileUtil.getVariantMediaFilename(filefolder, variant, result.fileExtension);
@@ -110,17 +117,9 @@ public class MediaDownloadUtil {
                             variantUpdate.setMediaId(media.getMediaId());
                             productVariantMapper.updateById(variantUpdate);
                         } else {
-                            if (i == 0) {
-                                // 第一张图为主图, 绑定到商品
-                                filename = MediaFileUtil.getMainMediaFilename(filefolder, result.fileExtension);
-                                Product productUpdate = new Product();
-                                productUpdate.setProductId(product.getProductId());
-                                productUpdate.setMainMediaId(media.getMediaId());
-                                productMapper.updateById(productUpdate);
-                            }else{
-                                filename = MediaFileUtil.getOtherMediaFilename(filefolder, sequence, result.fileExtension);
-                                sequence++;
-                            }
+                            filename = MediaFileUtil.getOtherMediaFilename(filefolder, sequence, result.fileExtension);
+                            sequence++;
+
                         }
                         String newNasUrl = MediaFileUtil.generateNasUrl(filefolder, filename);
                         Media mediaUpdate = new Media();

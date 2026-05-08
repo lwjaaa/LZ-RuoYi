@@ -131,8 +131,8 @@ public class MediaController extends BaseController {
      */
     @PreAuthorize("@ss.hasPermi('erp:media:list')")
     @GetMapping("/scan")
-    public AjaxResult scanMedia(@RequestParam("dirPath") String dirPath, @RequestParam("productId") String productId) {
-        List<Media> mediaList = mediaService.scanMediaToProduct(dirPath, productId);
+    public AjaxResult scanMedia(@RequestParam("productId") Long productId) {
+        List<Media> mediaList = mediaService.scanMediaToProduct(productId);
         return success(mediaList);
     }
 
