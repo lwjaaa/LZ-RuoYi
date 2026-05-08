@@ -439,65 +439,128 @@
           class="step-form step2-form"
           :label-position="'left'"
         >
-          <!-- 主商品信息 -->
-          <el-divider content-position="left" style="margin: 0 0 28px"
-            >主商品信息</el-divider
-          >
-
-          <!-- SPU 与 商品标题 同行 -->
-          <el-row :gutter="20">
-            <el-col :span="8">
-              <el-form-item label="SPU" prop="spu">
-                <el-input
-                  v-model="step2FormData.spu"
-                  disabled
-                  placeholder="系统自动生成"
+          <section class="readiness-panel" aria-label="发布就绪检查">
+            <div class="readiness-panel__main">
+              <div class="readiness-panel__copy">
+                <span class="readiness-panel__eyebrow">发布就绪</span>
+                <strong class="readiness-panel__title">
+                  {{
+                    readinessResult.errorCount > 0
+                      ? `还有 ${readinessResult.errorCount} 项必须修复`
+                      : readinessResult.warningCount > 0
+                        ? "已满足发布条件，可继续优化"
+                        : "商品资料已准备就绪"
+                  }}
+                </strong>
+                <span class="readiness-panel__desc">
+                  检查只做发布前提示，不会阻止保存。
+                </span>
+              </div>
+              <div class="readiness-panel__progress">
+                <el-progress
+                  :percentage="readinessResult.completion"
+                  :status="readinessProgressStatus"
+                  :stroke-width="10"
                 />
-              </el-form-item>
-            </el-col>
+                <div class="readiness-panel__stats">
+                  <el-tag
+                    :type="readinessResult.errorCount > 0 ? 'danger' : 'success'"
+                    effect="light"
+                  >
+                    必须修复 {{ readinessResult.errorCount }}
+                  </el-tag>
+                  <el-tag
+                    :type="readinessResult.warningCount > 0 ? 'warning' : 'success'"
+                    effect="light"
+                  >
+                    建议优化 {{ readinessResult.warningCount }}
+                  </el-tag>
+                </div>
+              </div>
+            </div>
+            <div
+              v-if="readinessVisibleIssues.length > 0"
+              class="readiness-issues"
+            >
+              <button
+                v-for="issue in readinessVisibleIssues"
+                :key="issue.id"
+                type="button"
+                class="readiness-issue"
+                :class="`is-${issue.severity}`"
+                @click="scrollToReadinessIssue(issue)"
+              >
+                <span class="readiness-issue__level">
+                  {{ issue.severity === "error" ? "必须修复" : "建议优化" }}
+                </span>
+                <span class="readiness-issue__title">{{ issue.title }}</span>
+              </button>
+            </div>
+            <div v-else class="readiness-empty">没有发现发布风险。</div>
+          </section>
 
-            <el-col :span="8">
-              <el-form-item label="商品类别" prop="category">
-                <el-input
-                  v-model="step2FormData.category"
-                  placeholder="请输入商品类别"
-                />
-              </el-form-item>
-            </el-col>
-            <el-col :span="8">
-              <el-form-item label="商品类型" prop="productType">
-                <el-input
-                  v-model="step2FormData.productType"
-                  placeholder="请输入商品类型"
-                />
-              </el-form-item>
-            </el-col>
-          </el-row>
+          <div ref="productInfoSectionRef" class="wizard-section-anchor">
+            <!-- 主商品信息 -->
+            <el-divider content-position="left" style="margin: 0 0 28px"
+              >主商品信息</el-divider
+            >
 
-          <!-- 商品类别 与 商品类型 同行 -->
-          <el-row :gutter="20">
-            <el-col :span="24">
-              <el-form-item label="商品标题" prop="productTitle">
-                <el-input
-                  v-model="step2FormData.productTitle"
-                  placeholder="请输入商品标题"
-                />
-              </el-form-item>
-            </el-col>
-          </el-row>
+            <!-- SPU 与 商品标题 同行 -->
+            <el-row :gutter="20">
+              <el-col :span="8">
+                <el-form-item label="SPU" prop="spu">
+                  <el-input
+                    v-model="step2FormData.spu"
+                    disabled
+                    placeholder="系统自动生成"
+                  />
+                </el-form-item>
+              </el-col>
 
-          <!-- 商品详情选项卡 -->
-          <el-divider
-            content-position="left"
-            class="media-section-divider"
-            style="margin: 28px 0"
-            >商品详详情编辑</el-divider
-          >
-          <el-tabs
-            v-model="activeDetailTab"
-            type="border-card"
-            class="detail-tabs"
-          >
+              <el-col :span="8">
+                <el-form-item label="商品类别" prop="category">
+                  <el-input
+                    v-model="step2FormData.category"
+                    placeholder="请输入商品类别"
+                  />
+                </el-form-item>
+              </el-col>
+              <el-col :span="8">
+                <el-form-item label="商品类型" prop="productType">
+                  <el-input
+                    v-model="step2FormData.productType"
+                    placeholder="请输入商品类型"
+                  />
+                </el-form-item>
+              </el-col>
+            </el-row>
+
+            <!-- 商品类别 与 商品类型 同行 -->
+            <el-row :gutter="20">
+              <el-col :span="24">
+                <el-form-item label="商品标题" prop="productTitle">
+                  <el-input
+                    v-model="step2FormData.productTitle"
+                    placeholder="请输入商品标题"
+                  />
+                </el-form-item>
+              </el-col>
+            </el-row>
+          </div>
+
+          <div ref="detailSectionRef" class="wizard-section-anchor">
+            <!-- 商品详情选项卡 -->
+            <el-divider
+              content-position="left"
+              class="media-section-divider"
+              style="margin: 28px 0"
+              >商品详详情编辑</el-divider
+            >
+            <el-tabs
+              v-model="activeDetailTab"
+              type="border-card"
+              class="detail-tabs"
+            >
             <!-- NOTE 选项卡 -->
             <el-tab-pane label="DESCRIPTION" name="description">
               <el-input
@@ -617,7 +680,8 @@
                 </template>
               </RichTextEditor>
             </el-tab-pane>
-          </el-tabs>
+            </el-tabs>
+          </div>
 
           <!-- 媒体文件列表 -->
           <el-divider
@@ -785,27 +849,107 @@
             ></div>
           </div>
 
-          <!-- 变体详细设置 -->
-          <div style="display: flex; align-items: center; margin: 48px 0 28px">
-            <el-divider content-position="left">变体详细设置</el-divider>
+          <div ref="variantTableSectionRef" class="wizard-section-anchor">
+            <!-- 变体详细设置 -->
+            <div style="display: flex; align-items: center; margin: 48px 0 28px">
+              <el-divider content-position="left">变体详细设置</el-divider>
 
-            <right-toolbar
-              :showSearch="false"
-              :showrRefresh="false"
-              :search="false"
-              :columns="columns"
-            ></right-toolbar>
-          </div>
+              <right-toolbar
+                :showSearch="false"
+                :showrRefresh="false"
+                :search="false"
+                :columns="columns"
+              ></right-toolbar>
+            </div>
 
-          <el-table
-            :data="step2Variants"
-            border
-            style="width: 100%"
-            :loading="loading"
-            row-key="variantId"
-            :row-class-name="tableRowClassName"
-            class="variant-table variant-table--detail"
-          >
+            <div class="variant-bulk-toolbar">
+              <div class="variant-bulk-toolbar__summary">
+                <strong>批量编辑</strong>
+                <span>已选 {{ bulkSelectedCount }} 个变体</span>
+              </div>
+              <div class="variant-bulk-toolbar__controls">
+                <el-select
+                  v-model="bulkEditField"
+                  class="bulk-field-select"
+                  size="small"
+                  @change="resetBulkEditValue"
+                >
+                  <el-option
+                    v-for="field in bulkFieldOptions"
+                    :key="field.value"
+                    :label="field.label"
+                    :value="field.value"
+                  />
+                </el-select>
+                <el-input
+                  v-if="currentBulkFieldOption?.inputType === 'text'"
+                  v-model="bulkEditTextValue"
+                  size="small"
+                  class="bulk-value-input"
+                  :placeholder="currentBulkFieldOption.placeholder"
+                />
+                <el-input-number
+                  v-else-if="currentBulkFieldOption?.inputType === 'number'"
+                  v-model="bulkEditNumberValue"
+                  :controls="false"
+                  :precision="currentBulkFieldOption.precision"
+                  size="small"
+                  class="bulk-value-input"
+                  placeholder="请输入数值"
+                />
+                <el-select
+                  v-else-if="currentBulkFieldOption?.inputType === 'select'"
+                  v-model="bulkEditSelectValue"
+                  size="small"
+                  class="bulk-value-input"
+                >
+                  <el-option label="否" value="0" />
+                  <el-option label="是" value="1" />
+                </el-select>
+                <el-select
+                  v-else
+                  v-model="bulkEditMediaId"
+                  size="small"
+                  class="bulk-media-select"
+                  placeholder="选择规格图"
+                  clearable
+                >
+                  <el-option
+                    v-for="media in imageMediaOptions"
+                    :key="media.mediaId"
+                    :label="media.filename || `媒体 ${media.mediaId}`"
+                    :value="media.mediaId"
+                  />
+                </el-select>
+                <el-button
+                  type="primary"
+                  size="small"
+                  :disabled="bulkSelectedCount === 0"
+                  @click="applyBulkEditToSelection"
+                >
+                  应用到选中
+                </el-button>
+                <el-button
+                  size="small"
+                  :disabled="bulkSelectedCount < 2"
+                  @click="fillDownFromFirstSelectedVariant"
+                >
+                  第一行向下填充
+                </el-button>
+              </div>
+            </div>
+
+            <el-table
+              :data="step2Variants"
+              border
+              style="width: 100%"
+              :loading="loading"
+              row-key="variantId"
+              :row-class-name="tableRowClassName"
+              class="variant-table variant-table--detail"
+              @selection-change="handleVariantSelectionChange"
+            >
+              <el-table-column type="selection" width="46" fixed="left" />
             <!-- 动态生成选项列 -->
             <template v-if="columns[0].visible">
               <template v-if="getActiveOptions().length > 0">
@@ -1236,7 +1380,7 @@
               <template #default="{ row }">
                 <el-input-number
                   :controls="false"
-                  v-model="row.comparePrice"
+                  v-model="row.compareAtPrice"
                   :min="0"
                   :precision="2"
                   size="small"
@@ -1245,7 +1389,8 @@
                 />
               </template>
             </el-table-column>
-          </el-table>
+            </el-table>
+          </div>
         </el-form>
       </div>
 
@@ -1305,6 +1450,17 @@ import {
   stableStringify,
 } from "@/utils/dirtyCompare";
 import { collectExpandedOptionIndexes } from "@/utils/productOptionCollapse";
+import {
+  evaluateProductReadiness,
+  type ReadinessIssue,
+} from "@/utils/erp/productReadiness";
+import {
+  applyBulkVariantPatch,
+  applyFirstSelectedFillDown,
+  createFieldPatch,
+  createMediaPatch,
+  type BulkVariantField,
+} from "@/utils/erp/variantBulkEdit";
 import { useDict } from "@/utils/dict";
 import type {
   Product,
@@ -1418,6 +1574,9 @@ const loading = ref<boolean>(false);
 const step1FormRef = ref<FormInstance>();
 const step2FormRef = ref<FormInstance>();
 const sourceUrlInputRef = ref<HTMLInputElement>(); // 来源 URL 输入框引用
+const productInfoSectionRef = ref<HTMLElement | null>(null);
+const detailSectionRef = ref<HTMLElement | null>(null);
+const variantTableSectionRef = ref<HTMLElement | null>(null);
 
 // 拖拽相关状态
 const draggedVariantRow = ref<ProductVariant | null>(null); // 存储拖拽的变体行数据
@@ -1788,6 +1947,45 @@ const imagePreviewList = computed<string[]>(() => {
     .map((item) => baseUrl + (item.nasMediaUrl || item.shopifyMediaUrl));
 });
 
+const readinessResult = computed(() =>
+  evaluateProductReadiness({
+    formData: step2FormData,
+    variants: step2Variants.value,
+    mediaList: step2FormData.mediaList,
+  }),
+);
+
+const readinessProgressStatus = computed(() => {
+  if (readinessResult.value.errorCount > 0) {
+    return "exception";
+  }
+  if (readinessResult.value.warningCount > 0) {
+    return "warning";
+  }
+  return "success";
+});
+
+const readinessVisibleIssues = computed(() => readinessResult.value.issues);
+
+const bulkSelectedCount = computed(() => selectedStep2Variants.value.length);
+
+const bulkSelectedVariantIds = computed<number[]>(() =>
+  selectedStep2Variants.value
+    .map((variant) => variant.variantId)
+    .filter(
+      (variantId): variantId is number =>
+        variantId !== null && variantId !== undefined,
+    ),
+);
+
+const currentBulkFieldOption = computed(() =>
+  bulkFieldOptions.find((option) => option.value === bulkEditField.value),
+);
+
+const imageMediaOptions = computed(() =>
+  step2FormData.mediaList.filter((media) => isImage(media)),
+);
+
 // 采购商品选项
 const optionList = ref<ProductOption[]>([]);
 
@@ -1881,6 +2079,40 @@ const step2Variants = ref<ProductVariant[]>([
     remark: "",
   },
 ]);
+
+type BulkFieldInputType = "text" | "number" | "select" | "media";
+
+interface BulkFieldOption {
+  label: string;
+  value: BulkVariantField;
+  inputType: BulkFieldInputType;
+  precision?: number;
+  placeholder?: string;
+}
+
+const bulkFieldOptions: BulkFieldOption[] = [
+  { label: "SKU", value: "sku", inputType: "text", placeholder: "请输入 SKU" },
+  { label: "规格图", value: "media", inputType: "media" },
+  { label: "采购价", value: "purchasePrice", inputType: "number", precision: 2 },
+  { label: "包装长度", value: "pkLength", inputType: "number", precision: 0 },
+  { label: "包装宽度", value: "pkWidth", inputType: "number", precision: 0 },
+  { label: "包装高度", value: "pkHeight", inputType: "number", precision: 0 },
+  { label: "实重", value: "pkWeight", inputType: "number", precision: 3 },
+  { label: "实际发货", value: "isActualShipment", inputType: "select" },
+  { label: "运费", value: "freight", inputType: "number", precision: 2 },
+  { label: "成本价", value: "unitCostPrice", inputType: "number", precision: 2 },
+  { label: "汇率", value: "exchangeRate", inputType: "number", precision: 4 },
+  { label: "售价", value: "price", inputType: "number", precision: 2 },
+  { label: "对比价", value: "compareAtPrice", inputType: "number", precision: 2 },
+];
+
+const selectedStep2Variants = ref<ProductVariant[]>([]);
+const highlightedVariantId = ref<number | string | null>(null);
+const bulkEditField = ref<BulkVariantField>("purchasePrice");
+const bulkEditTextValue = ref<string>("");
+const bulkEditNumberValue = ref<number | null>(null);
+const bulkEditSelectValue = ref<string>("0");
+const bulkEditMediaId = ref<number | string | null>(null);
 
 // 标签列表
 const tagList = ref<TagDictMenu[]>([]);
@@ -3099,11 +3331,158 @@ async function fillExchangeRate(row) {
   }
 }
 
-const tableRowClassName = ({ row, rowIndex }) => {
-  if (row.optionValues && row.optionValues.toUpperCase().indexOf("色") !== -1) {
-    return "set-row";
+function handleVariantSelectionChange(rows: ProductVariant[]): void {
+  selectedStep2Variants.value = rows;
+}
+
+function resetBulkEditValue(): void {
+  bulkEditTextValue.value = "";
+  bulkEditNumberValue.value = null;
+  bulkEditSelectValue.value = "0";
+  bulkEditMediaId.value = null;
+}
+
+function getSelectedRowsByIds(ids: Array<number | string>): ProductVariant[] {
+  return step2Variants.value.filter(
+    (variant) => variant.variantId != null && ids.includes(variant.variantId),
+  );
+}
+
+function getSelectedMediaForBulkEdit(): Media | null {
+  return (
+    imageMediaOptions.value.find((media) => media.mediaId === bulkEditMediaId.value) ||
+    null
+  );
+}
+
+function getBulkFieldValue(): string | number | null {
+  const fieldOption = currentBulkFieldOption.value;
+  if (!fieldOption) {
+    return null;
   }
-  return "";
+  if (fieldOption.inputType === "text") {
+    return bulkEditTextValue.value.trim();
+  }
+  if (fieldOption.inputType === "select") {
+    return bulkEditSelectValue.value;
+  }
+  return bulkEditNumberValue.value;
+}
+
+async function recalculateRowsAfterBulkEdit(
+  rows: ProductVariant[],
+  field: BulkVariantField | "fillDown",
+): Promise<void> {
+  for (const row of rows) {
+    if (["pkLength", "pkWidth", "pkHeight"].includes(field)) {
+      await calculateMaterialWeight(row);
+    } else if (field === "pkWeight") {
+      await calculateFreight(row);
+    } else if (
+      ["purchasePrice", "freight", "exchangeRate", "isActualShipment"].includes(
+        field,
+      )
+    ) {
+      await calculateVariantCost(row);
+    } else if (field === "unitCostPrice" || field === "price" || field === "fillDown") {
+      calculateProfitRate(row);
+    }
+  }
+}
+
+async function applyBulkEditToSelection(): Promise<void> {
+  const selectedIds = bulkSelectedVariantIds.value;
+  if (selectedIds.length === 0) {
+    proxy.$modal.msgWarning("请先选择要批量编辑的变体");
+    return;
+  }
+
+  const field = bulkEditField.value;
+  if (field === "media") {
+    const media = getSelectedMediaForBulkEdit();
+    step2Variants.value = applyBulkVariantPatch(
+      step2Variants.value,
+      selectedIds,
+      createMediaPatch(media),
+    ) as ProductVariant[];
+  } else {
+    const value = getBulkFieldValue();
+    if (value === "" || value === null || value === undefined) {
+      proxy.$modal.msgWarning("请输入批量编辑值");
+      return;
+    }
+    step2Variants.value = applyBulkVariantPatch(
+      step2Variants.value,
+      selectedIds,
+      createFieldPatch(field as Exclude<BulkVariantField, "media">, value),
+    ) as ProductVariant[];
+  }
+
+  const selectedRows = getSelectedRowsByIds(selectedIds);
+  selectedStep2Variants.value = selectedRows;
+  await recalculateRowsAfterBulkEdit(selectedRows, field);
+  proxy.$modal.msgSuccess(`已更新 ${selectedRows.length} 个变体`);
+}
+
+async function fillDownFromFirstSelectedVariant(): Promise<void> {
+  const selectedIds = bulkSelectedVariantIds.value;
+  if (selectedIds.length < 2) {
+    proxy.$modal.msgWarning("请至少选择两个变体");
+    return;
+  }
+
+  step2Variants.value = applyFirstSelectedFillDown(
+    step2Variants.value,
+    selectedIds,
+  ) as ProductVariant[];
+  const filledRows = getSelectedRowsByIds(selectedIds.slice(1));
+  selectedStep2Variants.value = getSelectedRowsByIds(selectedIds);
+  await recalculateRowsAfterBulkEdit(filledRows, "fillDown");
+  proxy.$modal.msgSuccess(`已向下填充 ${filledRows.length} 个变体`);
+}
+
+function scrollToElement(element: HTMLElement | null | undefined): void {
+  element?.scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
+function scrollToReadinessIssue(issue: ReadinessIssue): void {
+  if (issue.target === "bodyHtml") {
+    activeDetailTab.value = "bodyHtml";
+    nextTick(() => scrollToElement(detailSectionRef.value));
+    return;
+  }
+
+  if (issue.target === "media" || issue.target === "imageSearchKeyword") {
+    scrollToElement(mediaPanelRef.value);
+    return;
+  }
+
+  if (issue.target === "variantTable") {
+    highlightedVariantId.value = issue.variantId ?? null;
+    scrollToElement(variantTableSectionRef.value);
+    window.setTimeout(() => {
+      if (highlightedVariantId.value === issue.variantId) {
+        highlightedVariantId.value = null;
+      }
+    }, 1800);
+    return;
+  }
+
+  scrollToElement(productInfoSectionRef.value);
+}
+
+const tableRowClassName = ({ row, rowIndex }) => {
+  const classNames: string[] = [];
+  if (
+    highlightedVariantId.value != null &&
+    String(row.variantId) === String(highlightedVariantId.value)
+  ) {
+    classNames.push("readiness-highlight");
+  }
+  if (row.optionValues && row.optionValues.toUpperCase().indexOf("色") !== -1) {
+    classNames.push("set-row");
+  }
+  return classNames.join(" ");
 };
 
 // 加载服务器图片（直接添加到列表）
@@ -4044,6 +4423,126 @@ defineExpose({
   );
 }
 
+.wizard-section-anchor {
+  scroll-margin-top: 120px;
+}
+
+.readiness-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 28px;
+  padding: 18px 20px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 16px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+}
+
+.readiness-panel__main {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(260px, 360px);
+  gap: 20px;
+  align-items: center;
+}
+
+.readiness-panel__copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.readiness-panel__eyebrow {
+  color: #2563eb;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.readiness-panel__title {
+  color: #0f172a;
+  font-size: 18px;
+  line-height: 1.4;
+}
+
+.readiness-panel__desc {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.readiness-panel__progress {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.readiness-panel__stats {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.readiness-issues {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 8px;
+}
+
+.readiness-issue {
+  min-height: 48px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  background: rgba(255, 255, 255, 0.9);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease,
+    transform 0.18s ease;
+}
+
+.readiness-issue:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+}
+
+.readiness-issue.is-error {
+  border-color: rgba(220, 38, 38, 0.26);
+}
+
+.readiness-issue.is-warning {
+  border-color: rgba(217, 119, 6, 0.28);
+}
+
+.readiness-issue__level {
+  display: block;
+  margin-bottom: 3px;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.readiness-issue.is-error .readiness-issue__level {
+  color: #dc2626;
+}
+
+.readiness-issue.is-warning .readiness-issue__level {
+  color: #d97706;
+}
+
+.readiness-issue__title {
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.readiness-empty {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  color: #16a34a;
+  font-size: 13px;
+  font-weight: 600;
+}
+
 .form-item-block {
   padding: 18px 20px 20px;
   margin: 12px 0 0;
@@ -4705,6 +5204,59 @@ defineExpose({
   background: #ffffff;
 }
 
+.variant-bulk-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 16px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.variant-bulk-toolbar__summary {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 130px;
+}
+
+.variant-bulk-toolbar__summary strong {
+  color: #0f172a;
+  font-size: 15px;
+}
+
+.variant-bulk-toolbar__summary span {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.variant-bulk-toolbar__controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex: 1;
+  flex-wrap: wrap;
+}
+
+.bulk-field-select {
+  width: 128px;
+}
+
+.bulk-value-input {
+  width: 150px;
+}
+
+.bulk-media-select {
+  width: 180px;
+}
+
+:deep(.variant-table .readiness-highlight > td) {
+  background: #fff7ed !important;
+}
+
 .file-placeholder {
   width: 100%;
   height: 100%;
@@ -4963,6 +5515,9 @@ defineExpose({
   /* .wizard-progress-card, */
   .step-form,
   .image-manager,
+  .readiness-panel,
+  .readiness-issue,
+  .variant-bulk-toolbar,
   .variant-table,
   .option-row {
     border-radius: 18px;
@@ -5008,6 +5563,24 @@ defineExpose({
     width: 100%;
     text-align: left;
     line-height: 1.5;
+  }
+
+  .readiness-panel__main,
+  .variant-bulk-toolbar {
+    grid-template-columns: 1fr;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .readiness-panel__stats,
+  .variant-bulk-toolbar__controls {
+    justify-content: flex-start;
+  }
+
+  .bulk-field-select,
+  .bulk-value-input,
+  .bulk-media-select {
+    width: 100%;
   }
 
   .delete-button-wrapper {
