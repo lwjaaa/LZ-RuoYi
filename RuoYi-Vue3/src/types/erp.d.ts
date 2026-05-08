@@ -61,6 +61,7 @@ export interface ProductOption {
 }
 
 export interface ProductOptionValue {
+  valueId?: string
   englishValue: string
   chineseValue: string
 }
@@ -77,6 +78,7 @@ export interface ProductVariant {
   optionValues: string
   optionValueList: ProductVariantOption[]
   mediaId?: number
+  media?: Media
   position: number
   pkWidth?: number
   pkHeight?: number
@@ -102,6 +104,7 @@ export interface ProductVariant {
 
 export interface ProductVariantOption {
   optionId: string
+  valueId?: string
   englishName: string
   chineseName: string
   englishValue?: string

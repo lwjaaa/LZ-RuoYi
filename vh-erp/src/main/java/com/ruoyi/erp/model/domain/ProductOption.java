@@ -16,6 +16,11 @@ import java.util.List;
 public class ProductOption implements Serializable {
     @Serial
     private static final long serialVersionUID = 1L;
+
+    /**
+     * ERP 本地选项稳定标识，用于前端区分改名和删除
+     */
+    private String optionId;
     /**
      * 商品选项值列表
      */

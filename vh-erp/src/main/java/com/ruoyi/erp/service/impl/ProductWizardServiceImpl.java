@@ -765,7 +765,7 @@ public class ProductWizardServiceImpl implements IProductWizardService {
      * @return 生成的 SKU
      */
     private String generateSku(Product product, int index) {
-        String profix = product.getImageSearchKeyword();
+        String profix = StringUtils.isNotBlank(product.getSpu()) ? product.getSpu() : product.getImageSearchKeyword();
         if (StringUtils.isEmpty(profix)) {
             // 如果 SPU 为空，使用时间商品ID
             profix = String.valueOf(product.getProductId());

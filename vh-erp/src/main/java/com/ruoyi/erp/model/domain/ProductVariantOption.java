@@ -20,6 +20,10 @@ public class ProductVariantOption implements Serializable{
      */
     private String optionId;
     /**
+     * ERP 本地选项值稳定标识，用于前端区分改名和删除
+     */
+    private String valueId;
+    /**
      * 商品选项名称
      */
     private String englishName;

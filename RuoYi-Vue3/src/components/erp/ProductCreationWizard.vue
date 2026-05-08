@@ -1276,6 +1276,11 @@ import { treeList } from "@/api/erp/tag";
 import { scanMedia } from "@/api/erp/media";
 import { batchGetSuggestions } from "@/api/erp/formSuggestion";
 import { useExchangeRateStore } from "@/store/modules/exchangeRate";
+import {
+  normalizeDirtyModel,
+  stableStringify,
+} from "@/utils/dirtyCompare";
+import { collectExpandedOptionIndexes } from "@/utils/productOptionCollapse";
 import { useDict } from "@/utils/dict";
 import type {
   Product,
@@ -1772,6 +1777,50 @@ interface Step1Variant {
   isActiveAvailable?: string;
 }
 
+let localOptionKeySeed = 0;
+
+function createLocalOptionKey(prefix: string): string {
+  localOptionKeySeed += 1;
+  return `${prefix}_${Date.now()}_${localOptionKeySeed}`;
+}
+
+function ensureOptionKeys(options: ProductOption[]): ProductOption[] {
+  options.forEach((option) => {
+    if (!option.optionId) {
+      option.optionId = createLocalOptionKey("option");
+    }
+    option.values?.forEach((value) => {
+      if (!value.valueId) {
+        value.valueId = createLocalOptionKey("value");
+      }
+    });
+  });
+  return options;
+}
+
+function syncOptionKeysFromVariants(
+  options: ProductOption[],
+  variants: Array<{ optionValueList: ProductVariant["optionValueList"] }>,
+): void {
+  options.forEach((option, optionIndex) => {
+    variants.forEach((variant) => {
+      const variantOption = variant.optionValueList?.[optionIndex];
+      if (!variantOption) {
+        return;
+      }
+      variantOption.optionId = option.optionId || variantOption.optionId;
+      const matchedValue = option.values?.find(
+        (value) =>
+          value.chineseValue === variantOption.chineseValue &&
+          value.englishValue === variantOption.englishValue,
+      );
+      if (matchedValue?.valueId) {
+        variantOption.valueId = matchedValue.valueId;
+      }
+    });
+  });
+}
+
 const step1Variants = ref<Step1Variant[]>([
   {
     variantId: null,
@@ -1812,20 +1861,11 @@ const step2Variants = ref<ProductVariant[]>([
 // 标签列表
 const tagList = ref<TagDictMenu[]>([]);
 
-interface Step1DataSnapshot {
-  step1FormData: Step1FormData;
-  optionList: ProductOption[];
-  step1Variants: Step1Variant[];
-}
-
-interface Step2DataSnapshot {
-  step2FormData: Step2FormData;
-  step2Variants: ProductVariant[];
-}
+type DirtySnapshot = unknown;
 
 // 初始数据快照，用于检测数据变更
-const step1DataSnapshot = ref<Step1DataSnapshot | null>(null);
-const step2DataSnapshot = ref<Step2DataSnapshot | null>(null);
+const step1DataSnapshot = ref<DirtySnapshot | null>(null);
+const step2DataSnapshot = ref<DirtySnapshot | null>(null);
 
 // SPU 生成相关
 // 获取 MENU 类型的标签 ID
@@ -2273,7 +2313,7 @@ const handleLoadStep2Data = async (): Promise<void> => {
   // 解析采购商品选项
   if (productData.optionJson) {
     try {
-      optionList.value = JSON.parse(productData.optionJson);
+      optionList.value = ensureOptionKeys(JSON.parse(productData.optionJson));
     } catch (e) {
       optionList.value = [];
     }
@@ -2310,6 +2350,7 @@ const handleLoadStep2Data = async (): Promise<void> => {
       }
       step2V.push(variant);
     }
+    syncOptionKeysFromVariants(optionList.value, step2V);
     step2Variants.value = step2V;
   }
 
@@ -2337,7 +2378,7 @@ const handleLoadStep1Data = async (): Promise<void> => {
   // 解析采购商品选项
   if (productData.optionJson) {
     try {
-      optionList.value = JSON.parse(productData.optionJson);
+      optionList.value = ensureOptionKeys(JSON.parse(productData.optionJson));
       // 默认收起
       optionList.value.forEach((option) => {
         option.collapsed = true;
@@ -2366,6 +2407,7 @@ const handleLoadStep1Data = async (): Promise<void> => {
       });
       step1Variants.value = step1V;
     });
+    syncOptionKeysFromVariants(optionList.value, step1V);
   }
 
   // 保存初始数据快照
@@ -2374,62 +2416,141 @@ const handleLoadStep1Data = async (): Promise<void> => {
 };
 
 // 保存初始数据快照
-function saveStep1DataSnapshot() {
-  step1DataSnapshot.value = {
-    step1FormData: JSON.parse(JSON.stringify(step1FormData)),
-    optionList: JSON.parse(JSON.stringify(optionList.value)),
-    step1Variants: JSON.parse(JSON.stringify(step1Variants.value)),
+function buildStep1ComparableData() {
+  return {
+    step1FormData: {
+      productId: step1FormData.productId,
+      spu: step1FormData.spu,
+      productName: step1FormData.productName,
+      sourceUrl: step1FormData.sourceUrl,
+      purchaseUrl: step1FormData.purchaseUrl,
+      tagIds: step1FormData.tagIds || [],
+    },
+    optionList: optionList.value.map((option) => ({
+      optionId: option.optionId,
+      chineseName: option.chineseName,
+      englishName: option.englishName,
+      values: (option.values || []).map((value) => ({
+        valueId: value.valueId,
+        chineseValue: value.chineseValue,
+        englishValue: value.englishValue,
+      })),
+    })),
+    step1Variants: step1Variants.value.map((variant) => ({
+      variantId: variant.variantId,
+      purchaseUrl: variant.purchaseUrl || "",
+      optionValueList: JSON.parse(JSON.stringify(variant.optionValueList || [])),
+      position: variant.position,
+      remark: variant.remark || "",
+      isActiveAvailable: variant.isActiveAvailable || "1",
+    })),
   };
+}
+
+function buildMediaComparableData(media: Media) {
+  return {
+    mediaId: media.mediaId,
+    productId: media.productId,
+    shopifyMediaId: media.shopifyMediaId,
+    shopifyMediaUrl: media.shopifyMediaUrl,
+    nasMediaUrl: media.nasMediaUrl,
+    filename: media.filename,
+    alt: media.alt,
+    position: media.position,
+    mediaContentType: media.mediaContentType,
+  };
+}
+
+function buildStep2ComparableData() {
+  return {
+    step2FormData: {
+      productId: step2FormData.productId,
+      spu: step2FormData.spu,
+      productTitle: step2FormData.productTitle,
+      category: step2FormData.category,
+      productType: step2FormData.productType,
+      description: step2FormData.description,
+      descriptionCn: step2FormData.descriptionCn,
+      size: step2FormData.size,
+      material: step2FormData.material,
+      note: step2FormData.note,
+      noteCn: step2FormData.noteCn,
+      packageInclude: step2FormData.packageInclude,
+      bodyHtml: step2FormData.bodyHtml,
+      mediaList: (step2FormData.mediaList || []).map(buildMediaComparableData),
+      remark: step2FormData.remark,
+      imageSearchKeyword: step2FormData.imageSearchKeyword,
+    },
+    step2Variants: step2Variants.value.map((variant) => ({
+      variantId: variant.variantId,
+      productId: variant.productId,
+      sku: variant.sku || "",
+      optionValueList: JSON.parse(JSON.stringify(variant.optionValueList || [])),
+      mediaId: variant.mediaId,
+      position: variant.position,
+      purchasePrice: yuanToCents(variant.purchasePrice),
+      freight: yuanToCents(variant.freight),
+      unitCostPrice: yuanToCents(variant.unitCostPrice),
+      price: yuanToCents(variant.price),
+      compareAtPrice: yuanToCents(variant.compareAtPrice),
+      pkWidth: variant.pkWidth,
+      pkHeight: variant.pkHeight,
+      pkLength: variant.pkLength,
+      materialWeight: variant.materialWeight,
+      pkWeight: variant.pkWeight,
+      isActualShipment: variant.isActualShipment || "0",
+      isActiveAvailable: variant.isActiveAvailable || "1",
+      exchangeRate: variant.exchangeRate,
+      suggestedPrice: variant.suggestedPrice,
+      profit: variant.profit,
+      profitRate: variant.profitRate,
+      remark: variant.remark || "",
+    })),
+  };
+}
+
+function buildStepDirtyModel(step: number) {
+  return step === 0 ? buildStep1ComparableData() : buildStep2ComparableData();
+}
+
+function createStepDirtySnapshot(step: number): DirtySnapshot {
+  return normalizeDirtyModel(buildStepDirtyModel(step));
+}
+
+function saveStep1DataSnapshot() {
+  step1DataSnapshot.value = createStepDirtySnapshot(0);
   console.log("保存步骤1初始数据快照:", step1DataSnapshot.value);
 }
 function saveStep2DataSnapshot() {
-  step2DataSnapshot.value = {
-    step2FormData: JSON.parse(JSON.stringify(step2FormData)),
-    step2Variants: JSON.parse(JSON.stringify(step2Variants.value)),
-  };
+  step2DataSnapshot.value = createStepDirtySnapshot(1);
   console.log("保存步骤2初始数据快照:", step2DataSnapshot.value);
+}
+
+function isStepDirty(step: number) {
+  const snapshot =
+    step === 0 ? step1DataSnapshot.value : step2DataSnapshot.value;
+  if (!snapshot) {
+    return true; // 没有初始快照，默认为有变化
+  }
+
+  const currentData = createStepDirtySnapshot(step);
+  console.log("当前数据:", currentData);
+
+  const hasChanged = stableStringify(currentData) !== stableStringify(snapshot);
+  if (hasChanged) {
+    console.log(`步骤${step + 1}数据有变化`);
+  }
+  return hasChanged;
 }
 
 // 比较数据是否发生变化
 function hasStep1DataChanged() {
-  if (!step1DataSnapshot.value) {
-    return true; // 没有初始快照，默认为有变化
-  }
-
-  const currentData = {
-    step1FormData: step1FormData,
-    optionList: optionList.value,
-    step1Variants: step1Variants.value,
-  };
-  console.log("当前数据:", currentData);
-
-  // 比较数据是否相同
-  const hasChanged =
-    JSON.stringify(currentData) !== JSON.stringify(step1DataSnapshot.value);
-  if (hasChanged) {
-    console.log("步骤1数据有变化");
-  }
-  return hasChanged;
+  return isStepDirty(0);
 }
+
 // 比较数据是否发生变化
 function hasStep2DataChanged() {
-  if (!step2DataSnapshot.value) {
-    return true; // 没有初始快照，默认为有变化
-  }
-
-  const currentData = {
-    step2FormData: step2FormData,
-    step2Variants: step2Variants.value,
-  };
-  console.log("当前数据:", currentData);
-
-  // 比较数据是否相同
-  const hasChanged =
-    JSON.stringify(currentData) !== JSON.stringify(step2DataSnapshot.value);
-  if (hasChanged) {
-    console.log("步骤2数据有变化");
-  }
-  return hasChanged;
+  return isStepDirty(1);
 }
 
 // 重置表单
@@ -2563,6 +2684,7 @@ function addOptionValue(optIndex) {
     optionList.value[optIndex].values = [];
   }
   optionList.value[optIndex].values.push({
+    valueId: createLocalOptionKey("value"),
     chineseValue: "",
     englishValue: "",
   });
@@ -2581,9 +2703,21 @@ function toggleCollapse(optIndex: number): void {
   }
 }
 
+function collapseExpandedOptionsBeforeSave(): void {
+  collectExpandedOptionIndexes(optionList.value).forEach((optIndex) => {
+    toggleCollapse(optIndex);
+  });
+}
+
 // 删除选项值
-function removeOptionValue(optIndex, valIndex) {
+async function removeOptionValue(optIndex, valIndex) {
+  try {
+    await proxy.$modal.confirm("删除该选项值会同步删除对应变体，是否继续？");
+  } catch {
+    return;
+  }
   optionList.value[optIndex].values.splice(valIndex, 1);
+  generateVariants();
 }
 
 // 处理 Enter 键导航
@@ -2631,8 +2765,10 @@ const addOption = (): void => {
   optionList.value.push({
     chineseName: "",
     englishName: "",
+    optionId: createLocalOptionKey("option"),
     values: [
       {
+        valueId: createLocalOptionKey("value"),
         chineseValue: "",
         englishValue: "",
       },
@@ -2661,7 +2797,12 @@ const addOption = (): void => {
 };
 
 // 移除选项
-function removeOption(index) {
+async function removeOption(index) {
+  try {
+    await proxy.$modal.confirm("删除该选项会同步删除对应变体，是否继续？");
+  } catch {
+    return;
+  }
   optionList.value.splice(index, 1);
   generateVariants();
 }
@@ -2677,9 +2818,27 @@ function getActiveOptions() {
 }
 
 // 生成变体（笛卡尔积）
+function buildVariantOptionKey(optionValueList: ProductVariant["optionValueList"]): string {
+  return (optionValueList || [])
+    .map((item) => [item.optionId || "", item.valueId || ""].join("|"))
+    .join("||");
+}
+
+function buildVariantMap(variants: Step1Variant[]): Map<string, Step1Variant> {
+  const variantMap = new Map<string, Step1Variant>();
+  variants.forEach((variant) => {
+    const key = buildVariantOptionKey(variant.optionValueList);
+    if (key) {
+      variantMap.set(key, variant);
+    }
+  });
+  return variantMap;
+}
+
 function generateVariants(): void {
   // 过滤有实际值的选项
   const activeOptions = getActiveOptions();
+  const existingVariantMap = buildVariantMap(step1Variants.value);
 
   if (activeOptions.length === 0) {
     step1Variants.value = [
@@ -2700,6 +2859,7 @@ function generateVariants(): void {
     opt.values
       .filter((v) => v.chineseValue || v.englishValue)
       .map((v) => ({
+        valueId: v.valueId,
         chineseValue: v.chineseValue,
         englishValue: v.englishValue,
       })),
@@ -2708,16 +2868,18 @@ function generateVariants(): void {
 
   // 2. 映射生成变体行
   step1Variants.value = combinations.map((combo, index) => {
-    const existingVariant = step1Variants.value[index];
     const optionValueList = combo.map((val, idx) => {
       const opt = activeOptions[idx];
       return {
+        optionId: opt.optionId || "",
+        valueId: val.valueId,
         englishName: opt.englishName,
         englishValue: val.englishValue,
         chineseName: opt.chineseName,
         chineseValue: val.chineseValue,
       };
     });
+    const existingVariant = existingVariantMap.get(buildVariantOptionKey(optionValueList));
     return {
       variantId: existingVariant?.variantId,
       purchaseUrl: existingVariant?.purchaseUrl || step1FormData.purchaseUrl,
@@ -3020,6 +3182,7 @@ function handleVariantImageDragEnd(event: DragEvent): void {
             step2Variants.value.forEach((row) => {
               if (row.variantId === draggedId) {
                 row.mediaId = undefined;
+                row.media = undefined;
               }
             });
           }
@@ -3204,6 +3367,10 @@ function handleVariantImageDrop(event: DragEvent, row: ProductVariant): void {
       const media: Media = JSON.parse(mediaData);
       if (media) {
         row.mediaId = media.mediaId;
+        row.media = media;
+        draggedImage.value = null;
+        draggedVariantRow.value = null;
+        dragOverVariant.value = null;
         return;
       }
     }
@@ -3214,7 +3381,9 @@ function handleVariantImageDrop(event: DragEvent, row: ProductVariant): void {
   // 从draggedImage获取数据（从图片列表拖拽）
   if (draggedImage.value) {
     row.mediaId = draggedImage.value.mediaId;
+    row.media = draggedImage.value;
     draggedImage.value = null;
+    draggedVariantRow.value = null;
   }
 
   // 清空拖拽状态
@@ -3381,6 +3550,7 @@ const handleNext = async () => {
 // 处理表单提交
 const handleSubmitData = async (): Promise<number> => {
   if (activeStep.value === 0) {
+    collapseExpandedOptionsBeforeSave();
     // 保存第一步
     // 确保变体中的 optionValueList 同步更新到 optionValues 字符串（如果需要后端兼容）
     const variantsToSubmit = step1Variants.value.map((v) => ({

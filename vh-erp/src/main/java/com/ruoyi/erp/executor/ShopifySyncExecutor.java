@@ -199,30 +199,32 @@ public class ShopifySyncExecutor {
 
         // 3. 构建商品输入和媒体列表
         ShopifyGraphQLClient.ProductInput productInput = buildProductInput(product, uploadMediaList, tagNames);
-        List<ShopifyGraphQLClient.CreateMediaInput> mediaInputs = buildMediaInputs(uploadMediaList, product);
+        List<Media> createMediaList = filterCreateMediaList(uploadMediaList);
+        List<ShopifyGraphQLClient.CreateMediaInput> mediaInputs = buildMediaInputs(createMediaList, product);
 
         // 4. 创建/更新商品
         String shopifyProductId;
         List<String> shopifyMediaIds = new ArrayList<>();
         log.info("[商品「{}」] 创建/更新商品", product.getProductTitle());
         if (StringUtils.isNotEmpty(product.getShopifyProductId())) {
-            shopifyProductId = shopifyGraphQLClient.updateProduct(storeId, product.getShopifyProductId(), productInput);
+            ShopifyGraphQLClient.ProductCreateResult updateResult = shopifyGraphQLClient.updateProduct(storeId, product.getShopifyProductId(), productInput, mediaInputs);
+            shopifyProductId = updateResult.getProductId();
+            shopifyMediaIds = updateResult.getMediaIds();
             result.append("✅ 商品更新成功 → PID: ").append(shopifyProductId).append("\n");
         } else {
             ShopifyGraphQLClient.ProductCreateResult createResult = shopifyGraphQLClient.createProduct(storeId, productInput, mediaInputs);
             shopifyProductId = createResult.getProductId();
             shopifyMediaIds = createResult.getMediaIds();
             result.append("✅ 商品创建成功 → PID: ").append(shopifyProductId).append("\n");
-            
-            // 保存 media ID 到数据库
-            if (!shopifyMediaIds.isEmpty() && uploadMediaList != null) {
-                saveMediaIdsToDatabase(uploadMediaList, shopifyMediaIds);
-                result.append("✅ 已保存 ").append(shopifyMediaIds.size()).append(" 个媒体 ID\n");
-            }
         }
         log.info("[商品「{}」] 创建/更新商品完成", product.getProductTitle());
 
         // 更新商品的 Shopify ID
+        if (!shopifyMediaIds.isEmpty() && !createMediaList.isEmpty()) {
+            saveMediaIdsToDatabase(createMediaList, shopifyMediaIds);
+            result.append("✅ 已保存 ").append(shopifyMediaIds.size()).append(" 个媒体 ID\n");
+        }
+
         Product updateProduct = new Product();
         updateProduct.setProductId(productId);
         updateProduct.setShopifyProductId(shopifyProductId);
@@ -255,6 +257,11 @@ public class ShopifySyncExecutor {
 
             try {
                 // 如果已经有 Shopify media ID，跳过上传
+                if (StringUtils.isNotEmpty(media.getShopifyMediaId())) {
+                    result.append("media ").append(media.getFilename()).append(" already has Shopify Media ID, skip\n");
+                    continue;
+                }
+
                 if (StringUtils.isNotEmpty(media.getShopifyMediaUrl())) {
                     uploadMediaList.add(media);
                     result.append("⚠️ 图片「").append(media.getFilename()).append("」已存在，跳过\n");
@@ -327,23 +334,24 @@ public class ShopifySyncExecutor {
             BigDecimal compareAtPrice = PriceUtil.fenToYuan(variant.getCompareAtPrice());
 
             Long mediaId = variant.getMediaId();
-            String shopifyMediaUrl = null;
+            String shopifyMediaId = null;
             if (mediaId != null) {
                 Media media = mediaService.getOne(new LambdaQueryWrapper<>(Media.class)
-                        .select(Media::getShopifyMediaId).eq(Media::getMediaId, mediaId));
+                        .select(Media::getShopifyMediaId, Media::getShopifyMediaUrl).eq(Media::getMediaId, mediaId));
                 if (media != null) {
-                    shopifyMediaUrl = media.getShopifyMediaUrl();
+                    shopifyMediaId = media.getShopifyMediaId();
                 }
             }
 
             ShopifyGraphQLClient.VariantInput input = ShopifyGraphQLClient.VariantInput.builder()
                     .price(price)
-                    .mediaSrc(shopifyMediaUrl)
+                    .mediaId(shopifyMediaId)
                     .compareAtPrice(compareAtPrice)
                     .inventoryPolicy(resolveInventoryPolicy(store))
                     .optionValues(parseOptionValuesAsList(variant.getOptionValues()))
                     .inventoryItem(buildInventoryItem(store, variant))
                     .inventoryQuantities(buildInventoryQuantities(store))
+                    .taxable(false)
                     .build();
 
             variantInputs.add(input);
@@ -390,6 +398,17 @@ public class ShopifySyncExecutor {
 
     private String resolveInventoryPolicy(ShopifyStore store) {
         return StringUtils.isEmpty(store.getInventoryPolicy()) ? "DENY" : store.getInventoryPolicy();
+    }
+
+    private List<Media> filterCreateMediaList(List<Media> uploadMediaList) {
+        if (uploadMediaList == null || uploadMediaList.isEmpty()) {
+            return List.of();
+        }
+        return uploadMediaList.stream()
+                .filter(media -> media != null
+                        && StringUtils.isEmpty(media.getShopifyMediaId())
+                        && StringUtils.isNotEmpty(media.getShopifyMediaUrl()))
+                .toList();
     }
 
     private void saveMediaIdsToDatabase(List<Media> uploadMediaList, List<String> shopifyMediaIds) {
@@ -452,6 +471,7 @@ public class ShopifySyncExecutor {
             for (ProductVariantOption opt : optionValueList) {
                 options.add(ShopifyGraphQLClient.OptionValueInput.builder()
                         .name(opt.getEnglishValue())
+                        .optionName(opt.getEnglishName())
                         .build());
             }
         } catch (Exception e) {

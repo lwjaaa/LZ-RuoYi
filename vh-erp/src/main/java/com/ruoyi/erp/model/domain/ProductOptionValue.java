@@ -17,6 +17,11 @@ public class ProductOptionValue implements Serializable {
     private static final long serialVersionUID = 1L;
 
     /**
+     * ERP 本地选项值稳定标识，用于前端区分改名和删除
+     */
+    private String valueId;
+
+    /**
      * 英文选项值
      */
     private String englishValue;
