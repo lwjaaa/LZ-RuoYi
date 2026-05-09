@@ -1,7 +1,5 @@
 package com.ruoyi.erp.model.dto.product;
 
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.fasterxml.jackson.annotation.JsonFormat;
 import com.ruoyi.erp.model.domain.Media;
 import com.ruoyi.erp.model.domain.Product;
 import com.ruoyi.erp.model.domain.ProductOption;
@@ -10,7 +8,6 @@ import lombok.Data;
 import org.springframework.beans.BeanUtils;
 
 import java.io.Serializable;
-import java.util.Date;
 import java.util.List;
 
 /**
@@ -63,9 +60,6 @@ public class ProductBaseInfoEdit implements Serializable
 
     /** 包含的包材 */
     private String packageInclude;
-
-    /** 图片搜索关键字 */
-    private String imageSearchKeyword;
 
     /** 备注 */
     private String remark;

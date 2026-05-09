@@ -245,7 +245,7 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, Media> implements
         }
 
         // 提前计算所有媒体的新文件名
-        this.collectAllMediaRenameTasks(newMediaList, variantList, variantMediaIds, productId, spu, toRenameList);
+        this.collectAllMediaRenameTasks(newMediaList, variantList, variantMediaIds, product.getKeyWord(), toRenameList);
 
         // ==================== 3. 处理新媒体列表（根据下标设置 position，同时更新文件名和URL） ====================
         if (!CollectionUtils.isEmpty(newMediaList)) {
@@ -329,19 +329,16 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, Media> implements
     private void collectAllMediaRenameTasks(List<Media> mediaList,
                                             List<ProductVariant> variantList,
                                             Set<Long> variantMediaIds,
-                                            Long productId,
-                                            String spu,
+                                            String keyword,
                                             List<MediaRenameVo> toRenameList) {
         if (CollectionUtils.isEmpty(mediaList)) {
             return;
         }
 
-        // 收集变体媒体的重命名任务
-        String filenamePrefix = buildFileKeyWord(productId, spu);
         this.renameVariantMediaFiles(variantList, mediaList, toRenameList);
 
         // 收集主图和其他媒体的重命名任务
-        this.renameOtherMediaAndMainMediaFiles(mediaList, variantMediaIds, filenamePrefix, toRenameList);
+        this.renameOtherMediaAndMainMediaFiles(mediaList, variantMediaIds, keyword, toRenameList);
     }
 
     /**
@@ -392,7 +389,6 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, Media> implements
      * </p>
      *
      * @param variantList 变体列表
-     * @param spu         商品 SPU
      */
     private void renameVariantMediaFiles(List<ProductVariant> variantList, List<Media> mediaList,
                                          List<MediaRenameVo> toRenameList) {
@@ -570,19 +566,6 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, Media> implements
     }
 
     /**
-     * 构建媒体文件关键词，关键词是文件的目录路径和文件名前缀，优先使用 SPU，如果 SPU 为空则使用 productId
-     *
-     * @param productId
-     * @param spu
-     * @return java.lang.String
-     * @author lwj
-     **/
-    @Override
-    public String buildFileKeyWord(Long productId, String spu) {
-        return StringUtils.isNotBlank(spu)? spu : String.valueOf(productId);
-    }
-
-    /**
      * 根据商品spu或者id，扫描媒体目录，将媒体文件添加到商品中，并返回媒体列表
      * 扫描规则：1.扫描指定目录下的所有媒体文件。如果数据库中已存在对应文件的媒体记录，文件信息,并保留原有的Shopify关联和变体绑定。
      *          2.如果不存在，则新增媒体记录。对于数据库中存在但在目录中缺失的媒体记录，删除数据库记录和变体绑定,主图绑定。
@@ -600,7 +583,7 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, Media> implements
         if(product == null){
             throw new ServiceException("商品不存在");
         }
-        String dirPathAndPrefix = buildFileKeyWord(product.getProductId(),product.getSpu());
+        String dirPathAndPrefix = product.getKeyWord();
         String basePath = RuoYiConfig.getMediaPath() + dirPathAndPrefix;
 
         File dir = new File(basePath);

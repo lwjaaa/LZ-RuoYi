@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.ruoyi.common.annotation.Excel;
+import com.ruoyi.common.utils.StringUtils;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -121,9 +122,6 @@ public class Product implements Serializable
     @Excel(name = "PACKAGEINCLUDE")
     private String packageInclude;
 
-    /** 图片搜索关键字(文件夹) */
-    private String imageSearchKeyword;
-
     /** 创建者 */
     private String createBy;
 
@@ -165,4 +163,12 @@ public class Product implements Serializable
 
     @TableField(exist = false)
     private List<String> mediaUrlList;
+
+    /**
+     * 获取关键词，用于 SKU前缀、文件夹、文件名前缀
+     * 优先使用 SPU，如果 SPU 为空则使用 productId
+     */
+    public String getKeyWord(){
+        return StringUtils.isNotBlank(spu)? spu : String.valueOf(productId);
+    }
 }

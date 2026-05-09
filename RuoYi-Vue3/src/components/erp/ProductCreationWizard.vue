@@ -1668,7 +1668,6 @@ interface Step2FormData {
   bodyHtml: string;
   mediaList: Media[];
   remark: string;
-  imageSearchKeyword: string;
 }
 
 /** 第一步表单数据 */
@@ -1698,7 +1697,6 @@ const step2FormData = reactive<Step2FormData>({
   bodyHtml: "",
   mediaList: [],
   remark: "",
-  imageSearchKeyword: "",
 });
 
 // 防循环标志位：避免双向同步导致无限循环
@@ -2654,7 +2652,6 @@ const handleLoadStep2Data = async (): Promise<void> => {
     bodyHtml: productData.bodyHtml,
     mediaList: productData.mediaList,
     remark: productData.remark,
-    imageSearchKeyword: productData.imageSearchKeyword,
   });
 
   // 解析采购商品选项
@@ -2826,7 +2823,6 @@ function buildStep2ComparableData() {
       bodyHtml: step2FormData.bodyHtml,
       mediaList: (step2FormData.mediaList || []).map(buildMediaComparableData),
       remark: step2FormData.remark,
-      imageSearchKeyword: step2FormData.imageSearchKeyword,
     },
     step2Variants: step2Variants.value.map((variant) => ({
       variantId: variant.variantId,
@@ -2946,7 +2942,6 @@ function resetForm(step) {
       remark: "",
       description: "",
       descriptionCn: "",
-      imageSearchKeyword: "",
     });
 
     step2Variants.value = [

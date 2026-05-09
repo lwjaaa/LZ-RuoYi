@@ -49,7 +49,6 @@ export interface Product {
   tagIds?: number[]
   params?: Record<string, unknown>
   mediaList?: Media[]
-  imageSearchKeyword?: string
 }
 
 export interface ProductOption {
@@ -257,7 +256,6 @@ export interface BaseInfoData {
   bodyHtml: string;
   mediaList: Media[];
   remark: string;
-  imageSearchKeyword: string;
   productVariantList?: ProductVariant[]
 }
 

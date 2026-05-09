@@ -92,8 +92,6 @@ public interface IMediaService extends IService<Media>
      */
     public String importMediaData(List<Media> mediaList, Boolean isUpdateSupport, String operName);
 
-    String buildFileKeyWord(Long productId, String spu);
-
     /**
      * 扫描服务器指定路径返回媒体列表
      *

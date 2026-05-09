@@ -3,7 +3,6 @@ package com.ruoyi.erp.service.impl;
 import cn.hutool.core.collection.CollectionUtil;
 import com.alibaba.fastjson2.JSON;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.ruoyi.common.core.redis.RedisCache;
 import com.ruoyi.common.exception.ServiceException;
 import com.ruoyi.common.utils.DateUtils;
@@ -115,9 +114,6 @@ public class ProductWizardServiceImpl implements IProductWizardService {
 
             // 商品编辑的第二步，
             if (WIZARD_STEP_SECOND.equals(step)) {
-                if (StringUtils.isBlank(product.getImageSearchKeyword())) {
-                    throw new ServiceException("图片搜索关键词不能为空");
-                }
                 // 已提前获生成图片列表，所以在此校验图片信息
                 Set<Long> keepMediaIds = new HashSet<>();
                 if (CollectionUtil.isNotEmpty(product.getMediaList())) {
@@ -496,20 +492,19 @@ public class ProductWizardServiceImpl implements IProductWizardService {
     @Async
     protected void asyncDownloadMediaFiles(Product product, List<String> mediaUrlList, Map<String, ProductVariant> mediaUrlVarianMap) {
         String spu = product.getSpu();
-        String imageSearchKeyword = product.getImageSearchKeyword();
+        String keyWord = product.getKeyWord();
         log.info("开始异步下载媒体文件，spu: {}, 文件夹: {}, 文件数量: {}",
-                spu, product.getImageSearchKeyword(), mediaUrlList.size());
-
+                spu, keyWord, mediaUrlList.size());
         try {
-            List<Media> downloadedFiles = mediaDownloadUtil.downloadMediaFiles(product, mediaUrlList, mediaUrlVarianMap);
+            List<Media> downloadedFiles = mediaDownloadUtil.downloadMediaFiles(product, mediaUrlList, mediaUrlVarianMap, keyWord);
 
             if (CollectionUtil.isNotEmpty(downloadedFiles)) {
                 log.info("媒体文件下载完成，spu: {}, 文件夹: {}, 成功下载: {}个文件",
-                        spu, imageSearchKeyword, downloadedFiles.size());
+                        spu, keyWord, downloadedFiles.size());
             }
         } catch (Exception e) {
             log.error("异步下载媒体文件失败，spu: {}, 文件夹: {}, 错误: {}",
-                    spu, imageSearchKeyword, e.getMessage(), e);
+                    spu, keyWord, e.getMessage(), e);
         }
     }
 
@@ -545,23 +540,10 @@ public class ProductWizardServiceImpl implements IProductWizardService {
             if (StringUtils.isBlank(product.getPurchaseUrl())) {
                 product.setPurchaseUrl(product.getSourceUrl());
             }
-            String imageSearchKeyword = product.getImageSearchKeyword();
-            if (StringUtils.isBlank(imageSearchKeyword)) {
-                imageSearchKeyword = StringUtils.isBlank(product.getSpu()) ? product.getProductId().toString() : product.getSpu();
-                product.setImageSearchKeyword(imageSearchKeyword);
-            }
             // 新增逻辑
-            product.setImageSearchKeyword(product.getSpu());
             product.setCreateTime(DateUtils.getNowDate());
-            product.setImageSearchKeyword(product.getSpu());
             productService.save(product);
             productId = product.getProductId();
-            if (StringUtils.isBlank(imageSearchKeyword)) {
-                productService.update(new LambdaUpdateWrapper<>(Product.class)
-                        .eq(Product::getProductId, productId)
-                        .set(Product::getImageSearchKeyword, productId.toString()));
-                product.setImageSearchKeyword(productId.toString());
-            }
             log.info("商品主表新增成功，商品ID: {}", productId);
         } else {
             // 编辑逻辑
@@ -766,7 +748,7 @@ public class ProductWizardServiceImpl implements IProductWizardService {
      * @return 生成的 SKU
      */
     private String generateSku(Product product, int index) {
-        String profix = StringUtils.isNotBlank(product.getSpu()) ? product.getSpu() : product.getImageSearchKeyword();
+        String profix = product.getKeyWord();
         if (StringUtils.isEmpty(profix)) {
             // 如果 SPU 为空，使用时间商品ID
             profix = String.valueOf(product.getProductId());

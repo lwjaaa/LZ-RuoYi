@@ -61,7 +61,7 @@ public class MediaDownloadUtil {
      * @param mediaUrlVariantMap URL到变体的映射（用于规格图绑定）
      * @return 下载成功的 Media 对象列表
      */
-    public List<Media> downloadMediaFiles(Product product, List<String> mediaUrlList, Map<String, ProductVariant> mediaUrlVariantMap) {
+    public List<Media> downloadMediaFiles(Product product, List<String> mediaUrlList, Map<String, ProductVariant> mediaUrlVariantMap, String keyWord) {
         long startTime = System.currentTimeMillis();
         List<Media> downloadedMedias = new ArrayList<>();
         int successCount = 0;
@@ -72,16 +72,15 @@ public class MediaDownloadUtil {
             return downloadedMedias;
         }
 
-        String filefolder = product.getImageSearchKeyword();
-        log.info("开始下载媒体文件，文件夹: {}, 文件数量: {}", filefolder, mediaUrlList.size());
+        log.info("开始下载媒体文件，文件夹: {}, 文件数量: {}", keyWord, mediaUrlList.size());
 
         // 收集需要重命名的媒体文件
         List<MediaRenameVo> toRenameList = new ArrayList<>();
         try {
             // 创建SPU专属文件夹，返回绝对路径
-            String spuFolderPath = createSpuFolder(filefolder);
+            String spuFolderPath = createSpuFolder(keyWord);
             if (spuFolderPath == null) {
-                log.error("创建文件夹失败: {}", filefolder);
+                log.error("创建文件夹失败: {}", keyWord);
                 return downloadedMedias;
             }
             int sequence = 1;
@@ -111,17 +110,17 @@ public class MediaDownloadUtil {
                         }
                         if(variant != null){
                             // 如果是规格图，绑定到变体
-                            filename = MediaFileUtil.getVariantMediaFilename(filefolder, variant, result.fileExtension);
+                            filename = MediaFileUtil.getVariantMediaFilename(keyWord, variant, result.fileExtension);
                             ProductVariant variantUpdate = new ProductVariant();
                             variantUpdate.setVariantId(variant.getVariantId());
                             variantUpdate.setMediaId(media.getMediaId());
                             productVariantMapper.updateById(variantUpdate);
                         } else {
-                            filename = MediaFileUtil.getOtherMediaFilename(filefolder, sequence, result.fileExtension);
+                            filename = MediaFileUtil.getOtherMediaFilename(keyWord, sequence, result.fileExtension);
                             sequence++;
 
                         }
-                        String newNasUrl = MediaFileUtil.generateNasUrl(filefolder, filename);
+                        String newNasUrl = MediaFileUtil.generateNasUrl(keyWord, filename);
                         Media mediaUpdate = new Media();
                         mediaUpdate.setMediaId(media.getMediaId());
                         mediaUpdate.setFilename(filename);
@@ -149,7 +148,7 @@ public class MediaDownloadUtil {
             long duration = endTime - startTime;
             
             log.info("媒体文件下载完成，文件夹: {}, 成功: {}个, 失败: {}个, 总耗时: {}ms",
-                    filefolder, successCount, failCount, duration);
+                    keyWord, successCount, failCount, duration);
             
             // 记录详细的下载统计信息
             if (failCount > 0) {
@@ -159,7 +158,7 @@ public class MediaDownloadUtil {
             }
             
         } catch (Exception e) {
-            log.error("下载媒体文件整体流程异常，文件夹: {}, 错误信息: {}", filefolder, e.getMessage());
+            log.error("下载媒体文件整体流程异常，文件夹: {}, 错误信息: {}", keyWord, e.getMessage());
             log.debug("详细错误信息:", e);
         }
         // 只会修改磁盘文件
@@ -170,14 +169,13 @@ public class MediaDownloadUtil {
     /**
      * 创建SPU专属文件夹
      * 
-     * @param fileFolder 商品SPU
+     * @param keyWord 商品SPU
      * @return 文件夹路径，创建失败返回null
      */
-    private String createSpuFolder(String fileFolder) {
+    private String createSpuFolder(String keyWord) {
         try {
             // 清理SPU中的非法字符
-            String safeSpu = fileFolder.replaceAll("[^a-zA-Z0-9.-_]", "_");
-            String folderPath = MEDIA_BASE_PATH + safeSpu + "/";
+            String folderPath = MEDIA_BASE_PATH + keyWord + "/";
             
             File folder = new File(folderPath);
             if (!folder.exists()) {
@@ -191,7 +189,7 @@ public class MediaDownloadUtil {
             
             return folderPath;
         } catch (Exception e) {
-            log.error("创建文件夹异常: {}, 错误信息: {}", fileFolder, e.getMessage());
+            log.error("创建文件夹异常: {}, 错误信息: {}", keyWord, e.getMessage());
             return null;
         }
     }
