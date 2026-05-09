@@ -324,12 +324,18 @@ public class ShopifySyncExecutor {
      */
     private void syncVariants(Long storeId, String shopifyProductId, List<ProductVariant> variants, StringBuilder result) {
         List<ShopifyGraphQLClient.VariantInput> variantInputs = new ArrayList<>();
+        List<ProductVariant> createVariants = new ArrayList<>();
         ShopifyStore store = shopifyStoreMapper.selectById(storeId);
         if (store == null) {
             throw new RuntimeException("店铺不存在: " + storeId);
         }
 
         for (ProductVariant variant : variants) {
+            if (StringUtils.isNotEmpty(variant.getShopifyVariantId())) {
+                result.append("变体").append(variant.getVariantId()).append("已存在 Shopify ID，跳过创建\n");
+                continue;
+            }
+
             BigDecimal price = PriceUtil.fenToYuan(variant.getPrice());
             BigDecimal compareAtPrice = PriceUtil.fenToYuan(variant.getCompareAtPrice());
 
@@ -355,27 +361,48 @@ public class ShopifySyncExecutor {
                     .build();
 
             variantInputs.add(input);
+            createVariants.add(variant);
+        }
+
+        if (createVariants.isEmpty()) {
+            return;
         }
 
         try {
             List<String> variantIds = shopifyGraphQLClient.createVariantsBulk(storeId, shopifyProductId, variantInputs);
-            for (int i = 0; i < variantIds.size(); i++) {
-                result.append("✅ 变体").append(i + 1).append("创建成功 → VID: ").append(variantIds.get(i)).append("\n");
-
-                // 回写 shopifyVariantId
-                ProductVariant pv = new ProductVariant();
-                pv.setVariantId(variants.get(i).getVariantId());
-                pv.setShopifyVariantId(variantIds.get(i));
-                productVariantService.updateById(pv);
-            }
+            saveVariantIdsToDatabase(createVariants, variantIds, result);
         } catch (ShopifyApiException e) {
             result.append("❌ 变体批量创建失败: ").append(e.getMessage()).append("\n");
         }
     }
 
     /**
-     * 保存 media ID 到数据库
+     * 保存 Shopify 变体 ID 到数据库
      */
+    private void saveVariantIdsToDatabase(List<ProductVariant> variants, List<String> shopifyVariantIds, StringBuilder result) {
+        if (shopifyVariantIds == null || shopifyVariantIds.size() != variants.size()) {
+            throw new ShopifyApiException("Shopify 返回的变体 ID 数量与本地待同步变体数量不一致");
+        }
+
+        for (int i = 0; i < variants.size(); i++) {
+            ProductVariant variant = variants.get(i);
+            String shopifyVariantId = shopifyVariantIds.get(i);
+            if (StringUtils.isEmpty(shopifyVariantId)) {
+                throw new ShopifyApiException("Shopify 返回了空的变体 ID");
+            }
+
+            ProductVariant updateVariant = new ProductVariant();
+            updateVariant.setVariantId(variant.getVariantId());
+            updateVariant.setShopifyVariantId(shopifyVariantId);
+            int updated = productVariantService.updateProductVariant(updateVariant);
+            if (updated <= 0) {
+                throw new ShopifyApiException("保存 Shopify 变体 ID 失败，variantId=" + variant.getVariantId());
+            }
+
+            result.append("✅ 变体").append(i + 1).append("创建成功 → VID: ").append(shopifyVariantId).append("\n");
+        }
+    }
+
     private ShopifyGraphQLClient.InventoryItemInput buildInventoryItem(ShopifyStore store, ProductVariant variant) {
         return ShopifyGraphQLClient.InventoryItemInput.builder()
                 .sku(variant.getSku())
