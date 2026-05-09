@@ -37,7 +37,6 @@ function createReadyForm(overrides = {}) {
     productType: "Cabinet",
     bodyHtml: "<p>Detailed product description</p>",
     description: "Detailed product description",
-    imageSearchKeyword: "DDEDL0024",
     mediaList: [
       {
         mediaId: 10,
@@ -72,7 +71,6 @@ test("missing publish-blocking fields returns must-fix issues", () => {
   const result = productReadiness.evaluateProductReadiness({
     formData: createReadyForm({
       productTitle: "",
-      imageSearchKeyword: "",
       mediaList: [],
     }),
     variants: [createReadyVariant({ sku: "", price: 0 })],
@@ -80,9 +78,8 @@ test("missing publish-blocking fields returns must-fix issues", () => {
 
   const issueIds = result.issues.map((issue) => issue.id);
 
-  assert.equal(result.errorCount, 6);
+  assert.equal(result.errorCount, 5);
   assert.ok(issueIds.includes("product-title-required"));
-  assert.ok(issueIds.includes("image-search-keyword-required"));
   assert.ok(issueIds.includes("media-image-required"));
   assert.ok(issueIds.includes("variant-1-media-missing"));
   assert.ok(issueIds.includes("variant-1-sku-required"));

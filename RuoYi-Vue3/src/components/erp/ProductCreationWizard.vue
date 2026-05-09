@@ -7,12 +7,6 @@
           <div class="header-content">
             <div class="header-title-group">
               <span class="page-title">商品创建工作台</span>
-              <span class="page-subtitle">
-                以标准化流程完成商品建档、资料补全与变体成本配置
-              </span>
-            </div>
-            <div class="header-status">
-              <span class="status-pill">ERP Product Studio</span>
               <span class="status-pill status-pill--active">
                 {{
                   activeStep === 0
@@ -75,36 +69,82 @@
           </div>
         </template>
       </el-page-header>
-      <!-- <div class="wizard-progress-card">
-        <div class="wizard-progress-copy">
-          <div class="wizard-progress-copy__eyebrow">Workflow</div>
-          <div class="wizard-progress-copy__title">商品创建双阶段协作流程</div>
-          <div class="wizard-progress-copy__desc">
-            先完成选品与规格建模，再统一处理媒体、详情和变体定价，减少重复录入与信息遗漏。
-          </div>
-        </div>
-        <el-steps
-          :active="activeStep"
-          finish-status="success"
-          align-center
-          class="wizard-steps"
-        >
-          <el-step title="选品基础信息" />
-          <el-step title="信息录入" />
-        </el-steps>
-      </div> -->
-
       <!-- 第一步：选品基础信息 -->
       <div v-show="activeStep === 0" class="step-content">
-        <el-form
-          ref="step1FormRef"
-          :model="step1FormData"
-          :rules="step1Rules"
-          label-width="120px"
-          class="step-form step1-form"
+        <WizardWorkspace
+          :active-step="activeStep"
+          title="基础选品"
+          :show-header="false"
         >
-          <el-divider content-position="left" style="margin: 0 0 28px"
-            >主商品信息</el-divider
+          <template #aside>
+            <WizardAsidePanel title="建模摘要" tone="info">
+              <div class="aside-metrics">
+                <WizardMetric
+                  label="SPU"
+                  :value="step1FormData.spu || '-'"
+                  tone="info"
+                />
+                <WizardMetric label="标签" :value="selectedStep1TagCount" />
+                <WizardMetric label="选项数" :value="activeOptionCount" />
+                <WizardMetric
+                  label="可用变体"
+                  :value="availableStep1VariantCount"
+                  :tone="availableStep1VariantCount > 0 ? 'success' : 'warning'"
+                />
+              </div>
+              <div class="aside-status-list">
+                <div class="aside-status-row">
+                  <span>来源链接</span>
+                  <el-tag
+                    size="small"
+                    :type="step1FormData.sourceUrl ? 'success' : 'warning'"
+                    effect="light"
+                  >
+                    {{ step1FormData.sourceUrl ? "已填写" : "待补充" }}
+                  </el-tag>
+                </div>
+                <div class="aside-status-row">
+                  <span>采购链接</span>
+                  <el-tag
+                    size="small"
+                    :type="step1FormData.purchaseUrl ? 'success' : 'info'"
+                    effect="light"
+                  >
+                    {{ step1FormData.purchaseUrl ? "已填写" : "可继承来源" }}
+                  </el-tag>
+                </div>
+                <div class="aside-status-row">
+                  <span>商品名称</span>
+                  <el-tag
+                    size="small"
+                    :type="step1FormData.productName ? 'success' : 'warning'"
+                    effect="light"
+                  >
+                    {{ step1FormData.productName ? "已命名" : "待命名" }}
+                  </el-tag>
+                </div>
+              </div>
+            </WizardAsidePanel>
+
+            <WizardAsidePanel title="下一步提示">
+              <div class="aside-note-list">
+                <span>1. 先确认标签会生成正确 SPU 前缀。</span>
+                <span>2. 选项英文值会直接影响 Shopify 规格展示。</span>
+                <span>3. 采购变体可用状态会带入下一步定价表。</span>
+              </div>
+            </WizardAsidePanel>
+          </template>
+
+          <el-form
+            ref="step1FormRef"
+            :model="step1FormData"
+            :rules="step1Rules"
+            label-width="120px"
+            class="step-form step1-form"
+          >
+          <WizardSection
+            title="基础选品"
+            description="维护来源、SPU、标签和采购链接，减少后续重复录入。"
           >
           <el-row :gutter="20">
             <el-col :span="12">
@@ -182,10 +222,12 @@
               </el-form-item>
             </el-col>
           </el-row>
+          </WizardSection>
 
           <!-- 商品选项 -->
-          <el-divider content-position="left" style="margin: 28px 0"
-            >商品选项</el-divider
+          <WizardSection
+            title="选项建模"
+            description="用采购选项和英文展示值生成规格组合，卡片保持轻量可折叠。"
           >
           <div class="options-container">
             <div
@@ -216,7 +258,6 @@
                       placeholder="英文选项名称"
                       class="input-right"
                       size="small"
-                      @blur="handleOptionNameSelect"
                       clearable
                       @keydown.tab.prevent="
                         handleTabKey($event, optIndex, null, 'product')
@@ -247,7 +288,6 @@
                       placeholder="英文选项值"
                       class="input-right"
                       size="small"
-                      @blur="handleOptionValueSelect"
                       clearable
                       @keydown.tab.prevent="
                         handleTabKey($event, optIndex, valIndex, 'product')
@@ -286,8 +326,6 @@
                   </el-tooltip>
                 </div>
               </div>
-
-              <!-- 底部操作按钮 -->
 
               <!-- 收起状态提示 -->
               <div class="option-collapsed-hint" v-show="option.collapsed">
@@ -341,10 +379,12 @@
               </el-button>
             </el-tooltip>
           </div>
+          </WizardSection>
 
           <!-- 变体分录表格 -->
-          <el-divider content-position="left" style="margin: 48px 0 28px"
-            >变体详情</el-divider
+          <WizardSection
+            title="采购变体"
+            description="确认每个采购变体的链接与可用状态，下一步会继续补全成本、媒体和售价。"
           >
           <el-table
             :data="step1Variants"
@@ -364,11 +404,6 @@
                 align="center"
               >
                 <template #default="{ row }">
-                  <!-- <span>{{
-                    `${row.optionValueList[idx]?.chineseName}[${row.optionValueList[idx]?.optionValue}]` ||
-                    "-"
-                  }}</span> -->
-
                   <span>
                     {{ row.optionValueList[idx]?.chineseValue || "-" }}
                     <span v-if="row.optionValueList[idx]?.englishValue">
@@ -426,24 +461,22 @@
               </template>
             </el-table-column>
           </el-table>
-        </el-form>
+          </WizardSection>
+          </el-form>
+        </WizardWorkspace>
       </div>
 
       <!-- 第二步：信息录入 -->
       <div v-show="activeStep === 1" class="step-content">
-        <el-form
-          ref="step2FormRef"
-          :model="step2FormData"
-          :rules="step2Rules"
-          label-width="68px"
-          class="step-form step2-form"
-          :label-position="'left'"
+        <WizardWorkspace
+          :active-step="activeStep"
+          title="信息录入"
+          :show-header="false"
         >
-          <section class="readiness-panel" aria-label="发布就绪检查">
-            <div class="readiness-panel__main">
-              <div class="readiness-panel__copy">
-                <span class="readiness-panel__eyebrow">发布就绪</span>
-                <strong class="readiness-panel__title">
+          <template #aside>
+            <WizardAsidePanel title="发布就绪" :tone="readinessAsideTone">
+              <div class="readiness-compact">
+                <strong class="readiness-compact__title">
                   {{
                     readinessResult.errorCount > 0
                       ? `还有 ${readinessResult.errorCount} 项必须修复`
@@ -452,60 +485,109 @@
                         : "商品资料已准备就绪"
                   }}
                 </strong>
-                <span class="readiness-panel__desc">
+                <span class="readiness-compact__desc">
                   检查只做发布前提示，不会阻止保存。
                 </span>
-              </div>
-              <div class="readiness-panel__progress">
                 <el-progress
                   :percentage="readinessResult.completion"
                   :status="readinessProgressStatus"
-                  :stroke-width="10"
+                  :stroke-width="8"
                 />
-                <div class="readiness-panel__stats">
-                  <el-tag
-                    :type="readinessResult.errorCount > 0 ? 'danger' : 'success'"
-                    effect="light"
-                  >
-                    必须修复 {{ readinessResult.errorCount }}
-                  </el-tag>
-                  <el-tag
-                    :type="readinessResult.warningCount > 0 ? 'warning' : 'success'"
-                    effect="light"
-                  >
-                    建议优化 {{ readinessResult.warningCount }}
-                  </el-tag>
+              </div>
+
+              <div class="aside-metrics aside-metrics--two">
+                <WizardMetric
+                  label="完成度"
+                  :value="`${readinessResult.completion}%`"
+                  :tone="readinessAsideTone"
+                />
+                <WizardMetric
+                  label="必须修复"
+                  :value="readinessResult.errorCount"
+                  :tone="readinessResult.errorCount > 0 ? 'danger' : 'success'"
+                />
+                <WizardMetric
+                  label="建议优化"
+                  :value="readinessResult.warningCount"
+                  :tone="readinessResult.warningCount > 0 ? 'warning' : 'success'"
+                />
+                <WizardMetric
+                  label="绑定规格图"
+                  :value="boundVariantImageCount"
+                  :tone="boundVariantImageCount > 0 ? 'success' : 'default'"
+                />
+              </div>
+
+              <div
+                v-if="readinessVisibleIssues.length > 0"
+                class="readiness-issues readiness-issues--aside"
+              >
+                <button
+                  v-for="issue in readinessVisibleIssues"
+                  :key="issue.id"
+                  type="button"
+                  class="readiness-issue"
+                  :class="`is-${issue.severity}`"
+                  @click="scrollToReadinessIssue(issue)"
+                >
+                  <span class="readiness-issue__level">
+                    {{ issue.severity === "error" ? "必须修复" : "建议优化" }}
+                  </span>
+                  <span class="readiness-issue__title">{{ issue.title }}</span>
+                </button>
+              </div>
+              <div v-else class="readiness-empty">没有发现发布风险。</div>
+            </WizardAsidePanel>
+
+            <WizardAsidePanel title="快速跳转">
+              <div class="aside-jump-list">
+                <el-button text @click="scrollToElement(productInfoSectionRef)">
+                  基础资料
+                </el-button>
+                <el-button text @click="scrollToElement(detailSectionRef)">
+                  商品详情
+                </el-button>
+                <el-button text @click="scrollToElement(mediaPanelRef)">
+                  媒体文件
+                </el-button>
+                <el-button text @click="scrollToElement(variantTableSectionRef)">
+                  变体定价
+                </el-button>
+              </div>
+            </WizardAsidePanel>
+
+            <WizardAsidePanel title="商品概况">
+              <div class="aside-status-list">
+                <div class="aside-status-row">
+                  <span>媒体图片</span>
+                  <strong>{{ imageMediaOptions.length }}</strong>
+                </div>
+                <div class="aside-status-row">
+                  <span>启用变体</span>
+                  <strong>{{ activeStep2VariantCount }}</strong>
+                </div>
+                <div class="aside-status-row">
+                  <span>已选变体</span>
+                  <strong>{{ bulkSelectedCount }}</strong>
                 </div>
               </div>
-            </div>
-            <div
-              v-if="readinessVisibleIssues.length > 0"
-              class="readiness-issues"
-            >
-              <button
-                v-for="issue in readinessVisibleIssues"
-                :key="issue.id"
-                type="button"
-                class="readiness-issue"
-                :class="`is-${issue.severity}`"
-                @click="scrollToReadinessIssue(issue)"
-              >
-                <span class="readiness-issue__level">
-                  {{ issue.severity === "error" ? "必须修复" : "建议优化" }}
-                </span>
-                <span class="readiness-issue__title">{{ issue.title }}</span>
-              </button>
-            </div>
-            <div v-else class="readiness-empty">没有发现发布风险。</div>
-          </section>
+            </WizardAsidePanel>
+          </template>
+
+          <el-form
+            ref="step2FormRef"
+            :model="step2FormData"
+            :rules="step2Rules"
+            label-width="68px"
+            class="step-form step2-form"
+            :label-position="'left'"
+          >
 
           <div ref="productInfoSectionRef" class="wizard-section-anchor">
-            <!-- 主商品信息 -->
-            <el-divider content-position="left" style="margin: 0 0 28px"
-              >主商品信息</el-divider
+            <WizardSection
+              title="基础资料"
+              description="标题、类别和类型是发布前最容易遗漏的核心资料。"
             >
-
-            <!-- SPU 与 商品标题 同行 -->
             <el-row :gutter="20">
               <el-col :span="8">
                 <el-form-item label="SPU" prop="spu">
@@ -546,15 +628,13 @@
                 </el-form-item>
               </el-col>
             </el-row>
+            </WizardSection>
           </div>
 
           <div ref="detailSectionRef" class="wizard-section-anchor">
-            <!-- 商品详情选项卡 -->
-            <el-divider
-              content-position="left"
-              class="media-section-divider"
-              style="margin: 28px 0"
-              >商品详详情编辑</el-divider
+            <WizardSection
+              title="商品详情"
+              description="用结构化字段和富文本描述维护 Shopify 详情内容。"
             >
             <el-tabs
               v-model="activeDetailTab"
@@ -583,7 +663,6 @@
                 v-model="step2FormData.size"
                 :fetch-suggestions="querySizeSuggestions"
                 placeholder="请输入SIZE"
-                @blur="handleSizeSelect"
                 clearable
                 type="textarea"
                 :rows="4"
@@ -595,7 +674,6 @@
                 v-model="step2FormData.material"
                 :fetch-suggestions="queryMaterialSuggestions"
                 placeholder="请输入MATERIAL"
-                @blur="handleMaterialSelect"
                 clearable
                 type="textarea"
                 :rows="4"
@@ -616,7 +694,6 @@
                 v-model="step2FormData.note"
                 :fetch-suggestions="queryNoteSuggestions"
                 placeholder="请输入NOTE"
-                @blur="handleNoteSelect"
                 clearable
                 type="textarea"
                 :rows="4"
@@ -681,17 +758,15 @@
               </RichTextEditor>
             </el-tab-pane>
             </el-tabs>
+            </WizardSection>
           </div>
 
-          <!-- 媒体文件列表 -->
-          <el-divider
-            content-position="left"
-            class="media-section-divider"
-            style="margin: 48px 0 28px"
-            :class="{ 'is-hidden': isMediaFloating }"
-            >商品媒体文件管理</el-divider
+          <div class="wizard-section-anchor">
+          <WizardSection
+            title="媒体文件"
+            description="导入、排序商品媒体，并拖拽图片绑定到具体变体。"
           >
-          <!-- 媒体面板（统一元素，通过CSS切换悬浮/内嵌） -->
+          <!-- 媒体面板（统一元素，通过 CSS 切换悬浮/内嵌） -->
           <div
             class="media-panel"
             :class="{ 'is-floating': isMediaFloating }"
@@ -714,14 +789,6 @@
             >
               <span class="media-panel-title">媒体文件</span>
               <div class="media-panel-toolbar">
-                <el-input
-                  v-model="step2FormData.imageSearchKeyword"
-                  placeholder="输入媒体文件所在目录搜索"
-                  :style="{ width: isMediaFloating ? '180px' : '240px' }"
-                  :size="isMediaFloating ? 'small' : 'default'"
-                  clearable
-                  @keyup.enter="loadServerImages"
-                />
                 <el-button
                   type="primary"
                   icon="Upload"
@@ -848,19 +915,22 @@
               @mousedown="startResizeMediaPanel"
             ></div>
           </div>
+          </WizardSection>
+          </div>
 
           <div ref="variantTableSectionRef" class="wizard-section-anchor">
-            <!-- 变体详细设置 -->
-            <div style="display: flex; align-items: center; margin: 48px 0 28px">
-              <el-divider content-position="left">变体详细设置</el-divider>
-
+            <WizardSection
+              title="变体定价"
+              description="勾选变体后可批量覆盖核心字段、规格图和价格配置。"
+            >
+              <template #actions>
               <right-toolbar
                 :showSearch="false"
                 :showrRefresh="false"
                 :search="false"
                 :columns="columns"
               ></right-toolbar>
-            </div>
+              </template>
 
             <div class="variant-bulk-toolbar">
               <div class="variant-bulk-toolbar__summary">
@@ -1390,8 +1460,10 @@
               </template>
             </el-table-column>
             </el-table>
+            </WizardSection>
           </div>
         </el-form>
+        </WizardWorkspace>
       </div>
 
       <!-- 视频播放弹框 -->
@@ -1414,27 +1486,24 @@ import {
   onUnmounted,
   getCurrentInstance,
   nextTick,
-  type Ref,
-  type ComputedRef,
 } from "vue";
 import {
   Picture,
-  ArrowDown,
-  Edit,
   VideoPlay,
   Document,
-  Close,
-  Rank,
 } from "@element-plus/icons-vue";
 import {
   ElMessageBox,
   ElMessage,
   type FormInstance,
   type FormRules,
-  type UploadUserFile,
 } from "element-plus";
 import CustomVideoModal from "./CustomVideoModal.vue";
 import RichTextEditor from "./RichTextEditor.vue";
+import WizardAsidePanel from "./productWizard/WizardAsidePanel.vue";
+import WizardMetric from "./productWizard/WizardMetric.vue";
+import WizardSection from "./productWizard/WizardSection.vue";
+import WizardWorkspace from "./productWizard/WizardWorkspace.vue";
 import {
   addSelectionInfo,
   updateBaseInfo,
@@ -1555,16 +1624,6 @@ async function handleBack() {
     emit("back");
   }
 }
-
-// 修改：关闭对话框改为触发返回事件
-// function handleClose() {
-//   emit("back");
-// }
-
-// 注册组件
-const components = {
-  CustomVideoModal,
-};
 
 // 状态
 const visible = ref<boolean>(false);
@@ -2113,6 +2172,38 @@ const bulkEditTextValue = ref<string>("");
 const bulkEditNumberValue = ref<number | null>(null);
 const bulkEditSelectValue = ref<string>("0");
 const bulkEditMediaId = ref<number | string | null>(null);
+
+const selectedStep1TagCount = computed(() => step1FormData.tagIds.length);
+
+const activeOptionCount = computed(() => getActiveOptions().length);
+
+const availableStep1VariantCount = computed(
+  () =>
+    step1Variants.value.filter((variant) => variant.isActiveAvailable !== "0")
+      .length,
+);
+
+const activeStep2VariantCount = computed(
+  () =>
+    step2Variants.value.filter((variant) => variant.isActiveAvailable !== "0")
+      .length,
+);
+
+const boundVariantImageCount = computed(
+  () =>
+    step2Variants.value.filter((variant) => variant.mediaId || variant.media)
+      .length,
+);
+
+const readinessAsideTone = computed<"success" | "warning" | "danger">(() => {
+  if (readinessResult.value.errorCount > 0) {
+    return "danger";
+  }
+  if (readinessResult.value.warningCount > 0) {
+    return "warning";
+  }
+  return "success";
+});
 
 // 标签列表
 const tagList = ref<TagDictMenu[]>([]);
@@ -3452,7 +3543,7 @@ function scrollToReadinessIssue(issue: ReadinessIssue): void {
     return;
   }
 
-  if (issue.target === "media" || issue.target === "imageSearchKeyword") {
+  if (issue.target === "media") {
     scrollToElement(mediaPanelRef.value);
     return;
   }
@@ -3487,14 +3578,9 @@ const tableRowClassName = ({ row, rowIndex }) => {
 
 // 加载服务器图片（直接添加到列表）
 async function loadServerImages() {
-  if (!step2FormData.imageSearchKeyword) {
-    proxy.$modal.msgError("请输入搜索关键词");
-    return;
-  }
   imageLoading.value = true;
   try {
     const response = await scanMedia({
-      dirPath: step2FormData.imageSearchKeyword,
       productId: step2FormData.productId,
     });
 
@@ -4029,12 +4115,6 @@ const handleSubmitData = async (): Promise<number> => {
   return 0;
 };
 
-// 关闭对话框
-/*function handleClose() {
-  visible.value = false;
-  emit("submit", { action: "cancel", hasChanged: false });
-}*/
-
 /**
  * 加载提示词
  */
@@ -4149,57 +4229,6 @@ function queryOptionValueSuggestions(queryString: string, cb: any) {
   cb(results);
 }
 
-/**
- * 选择大小建议后的回调
- */
-function handleSizeSelect(item: SuggestionItem) {
-  updateSuggestionUsage("size", item.value);
-}
-
-/**
- * 选择材质建议后的回调
- */
-function handleMaterialSelect(item: SuggestionItem) {
-  updateSuggestionUsage("material", item.value);
-}
-
-/**
- * 选择备注建议后的回调
- */
-function handleNoteSelect(item: SuggestionItem) {
-  updateSuggestionUsage("note", item.value);
-}
-
-/**
- * 选择英文选项名建议后的回调
- */
-function handleOptionNameSelect(item: SuggestionItem) {
-  updateSuggestionUsage("optionEnglishName", item.value);
-}
-
-/**
- * 选择英文选项值建议后的回调
- */
-function handleOptionValueSelect(item: SuggestionItem) {
-  updateSuggestionUsage("optionEnglishValue", item.value);
-}
-
-/**
- * 更新提示词使用记录
- */
-function updateSuggestionUsage(fieldName: string, newValue: string) {
-  // 这里可以调用后端接口更新使用时间
-  // 但由于保存商品时已经自动更新，所以这里可以不调用
-  // 如果需要在选择时就更新，可以取消下面的注释
-  /*batchUpdateUsage([{
-    fieldName: fieldName,
-    oldValue: null,
-    newValue: newValue
-  }]).catch(error => {
-    console.error('更新提示词使用记录失败:', error)
-  })*/
-}
-
 //表格展示列
 const columns = ref([
   { key: 0, label: "规格", visible: true },
@@ -4229,33 +4258,21 @@ defineExpose({
 .product-wizard-container {
   min-height: calc(100vh - 84px);
   padding: 24px;
-  background: radial-gradient(
-      circle at top left,
-      rgba(30, 64, 175, 0.12),
-      transparent 30%
-    ),
-    radial-gradient(
-      circle at top right,
-      rgba(34, 197, 94, 0.1),
-      transparent 24%
-    ),
-    linear-gradient(180deg, #f4f7fb 0%, #eef2f8 100%);
+  background: #f6f8fb;
 }
 
 .product-wizard-shell {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 12px;
 }
 
 .wizard-header,
-/* .wizard-progress-card, */
 .step-form,
-.image-manager,
 .variant-table,
 .option-row {
-  border: 1px solid rgba(148, 163, 184, 0.18);
-  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
+  border: 1px solid #dbe3ef;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
 }
 
 .wizard-header {
@@ -4263,51 +4280,38 @@ defineExpose({
   top: 0;
   z-index: 20;
   margin-bottom: 0;
-  padding: 20px 24px;
-  border-radius: 24px;
-  background: rgba(255, 255, 255, 0.88);
-  backdrop-filter: blur(18px);
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.96);
 }
 
 .header-content {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 10px;
   flex-wrap: wrap;
 }
 
 .header-title-group {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .page-title {
-  font-size: 24px;
+  font-size: 18px;
   line-height: 1.2;
   font-weight: 700;
-  letter-spacing: 0.01em;
   color: #0f172a;
-}
-
-.page-subtitle {
-  font-size: 13px;
-  line-height: 1.7;
-  color: #64748b;
-}
-
-.header-status {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
 }
 
 .status-pill {
   display: inline-flex;
   align-items: center;
-  min-height: 32px;
-  padding: 0 14px;
+  min-height: 26px;
+  padding: 0 10px;
   border-radius: 999px;
   border: 1px solid rgba(148, 163, 184, 0.26);
   background: rgba(248, 250, 252, 0.94);
@@ -4318,167 +4322,114 @@ defineExpose({
 
 .status-pill--active {
   border-color: rgba(37, 99, 235, 0.24);
-  background: linear-gradient(135deg, #dbeafe 0%, #eff6ff 100%);
+  background: #eff6ff;
   color: #1d4ed8;
 }
 
 .right-buttons {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
   flex-wrap: wrap;
 }
 
 .header-action-btn {
-  min-width: 108px;
-  height: 40px;
-  border-radius: 12px;
+  min-width: 84px;
+  height: 32px;
+  border-radius: 8px;
   font-weight: 600;
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
-}
-
-.header-action-btn:hover {
-  transform: translateY(-1px);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .header-action-btn--ghost {
-  box-shadow: 0 10px 20px rgba(37, 99, 235, 0.12);
+  box-shadow: none;
 }
 
 .header-action-btn--strong {
-  box-shadow: 0 12px 24px rgba(34, 197, 94, 0.18);
+  box-shadow: none;
 }
-/* 
-.wizard-progress-card {
-  display: grid;
-  grid-template-columns: minmax(280px, 360px) 1fr;
-  gap: 24px;
-  align-items: center;
-  padding: 24px 28px;
-  border-radius: 24px;
-  background: radial-gradient(
-      circle at top right,
-      rgba(34, 197, 94, 0.22),
-      transparent 28%
-    ),
-    linear-gradient(135deg, #0f172a 0%, #1e293b 56%, #1e3a8a 100%);
-}
-
-.wizard-progress-copy {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  color: #f8fafc;
-}
-
-.wizard-progress-copy__eyebrow {
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: rgba(191, 219, 254, 0.84);
-}
-
-.wizard-progress-copy__title {
-  font-size: 22px;
-  line-height: 1.35;
-  font-weight: 700;
-}
-
-.wizard-progress-copy__desc {
-  font-size: 13px;
-  line-height: 1.7;
-  color: rgba(226, 232, 240, 0.88);
-} */
-
-/* .wizard-steps {
-  padding: 16px 18px;
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.06);
-} */
 
 .step-content {
   flex: 1;
 }
 
 .step-form {
-  padding: 24px;
-  border-radius: 24px;
-  background: rgba(255, 255, 255, 0.9);
-}
-
-.step1-form {
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.98),
-    rgba(248, 250, 252, 0.94)
-  );
-}
-
-.step2-form {
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.98),
-    rgba(246, 249, 252, 0.94)
-  );
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .wizard-section-anchor {
   scroll-margin-top: 120px;
 }
 
-.readiness-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  margin-bottom: 28px;
-  padding: 18px 20px;
-  border: 1px solid rgba(148, 163, 184, 0.18);
-  border-radius: 16px;
-  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
-}
-
-.readiness-panel__main {
+.aside-metrics {
   display: grid;
-  grid-template-columns: minmax(220px, 1fr) minmax(260px, 360px);
-  gap: 20px;
-  align-items: center;
+  grid-template-columns: 1fr;
+  gap: 10px;
 }
 
-.readiness-panel__copy {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+.aside-metrics--two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 12px;
 }
 
-.readiness-panel__eyebrow {
-  color: #2563eb;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.readiness-panel__title {
-  color: #0f172a;
-  font-size: 18px;
-  line-height: 1.4;
-}
-
-.readiness-panel__desc {
-  color: #64748b;
-  font-size: 13px;
-}
-
-.readiness-panel__progress {
+.aside-status-list,
+.aside-note-list,
+.aside-jump-list,
+.readiness-compact {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-.readiness-panel__stats {
+.aside-status-list {
+  margin-top: 12px;
+}
+
+.aside-status-row {
   display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: #475569;
+  font-size: 13px;
+}
+
+.aside-status-row strong {
+  color: #0f172a;
+  font-variant-numeric: tabular-nums;
+}
+
+.aside-note-list {
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.aside-jump-list {
+  align-items: stretch;
+}
+
+.aside-jump-list :deep(.el-button) {
+  justify-content: flex-start;
+  margin-left: 0;
+}
+
+.readiness-compact__title {
+  color: #0f172a;
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.readiness-compact__desc {
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.6;
 }
 
 .readiness-issues {
@@ -4487,21 +4438,24 @@ defineExpose({
   gap: 8px;
 }
 
+.readiness-issues--aside {
+  grid-template-columns: 1fr;
+  margin-top: 12px;
+}
+
 .readiness-issue {
   min-height: 48px;
   padding: 8px 10px;
-  border-radius: 12px;
-  border: 1px solid rgba(148, 163, 184, 0.22);
-  background: rgba(255, 255, 255, 0.9);
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
   text-align: left;
   cursor: pointer;
-  transition: border-color 0.18s ease, box-shadow 0.18s ease,
-    transform 0.18s ease;
+  transition: border-color 0.18s ease, background-color 0.18s ease;
 }
 
 .readiness-issue:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+  background: #f8fafc;
 }
 
 .readiness-issue.is-error {
@@ -4543,24 +4497,7 @@ defineExpose({
   font-weight: 600;
 }
 
-.form-item-block {
-  padding: 18px 20px 20px;
-  margin: 12px 0 0;
-  border-radius: 20px;
-  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
-  border: 1px solid rgba(148, 163, 184, 0.16);
-}
-
-.mb-4 {
-  margin-bottom: 0;
-}
-
-.mb-2 {
-  margin-bottom: 8px;
-}
-
 .options-container,
-.image-manager,
 .detail-tabs {
   width: 100%;
 }
@@ -4577,21 +4514,20 @@ defineExpose({
   gap: 10px;
   margin-bottom: 0;
   overflow: hidden;
-  border-radius: 18px;
-  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  border-radius: 10px;
+  background: #ffffff;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .option-row:hover,
 .option-row:focus-within {
-  transform: translateY(-1px);
-  border-color: rgba(37, 99, 235, 0.24);
-  box-shadow: 0 20px 36px rgba(37, 99, 235, 0.08);
+  border-color: #bfdbfe;
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.06);
 }
 
 .option-row-collapsed {
   padding: 14px 16px;
-  background: linear-gradient(135deg, #f8fbff 0%, #f2f7ff 100%);
+  background: #f8fafc;
 }
 
 .option-values-container {
@@ -4720,83 +4656,11 @@ defineExpose({
   margin-left: 8px !important;
 }
 
-.image-manager {
-  padding: 18px;
-  border-radius: 20px;
-  background: linear-gradient(
-    180deg,
-    rgba(248, 250, 252, 0.96),
-    rgba(241, 245, 249, 0.98)
-  );
-}
-
-.image-toolbar {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-
-.media-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 18px;
-  background: linear-gradient(
-    135deg,
-    rgba(99, 102, 241, 0.08) 0%,
-    rgba(59, 130, 246, 0.05) 100%
-  );
-  border-radius: 14px;
-  border: 1px solid rgba(99, 102, 241, 0.12);
-  margin-bottom: 16px;
-}
-
-.media-title {
-  font-size: 15px;
-  font-weight: 700;
-  color: #1e1b4b;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.media-title::before {
-  content: "";
-  display: inline-block;
-  width: 4px;
-  height: 18px;
-  background: linear-gradient(180deg, #6366f1, #3b82f6);
-  border-radius: 2px;
-}
-
-.media-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.media-toolbar .el-input {
-  --el-input-border-color: rgba(99, 102, 241, 0.3);
-  --el-input-hover-border-color: rgba(99, 102, 241, 0.5);
-  --el-input-focus-border-color: #6366f1;
-}
-
-.media-form-item .el-form-item__content {
-  display: block !important;
-}
-
-/* 媒体面板统一样式（通过.is-floating切换悬浮状态） */
 .media-panel {
-  padding: 20px;
-  border-radius: 20px;
-  background: linear-gradient(
-    180deg,
-    #ffffff 0%,
-    rgba(248, 250, 252, 0.8) 100%
-  );
-  border: 1px solid rgba(99, 102, 241, 0.1);
-  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.04);
+  padding: 14px;
+  border: 1px solid #dbe3ef;
+  border-radius: 12px;
+  background: #ffffff;
   transition: box-shadow 0.25s ease, transform 0.2s ease;
 }
 
@@ -4807,31 +4671,19 @@ defineExpose({
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 25px 60px rgba(15, 23, 42, 0.25),
-    0 12px 28px rgba(15, 23, 42, 0.15), 0 0 0 1px rgba(99, 102, 241, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  box-shadow: 0 18px 50px rgba(15, 23, 42, 0.2);
 }
 
-.media-panel.is-floating:hover {
-  box-shadow: 0 30px 70px rgba(15, 23, 42, 0.3),
-    0 16px 35px rgba(15, 23, 42, 0.2), 0 0 0 1px rgba(99, 102, 241, 0.15),
-    inset 0 1px 0 rgba(255, 255, 255, 0.9);
-}
-
-/* 媒体面板头部 */
 .media-panel-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 18px;
-  background: linear-gradient(
-    135deg,
-    rgba(99, 102, 241, 0.08) 0%,
-    rgba(59, 130, 246, 0.05) 100%
-  );
-  border-radius: 14px;
-  border: 1px solid rgba(99, 102, 241, 0.12);
-  margin-bottom: 16px;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #f8fafc;
+  margin-bottom: 12px;
 }
 
 .media-panel.is-floating .media-panel-header {
@@ -4843,19 +4695,10 @@ defineExpose({
 .media-panel-title {
   font-size: 15px;
   font-weight: 700;
-  color: #1e1b4b;
+  color: #0f172a;
   display: flex;
   align-items: center;
   gap: 8px;
-}
-
-.media-panel-title::before {
-  content: "";
-  display: inline-block;
-  width: 4px;
-  height: 18px;
-  background: linear-gradient(180deg, #6366f1, #3b82f6);
-  border-radius: 2px;
 }
 
 .media-panel-toolbar {
@@ -4865,20 +4708,7 @@ defineExpose({
 }
 
 .media-panel-toolbar .el-input {
-  --el-input-border-color: rgba(99, 102, 241, 0.3);
-  --el-input-hover-border-color: rgba(99, 102, 241, 0.5);
-  --el-input-focus-border-color: #6366f1;
-}
-
-.media-panel-toolbar .el-button--primary {
-  background: #fff;
-  border-color: rgba(99, 102, 241, 0.3);
-  color: #6366f1;
-}
-
-.media-panel-toolbar .el-button--primary:hover {
-  background: rgba(99, 102, 241, 0.08);
-  border-color: rgba(99, 102, 241, 0.5);
+  --el-input-focus-border-color: #2563eb;
 }
 
 .media-panel.is-floating .media-panel-toolbar .el-button.is-circle {
@@ -4901,7 +4731,6 @@ defineExpose({
   padding: 16px;
 }
 
-/* 悬浮面板拖拽调整大小手柄 */
 .media-panel-resize {
   position: absolute;
   right: 0;
@@ -4909,75 +4738,52 @@ defineExpose({
   width: 28px;
   height: 28px;
   cursor: se-resize;
-  background: linear-gradient(
-    135deg,
-    transparent 40%,
-    rgba(99, 102, 241, 0.7) 40%,
-    rgba(99, 102, 241, 0.7) 60%,
-    transparent 60%
-  );
-  border-radius: 0 0 20px 0;
+  background: #dbeafe;
+  border-radius: 8px 0 10px 0;
   transition: background 0.2s ease;
 }
 
 .media-panel-resize:hover {
-  background: linear-gradient(
-    135deg,
-    transparent 35%,
-    #6366f1 35%,
-    #6366f1 65%,
-    transparent 65%
-  );
-}
-
-/* 隐藏悬浮状态下的分割线 */
-.media-section-divider.is-hidden {
-  display: none;
+  background: #bfdbfe;
 }
 
 .image-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 18px;
+  grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
+  gap: 12px;
   min-height: 140px;
-  padding: 20px;
-  border-radius: 20px;
-  border: 2px dashed rgba(99, 102, 241, 0.2);
-  background: rgba(255, 255, 255, 0.6);
-  transition: border-color 0.25s ease, background 0.25s ease,
-    box-shadow 0.25s ease;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px dashed #cbd5e1;
+  background: #f8fafc;
+  transition: border-color 0.2s ease, background 0.2s ease;
 }
 
 .image-grid.is-floating-grid {
   min-height: 140px;
-  padding: 20px;
-  border-radius: 20px;
+  padding: 12px;
+  border-radius: 10px;
 }
 
 .image-grid:hover {
-  border-color: rgba(99, 102, 241, 0.4);
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow: inset 0 2px 8px rgba(99, 102, 241, 0.05);
+  border-color: #93c5fd;
+  background: #ffffff;
 }
 
 .image-item {
   position: relative;
   width: 100%;
   aspect-ratio: 1 / 1;
-  border-radius: 18px;
+  border-radius: 10px;
   overflow: hidden;
-  border: 1px solid rgba(148, 163, 184, 0.18);
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
-  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
-    box-shadow 0.2s ease, border-color 0.2s ease, opacity 0.2s ease;
+  border: 1px solid #dbe3ef;
+  transition: border-color 0.2s ease, opacity 0.2s ease;
   cursor: pointer;
   background: #fff;
 }
 
 .image-item:hover {
-  transform: translateY(-4px) scale(1.02);
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
-  border-color: rgba(99, 102, 241, 0.4);
+  border-color: #60a5fa;
 }
 
 .image-item.dragging {
@@ -4987,25 +4793,14 @@ defineExpose({
 }
 
 .image-item.drag-over {
-  border: 2px dashed #6366f1;
-  transform: scale(1.05);
-  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.25);
-  background: rgba(99, 102, 241, 0.05);
-}
-
-.image-item:active {
-  transform: scale(0.98);
+  border: 1px dashed #2563eb;
+  background: #eff6ff;
 }
 
 .image-thumb {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.3s ease;
-}
-
-.image-item:hover .image-thumb {
-  transform: scale(1.08);
 }
 
 .image-overlay {
@@ -5015,11 +4810,7 @@ defineExpose({
   align-items: flex-end;
   justify-content: space-between;
   padding: 12px;
-  background: linear-gradient(
-    180deg,
-    rgba(15, 23, 42, 0.02) 50%,
-    rgba(15, 23, 42, 0.75) 100%
-  );
+  background: rgba(15, 23, 42, 0.52);
   opacity: 0;
   transition: opacity 0.25s ease;
   pointer-events: none;
@@ -5038,8 +4829,6 @@ defineExpose({
   color: #dc2626;
   background: rgba(255, 255, 255, 0.92);
   border: 1px solid rgba(220, 38, 38, 0.18);
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.16);
-  backdrop-filter: blur(8px);
   transition: opacity 0.18s ease, transform 0.18s ease,
     background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease;
 }
@@ -5065,20 +4854,6 @@ defineExpose({
   transform: translate(0, 0) scale(1);
 }
 
-.media-type-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 4px 10px;
-  background: rgba(99, 102, 241, 0.9);
-  color: #fff;
-  font-size: 11px;
-  font-weight: 600;
-  border-radius: 20px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  backdrop-filter: blur(4px);
-}
-
 .image-placeholder {
   width: 100%;
   min-height: 180px;
@@ -5087,27 +4862,16 @@ defineExpose({
   align-items: center;
   justify-content: center;
   gap: 14px;
-  border: 2px dashed rgba(99, 102, 241, 0.25);
-  border-radius: 20px;
-  background: linear-gradient(
-    180deg,
-    rgba(248, 250, 252, 0.9) 0%,
-    rgba(241, 245, 249, 0.95) 100%
-  );
-  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease,
-    box-shadow 0.2s ease;
+  border: 1px dashed #cbd5e1;
+  border-radius: 10px;
+  background: #ffffff;
+  transition: border-color 0.2s ease, background 0.2s ease;
   cursor: pointer;
 }
 
 .image-placeholder:hover {
-  transform: translateY(-2px);
-  border-color: rgba(99, 102, 241, 0.5);
-  background: linear-gradient(
-    180deg,
-    rgba(238, 242, 255, 0.95) 0%,
-    rgba(224, 231, 255, 0.9) 100%
-  );
-  box-shadow: 0 8px 20px rgba(99, 102, 241, 0.1);
+  border-color: #93c5fd;
+  background: #eff6ff;
 }
 
 .placeholder-icon {
@@ -5118,7 +4882,6 @@ defineExpose({
 
 .image-placeholder:hover .placeholder-icon {
   color: #6366f1;
-  transform: scale(1.1);
 }
 
 .placeholder-text {
@@ -5131,41 +4894,30 @@ defineExpose({
   position: relative;
   width: 88px;
   height: 66px;
-  border: 1px dashed rgba(148, 163, 184, 0.42);
-  border-radius: 14px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
   cursor: pointer;
-  background: linear-gradient(
-    180deg,
-    rgba(248, 250, 252, 0.92),
-    rgba(255, 255, 255, 0.98)
-  );
-  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  background: #f8fafc;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
 }
 
 .variant-image-item:hover {
-  transform: translateY(-1px);
-  border-color: rgba(37, 99, 235, 0.3);
-  box-shadow: 0 10px 20px rgba(37, 99, 235, 0.1);
+  border-color: #60a5fa;
+  background: #eff6ff;
 }
 
 .variant-image-item.drag-over {
-  border-color: rgba(37, 99, 235, 0.72);
-  box-shadow: 0 12px 24px rgba(37, 99, 235, 0.14);
+  border-color: #2563eb;
 }
 
 .variant-thumb {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.22s ease;
-}
-
-.variant-image-item:hover .variant-thumb {
-  transform: scale(1.06);
 }
 
 .variant-image-unbind-button {
@@ -5193,13 +4945,13 @@ defineExpose({
 }
 
 .detail-tabs {
-  border-radius: 18px;
+  border-radius: 10px;
   overflow: hidden;
 }
 
 .variant-table {
   margin-top: 12px;
-  border-radius: 20px;
+  border-radius: 10px;
   overflow: hidden;
   background: #ffffff;
 }
@@ -5209,17 +4961,17 @@ defineExpose({
   align-items: center;
   justify-content: space-between;
   gap: 14px;
-  padding: 14px 16px;
-  border: 1px solid rgba(148, 163, 184, 0.18);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.82);
+  padding: 10px 12px;
+  border: 1px solid #dbe3ef;
+  border-radius: 10px;
+  background: #f8fafc;
 }
 
 .variant-bulk-toolbar__summary {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 130px;
+  align-items: center;
+  gap: 8px;
+  min-width: 150px;
 }
 
 .variant-bulk-toolbar__summary strong {
@@ -5266,11 +5018,7 @@ defineExpose({
   justify-content: center;
   gap: 8px;
   padding: 10px;
-  background: linear-gradient(
-    180deg,
-    rgba(248, 250, 252, 0.96),
-    rgba(241, 245, 249, 0.96)
-  );
+  background: #f8fafc;
   color: #64748b;
   font-size: 12px;
 }
@@ -5300,7 +5048,6 @@ defineExpose({
   color: #ffffff;
   font-size: 11px;
   font-weight: 600;
-  backdrop-filter: blur(10px);
 }
 
 .video-thumbnail {
@@ -5334,55 +5081,21 @@ defineExpose({
   transform: translate(-50%, -50%) scale(1.06);
 }
 
-.footer-right-buttons {
-  display: flex;
-  gap: 10px;
-}
-
 :deep(.el-page-header__content) {
   width: 100%;
 }
 
+:deep(.el-page-header__header) {
+  align-items: center;
+  gap: 12px;
+}
+
 :deep(.el-page-header__left) {
-  align-items: flex-start;
+  align-items: center;
 }
-/* 
-:deep(.wizard-progress-card .el-step__title) {
-  color: rgba(226, 232, 240, 0.88);
-  font-weight: 600;
-}
-
-:deep(.wizard-progress-card .is-process .el-step__title),
-:deep(.wizard-progress-card .is-finish .el-step__title) {
-  color: #ffffff;
-}
-
-:deep(.wizard-progress-card .el-step__icon) {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.24);
-  color: #ffffff;
-}
-
-:deep(.wizard-progress-card .is-process .el-step__icon),
-:deep(.wizard-progress-card .is-finish .el-step__icon) {
-  background: linear-gradient(135deg, #2563eb, #22c55e);
-  border-color: transparent;
-} */
 
 :deep(.step-form .el-form-item) {
   margin-bottom: 20px;
-}
-
-/* :deep(.step-form .el-divider) {
-  margin: 22px 0 14px;
-} */
-
-:deep(.step-form .el-divider__text) {
-  padding: 0 14px;
-  font-size: 17px;
-  font-weight: 700;
-  color: #0f172a;
-  background: rgba(255, 255, 255, 0.9);
 }
 
 :deep(.step-form .el-form-item__label) {
@@ -5397,8 +5110,8 @@ defineExpose({
 :deep(.step-form .el-select__wrapper),
 :deep(.step-form .el-cascader .el-input__wrapper),
 :deep(.step-form .el-input-number .el-input__wrapper) {
-  border-radius: 12px;
-  transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+  border-radius: 10px;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
 :deep(.step-form .el-input__wrapper:hover),
@@ -5423,30 +5136,22 @@ defineExpose({
 }
 
 :deep(.step-form .el-button) {
-  border-radius: 12px;
+  border-radius: 10px;
   font-weight: 600;
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
-}
-
-:deep(.step-form .el-button:hover) {
-  transform: translateY(-1px);
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
 :deep(.step-form .el-button--primary) {
-  box-shadow: 0 10px 18px rgba(37, 99, 235, 0.16);
+  box-shadow: none;
 }
 
 :deep(.step-form .el-button--success) {
-  box-shadow: 0 10px 18px rgba(34, 197, 94, 0.16);
+  box-shadow: none;
 }
 
 :deep(.detail-tabs .el-tabs__header) {
   margin-bottom: 0;
-  background: linear-gradient(
-    180deg,
-    rgba(248, 250, 252, 0.92),
-    rgba(241, 245, 249, 0.92)
-  );
+  background: #f8fafc;
 }
 
 :deep(.detail-tabs .el-tabs__nav-wrap) {
@@ -5475,7 +5180,7 @@ defineExpose({
 }
 
 :deep(.variant-table .el-table__header-wrapper th) {
-  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  background: #f8fafc;
   color: #334155;
   font-weight: 700;
 }
@@ -5499,36 +5204,26 @@ defineExpose({
 :deep(.el-table .set-row) {
   --el-table-tr-bg-color: rgba(219, 234, 254, 0.8) !important;
 }
-/* 
-@media (max-width: 1200px) {
-  .wizard-progress-card {
-    grid-template-columns: 1fr;
-  }
-} */
-
 @media (max-width: 768px) {
   .product-wizard-container {
     padding: 14px;
   }
 
   .wizard-header,
-  /* .wizard-progress-card, */
   .step-form,
-  .image-manager,
-  .readiness-panel,
   .readiness-issue,
   .variant-bulk-toolbar,
   .variant-table,
   .option-row {
-    border-radius: 18px;
+    border-radius: 10px;
   }
 
   .wizard-header {
-    padding: 16px;
+    padding: 10px 12px;
   }
 
   .page-title {
-    font-size: 20px;
+    font-size: 18px;
   }
 
   .right-buttons {
@@ -5536,20 +5231,8 @@ defineExpose({
   }
 
   .header-action-btn {
-    flex: 1 1 calc(50% - 10px);
+    flex: 1 1 calc(50% - 6px);
     min-width: 0;
-  }
-
-  /* .wizard-progress-card {
-    padding: 18px;
-  } */
-
-  .step-form {
-    padding: 16px;
-  }
-
-  .form-item-block {
-    padding: 14px;
   }
 
   .option-value-row,
@@ -5565,14 +5248,11 @@ defineExpose({
     line-height: 1.5;
   }
 
-  .readiness-panel__main,
   .variant-bulk-toolbar {
-    grid-template-columns: 1fr;
     flex-direction: column;
     align-items: stretch;
   }
 
-  .readiness-panel__stats,
   .variant-bulk-toolbar__controls {
     justify-content: flex-start;
   }
@@ -5603,11 +5283,6 @@ defineExpose({
     flex-basis: 100%;
   }
 
-  .status-pill {
-    width: 100%;
-    justify-content: center;
-  }
-
   .image-grid {
     grid-template-columns: 1fr;
   }
@@ -5615,9 +5290,7 @@ defineExpose({
 
 @media (prefers-reduced-motion: reduce) {
   .wizard-header,
-  /* .wizard-progress-card, */
   .step-form,
-  .image-manager,
   .variant-table,
   .option-row,
   .image-item,

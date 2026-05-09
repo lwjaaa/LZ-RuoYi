@@ -2,7 +2,6 @@ export type ReadinessSeverity = "error" | "warning";
 
 export type ReadinessTarget =
   | "productTitle"
-  | "imageSearchKeyword"
   | "media"
   | "bodyHtml"
   | "productType"
@@ -38,7 +37,6 @@ interface ReadinessFormData {
   productType?: string | null;
   bodyHtml?: string | null;
   description?: string | null;
-  imageSearchKeyword?: string | null;
   mediaList?: ReadinessMedia[] | null;
 }
 
@@ -127,19 +125,6 @@ export function evaluateProductReadiness({
         description: "Shopify 商品发布需要清晰的商品标题。",
         target: "productTitle",
         field: "productTitle",
-      }),
-    );
-  }
-
-  if (!hasText(formData.imageSearchKeyword)) {
-    issues.push(
-      createIssue({
-        id: "image-search-keyword-required",
-        severity: "error",
-        title: "媒体目录不能为空",
-        description: "后端保存第二步时需要媒体搜索关键词。",
-        target: "imageSearchKeyword",
-        field: "imageSearchKeyword",
       }),
     );
   }

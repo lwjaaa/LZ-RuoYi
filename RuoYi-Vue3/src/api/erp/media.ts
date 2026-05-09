@@ -73,14 +73,13 @@ export interface ScanMediaResult {
   errors?: string[];
 }
 
-export function scanMedia(params: {
-  dirPath: string;
-  productId?: number | null;
-}): Promise<ApiResponse<Media[]>> {
+export function scanMedia(
+  params: { productId?: number | null } = {},
+): Promise<ApiResponse<Media[]>> {
   return request({
     url: "/erp/media/scan",
     method: "get",
-    params: { dirPath: params.dirPath, productId: params.productId },
+    params,
   });
 }
 
