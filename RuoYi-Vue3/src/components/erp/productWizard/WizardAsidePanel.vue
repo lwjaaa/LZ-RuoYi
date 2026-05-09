@@ -28,8 +28,12 @@ const toneClass = computed(() => `is-${props.tone}`);
 
 <style scoped>
 .wizard-aside-panel {
+  flex: 0 0 auto;
+  min-width: 0;
   border-radius: 12px;
   background: #ffffff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04),
+    0 8px 22px rgba(15, 23, 42, 0.04);
   overflow: hidden;
 }
 
@@ -41,6 +45,7 @@ const toneClass = computed(() => `is-${props.tone}`);
   min-height: 44px;
   padding: 12px 14px;
   background: #ffffff;
+  box-shadow: inset 0 -1px 0 #eef2f7;
 }
 
 .wizard-aside-panel__title {
@@ -52,7 +57,9 @@ const toneClass = computed(() => `is-${props.tone}`);
 }
 
 .wizard-aside-panel__body {
+  min-width: 0;
   padding: 14px;
+  background: #ffffff;
 }
 
 .wizard-aside-panel.is-success .wizard-aside-panel__title {

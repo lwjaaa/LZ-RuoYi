@@ -14,10 +14,15 @@
     </div>
 
     <div class="wizard-workspace__body">
-      <main class="wizard-workspace__main">
+      <main ref="mainRef" class="wizard-workspace__main">
         <slot />
       </main>
-      <aside v-if="$slots.aside" class="wizard-workspace__aside">
+      <aside
+        v-if="$slots.aside"
+        ref="asideRef"
+        class="wizard-workspace__aside"
+        :style="asideStyle"
+      >
         <slot name="aside" />
       </aside>
     </div>
@@ -25,7 +30,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
 
 const props = defineProps<{
   activeStep: number;
@@ -37,6 +42,96 @@ const props = defineProps<{
 const showHeader = computed(() => props.showHeader !== false);
 
 const stepNumber = computed(() => props.activeStep + 1);
+
+const mainRef = ref<HTMLElement | null>(null);
+const asideRef = ref<HTMLElement | null>(null);
+const mainHeight = ref<number | null>(null);
+const asideViewportHeight = ref<number | null>(null);
+let resizeObserver: ResizeObserver | null = null;
+let measureFrame: number | null = null;
+
+const asideStyle = computed(() => {
+  if (!mainHeight.value && !asideViewportHeight.value) {
+    return undefined;
+  }
+
+  const style: Record<string, string> = {};
+
+  if (mainHeight.value) {
+    style["--wizard-main-height"] = `${mainHeight.value}px`;
+  }
+
+  if (asideViewportHeight.value) {
+    style["--wizard-aside-viewport-height"] =
+      `${asideViewportHeight.value}px`;
+  }
+
+  return style;
+});
+
+function updateMainHeight(): void {
+  mainHeight.value = mainRef.value?.scrollHeight ?? null;
+}
+
+function updateAsideViewportHeight(): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  const top = asideRef.value?.getBoundingClientRect().top ?? 84;
+  const stickyTop = Number(
+    window
+      .getComputedStyle(asideRef.value ?? document.documentElement)
+      .getPropertyValue("--wizard-aside-sticky-top")
+      .replace("px", ""),
+  );
+  const effectiveTop = Number.isFinite(stickyTop)
+    ? Math.max(top, stickyTop)
+    : top;
+
+  asideViewportHeight.value = Math.max(
+    360,
+    Math.floor(window.innerHeight - effectiveTop - 32),
+  );
+}
+
+function updateLayoutMeasurements(): void {
+  updateMainHeight();
+  updateAsideViewportHeight();
+}
+
+function scheduleLayoutMeasurements(): void {
+  if (typeof window === "undefined" || measureFrame !== null) {
+    return;
+  }
+
+  measureFrame = window.requestAnimationFrame(() => {
+    measureFrame = null;
+    updateLayoutMeasurements();
+  });
+}
+
+onMounted(() => {
+  nextTick(updateLayoutMeasurements);
+
+  if (typeof ResizeObserver !== "undefined" && mainRef.value) {
+    resizeObserver = new ResizeObserver(scheduleLayoutMeasurements);
+    resizeObserver.observe(mainRef.value);
+  }
+
+  window.addEventListener("resize", scheduleLayoutMeasurements);
+  document.addEventListener("scroll", scheduleLayoutMeasurements, true);
+});
+
+onBeforeUnmount(() => {
+  resizeObserver?.disconnect();
+  window.removeEventListener("resize", scheduleLayoutMeasurements);
+  document.removeEventListener("scroll", scheduleLayoutMeasurements, true);
+
+  if (measureFrame !== null) {
+    window.cancelAnimationFrame(measureFrame);
+  }
+});
 </script>
 
 <style scoped>
@@ -95,7 +190,7 @@ const stepNumber = computed(() => props.activeStep + 1);
 
 .wizard-workspace__body {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(280px, 336px);
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 360px);
   align-items: start;
   gap: 18px;
 }
@@ -109,14 +204,45 @@ const stepNumber = computed(() => props.activeStep + 1);
 
 .wizard-workspace__aside {
   position: sticky;
-  top: 84px;
+  --wizard-aside-sticky-top: 84px;
+
+  top: var(--wizard-aside-sticky-top);
   display: flex;
   min-width: 0;
-  max-height: calc(100vh - 108px);
+  max-height: min(
+    var(--wizard-aside-viewport-height, calc(100vh - 160px)),
+    var(--wizard-main-height, 100vh)
+  );
   flex-direction: column;
   gap: 12px;
-  overflow: auto;
+  padding: 12px;
+  border: 1px solid #dbe3ef;
+  border-radius: 12px;
+  background: #f6f8fb;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-color: #c5d0de transparent;
+  scrollbar-gutter: stable;
   scrollbar-width: thin;
+}
+
+.wizard-workspace__aside::-webkit-scrollbar {
+  width: 8px;
+}
+
+.wizard-workspace__aside::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.wizard-workspace__aside::-webkit-scrollbar-thumb {
+  border: 2px solid #f6f8fb;
+  border-radius: 999px;
+  background: #c5d0de;
+}
+
+.wizard-workspace__aside::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 
 @media (max-width: 1180px) {

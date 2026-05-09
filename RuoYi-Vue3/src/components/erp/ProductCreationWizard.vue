@@ -4396,6 +4396,8 @@ defineExpose({
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  min-height: 34px;
+  padding: 0 2px;
   color: #475569;
   font-size: 13px;
 }
@@ -4418,6 +4420,19 @@ defineExpose({
 .aside-jump-list :deep(.el-button) {
   justify-content: flex-start;
   margin-left: 0;
+  padding: 9px 10px;
+  border-radius: 8px;
+  color: #475569;
+  font-weight: 500;
+}
+
+.aside-jump-list :deep(.el-button:hover) {
+  background: #f8fafc;
+  color: #2563eb;
+}
+
+.readiness-compact {
+  padding: 2px 0 4px;
 }
 
 .readiness-compact__title {
@@ -4447,7 +4462,7 @@ defineExpose({
   min-height: 48px;
   padding: 8px 10px;
   border-radius: 10px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #e5e7eb;
   background: #ffffff;
   text-align: left;
   cursor: pointer;
@@ -4456,14 +4471,17 @@ defineExpose({
 
 .readiness-issue:hover {
   background: #f8fafc;
+  border-color: #dbe3ef;
 }
 
 .readiness-issue.is-error {
-  border-color: rgba(220, 38, 38, 0.26);
+  border-color: #e5e7eb;
+  background: #fffafa;
 }
 
 .readiness-issue.is-warning {
-  border-color: rgba(217, 119, 6, 0.28);
+  border-color: #e5e7eb;
+  background: #fffdf7;
 }
 
 .readiness-issue__level {

@@ -29,9 +29,9 @@ const toneClass = computed(() => `is-${props.tone}`);
   flex-direction: column;
   gap: 4px;
   padding: 10px 12px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #e5e7eb;
   border-radius: 10px;
-  background: #f8fafc;
+  background: #ffffff;
 }
 
 .wizard-metric__label {
@@ -49,22 +49,38 @@ const toneClass = computed(() => `is-${props.tone}`);
 }
 
 .wizard-metric.is-success {
-  border-color: #bbf7d0;
-  background: #f0fdf4;
+  border-color: #dbe3ef;
+  background: #fbfefd;
+}
+
+.wizard-metric.is-success .wizard-metric__value {
+  color: #047857;
 }
 
 .wizard-metric.is-warning {
-  border-color: #fde68a;
-  background: #fffbeb;
+  border-color: #dbe3ef;
+  background: #fffdf7;
+}
+
+.wizard-metric.is-warning .wizard-metric__value {
+  color: #b45309;
 }
 
 .wizard-metric.is-danger {
-  border-color: #fecaca;
-  background: #fef2f2;
+  border-color: #dbe3ef;
+  background: #fffafa;
+}
+
+.wizard-metric.is-danger .wizard-metric__value {
+  color: #b91c1c;
 }
 
 .wizard-metric.is-info {
-  border-color: #bfdbfe;
-  background: #eff6ff;
+  border-color: #dbe3ef;
+  background: #fbfdff;
+}
+
+.wizard-metric.is-info .wizard-metric__value {
+  color: #1d4ed8;
 }
 </style>
