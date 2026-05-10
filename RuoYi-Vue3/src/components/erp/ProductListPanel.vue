@@ -529,6 +529,7 @@ import {
   getCurrentInstance,
   computed,
 } from "vue";
+import { ElMessageBox } from "element-plus";
 import { listProduct, getProduct, delProduct, pushBatch, getPushResult, publishProducts } from "@/api/erp/product";
 import { listActiveStores } from "@/api/erp/store";
 import { getToken } from "@/utils/auth";
@@ -885,9 +886,10 @@ function submitStoreAction(): void {
     })
       .then((res: any) => {
         storeAction.open = false;
-        if (res.data && res.data.taskId) {
-          proxy.$modal.msgSuccess("已创建推送任务，任务ID: " + res.data.taskId);
-          openTaskProgress(res.data.taskId);
+        const taskId = res.data?.taskId || res.taskId;
+        if (taskId) {
+          proxy.$modal.msgSuccess("已创建推送任务，任务ID: " + taskId);
+          openTaskProgress(taskId);
         } else {
           proxy.$modal.msgWarning("没有可推送的商品");
         }
@@ -926,7 +928,7 @@ function handlePushToShopify(): void {
 }
 
 function openTaskProgress(taskId: number): void {
-  proxy.$prompt("任务ID: " + taskId + "\n\n请在推送任务页面查看进度", "推送任务已创建", {
+  ElMessageBox.confirm(`推送任务已创建，任务ID：${taskId}。可前往推送任务页面查看进度。`, "推送任务已创建", {
     confirmButtonText: "打开任务页面",
     cancelButtonText: "稍后查看",
     type: "info",

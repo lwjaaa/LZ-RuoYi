@@ -118,7 +118,7 @@ public class ProductController extends BaseController {
                 request.getProductIds(),
                 request.getStoreId()
         );
-        return success().put("taskId", taskId);
+        return taskId == null ? success() : success(java.util.Map.of("taskId", taskId));
     }
 
     /**
