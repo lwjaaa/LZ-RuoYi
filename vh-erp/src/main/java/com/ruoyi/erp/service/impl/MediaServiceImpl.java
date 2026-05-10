@@ -28,8 +28,13 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * erp媒体Service业务层处理
@@ -324,6 +329,147 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, Media> implements
 
         log.info("商品媒体更新完成，商品ID: {}, 保留媒体数: {}, 删除媒体数: {}, 重命名数: {}",
                 productId, keepMediaIds.size(), toDeleteMediaIds.size(), toRenameList.size());
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void syncProductMediaKeyword(Product product, String oldKeyword, List<ProductVariant> variantList) {
+        if (product == null || product.getProductId() == null || StringUtils.isEmpty(oldKeyword)) {
+            return;
+        }
+
+        String newKeyword = product.getKeyWord();
+        if (StringUtils.isEmpty(newKeyword) || Objects.equals(oldKeyword, newKeyword)) {
+            return;
+        }
+
+        List<Media> mediaList = this.listByProductId(product.getProductId());
+        if (CollectionUtils.isEmpty(mediaList)) {
+            log.info("商品没有可同步的媒体记录，商品ID: {}, 旧关键词: {}, 新关键词: {}",
+                    product.getProductId(), oldKeyword, newKeyword);
+            return;
+        }
+
+        Path targetDir = Paths.get(RuoYiConfig.getMediaPath(), newKeyword).normalize();
+        try {
+            Files.createDirectories(targetDir);
+        } catch (IOException e) {
+            throw new ServiceException("创建目标媒体目录失败: " + targetDir);
+        }
+
+        Map<Long, ProductVariant> variantMediaMap = buildVariantMediaMap(variantList);
+        List<MediaMoveOperation> operations = buildMediaKeywordMoveOperations(mediaList, variantMediaMap, oldKeyword, newKeyword, targetDir);
+
+        for (MediaMoveOperation operation : operations) {
+            try {
+                if (!operation.oldPath.equals(operation.newPath)) {
+                    Files.move(operation.oldPath, operation.newPath);
+                }
+            } catch (IOException e) {
+                throw new ServiceException("移动媒体文件失败: " + operation.oldPath + " -> " + operation.newPath);
+            }
+
+            Media mediaUpdate = new Media();
+            mediaUpdate.setMediaId(operation.media.getMediaId());
+            mediaUpdate.setFilename(operation.newFilename);
+            mediaUpdate.setNasMediaUrl(operation.newNasMediaUrl);
+            mediaUpdate.setUpdateTime(DateUtils.getNowDate());
+            this.updateById(mediaUpdate);
+        }
+
+        deleteEmptyOldKeywordDirectory(oldKeyword, targetDir);
+        log.info("商品媒体关键词同步完成，商品ID: {}, 旧关键词: {}, 新关键词: {}, 媒体数量: {}",
+                product.getProductId(), oldKeyword, newKeyword, operations.size());
+    }
+
+    private Map<Long, ProductVariant> buildVariantMediaMap(List<ProductVariant> variantList) {
+        Map<Long, ProductVariant> variantMediaMap = new LinkedHashMap<>();
+        if (CollectionUtils.isEmpty(variantList)) {
+            return variantMediaMap;
+        }
+
+        for (ProductVariant variant : variantList) {
+            Long mediaId = variant.getMediaId();
+            if (mediaId != null && !variantMediaMap.containsKey(mediaId)) {
+                variantMediaMap.put(mediaId, variant);
+            }
+        }
+        return variantMediaMap;
+    }
+
+    private List<MediaMoveOperation> buildMediaKeywordMoveOperations(List<Media> mediaList,
+                                                                     Map<Long, ProductVariant> variantMediaMap,
+                                                                     String oldKeyword,
+                                                                     String newKeyword,
+                                                                     Path targetDir) {
+        List<MediaMoveOperation> operations = new ArrayList<>();
+        Set<Path> plannedTargetPaths = new HashSet<>();
+        int sequence = 1;
+
+        for (Media media : mediaList) {
+            String extension = MediaFileUtil.getFileExtensionByFilename(media.getFilename());
+            ProductVariant variant = variantMediaMap.get(media.getMediaId());
+            String newFilename;
+            if (variant != null && StringUtils.isNotEmpty(variant.getSku())) {
+                newFilename = MediaFileUtil.concatFilename(variant.getSku(), extension);
+            } else {
+                newFilename = MediaFileUtil.getOtherMediaFilename(newKeyword, sequence, extension);
+                sequence++;
+            }
+
+            String oldFilePath = MediaFileUtil.convertUrlToFilePath(media.getNasMediaUrl());
+            if (StringUtils.isEmpty(oldFilePath)) {
+                oldFilePath = Paths.get(RuoYiConfig.getMediaPath(), oldKeyword, media.getFilename()).toString();
+            }
+            Path oldPath = Paths.get(oldFilePath).normalize();
+            Path newPath = targetDir.resolve(newFilename).normalize();
+
+            if (!Files.exists(oldPath) || !Files.isRegularFile(oldPath)) {
+                throw new ServiceException("媒体文件不存在: " + oldPath);
+            }
+            if (!plannedTargetPaths.add(newPath)) {
+                throw new ServiceException("目标媒体文件名重复: " + newPath);
+            }
+            if (!oldPath.equals(newPath) && Files.exists(newPath)) {
+                throw new ServiceException("目标媒体文件已存在: " + newPath);
+            }
+
+            String newNasUrl = MediaFileUtil.generateNasUrl(MediaFileUtil.fixFileSeparator(newPath.toString()));
+            operations.add(new MediaMoveOperation(media, oldPath, newPath, newFilename, newNasUrl));
+        }
+
+        return operations;
+    }
+
+    private void deleteEmptyOldKeywordDirectory(String oldKeyword, Path targetDir) {
+        Path oldDir = Paths.get(RuoYiConfig.getMediaPath(), oldKeyword).normalize();
+        if (oldDir.equals(targetDir) || !Files.isDirectory(oldDir)) {
+            return;
+        }
+
+        try (Stream<Path> children = Files.list(oldDir)) {
+            if (children.findAny().isEmpty()) {
+                Files.delete(oldDir);
+            }
+        } catch (IOException e) {
+            log.warn("删除旧媒体空目录失败: {}, 错误: {}", oldDir, e.getMessage());
+        }
+    }
+
+    private static class MediaMoveOperation {
+        private final Media media;
+        private final Path oldPath;
+        private final Path newPath;
+        private final String newFilename;
+        private final String newNasMediaUrl;
+
+        private MediaMoveOperation(Media media, Path oldPath, Path newPath, String newFilename, String newNasMediaUrl) {
+            this.media = media;
+            this.oldPath = oldPath;
+            this.newPath = newPath;
+            this.newFilename = newFilename;
+            this.newNasMediaUrl = newNasMediaUrl;
+        }
     }
 
     private void collectAllMediaRenameTasks(List<Media> mediaList,

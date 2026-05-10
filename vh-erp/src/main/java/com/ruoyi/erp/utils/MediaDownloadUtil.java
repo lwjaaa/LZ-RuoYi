@@ -165,6 +165,11 @@ public class MediaDownloadUtil {
         mediaService.doRenameMediaFiles(toRenameList);
         return downloadedMedias;
     }
+
+    public List<Media> downloadMediaFiles(Product product, List<String> mediaUrlList, Map<String, ProductVariant> mediaUrlVariantMap) {
+        String keyWord = product != null ? product.getKeyWord() : null;
+        return downloadMediaFiles(product, mediaUrlList, mediaUrlVariantMap, keyWord);
+    }
     
     /**
      * 创建SPU专属文件夹

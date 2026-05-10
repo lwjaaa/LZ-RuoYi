@@ -2992,7 +2992,7 @@ const generateSpu = async (auto) => {
     }
     if (selectedMenuTags.length > 1) {
       if (!auto)
-        proxy.$modal.msgError("选择了多个标签，请确保每个选品只选择一个标签");
+        proxy.$modal.msgError("选择了多个标签，请确保每个选品只选择一个菜单标签");
       return;
     }
 
@@ -4081,6 +4081,10 @@ const handleSubmitData = async (): Promise<number> => {
       ...v,
       optionValues: JSON.stringify(v.optionValueList),
     }));
+    // 在提交的时候确认选择的标签是扁平化的，对齐后端数据结构
+    step1FormData.tagIds = Array.isArray(step1FormData.tagIds)
+        ? step1FormData.tagIds.flat().filter(id => id != null)
+        : [];
     const submitData = {
       ...step1FormData,
       optionList: optionList.value,

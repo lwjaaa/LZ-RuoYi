@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.ruoyi.erp.model.domain.Media;
 import com.ruoyi.erp.model.domain.Product;
+import com.ruoyi.erp.model.domain.ProductVariant;
 import com.ruoyi.erp.model.dto.media.MediaQuery;
 import com.ruoyi.erp.model.vo.media.MediaRenameVo;
 import com.ruoyi.erp.model.vo.media.MediaVo;
@@ -100,6 +101,15 @@ public interface IMediaService extends IService<Media>
     List<Media> scanMediaToProduct(Long productId);
 
     void updateProductMedia(Product product);
+
+    /**
+     * 商品关键词变化后同步媒体目录、文件名和访问地址
+     *
+     * @param product     商品信息，使用 product.getKeyWord() 作为新关键词
+     * @param oldKeyword  旧关键词
+     * @param variantList 已按新关键词更新 SKU 的变体列表
+     */
+    void syncProductMediaKeyword(Product product, String oldKeyword, List<ProductVariant> variantList);
 
     void deleteMediaFilesFromDisk(List<Media> medias);
 

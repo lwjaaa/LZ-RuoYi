@@ -3,6 +3,7 @@ package com.ruoyi.erp.service.impl;
 import cn.hutool.core.collection.CollectionUtil;
 import com.alibaba.fastjson2.JSON;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.ruoyi.common.core.redis.RedisCache;
 import com.ruoyi.common.exception.ServiceException;
 import com.ruoyi.common.utils.DateUtils;
@@ -532,7 +533,12 @@ public class ProductWizardServiceImpl implements IProductWizardService {
         // ==================== 1. 确定是新增还是编辑 ====================
         Long productId = product.getProductId();
         boolean isInsert = StringUtils.isNull(productId);
-        Product oldProduct = productService.getById(productId);
+        Product oldProduct = isInsert ? null : productService.getById(productId);
+        if (!isInsert && oldProduct == null) {
+            throw new ServiceException("商品不存在");
+        }
+        String oldKeyword = isInsert ? null : oldProduct.getKeyWord();
+        boolean keywordChanged = false;
 
         if (isInsert) {
             // ==================== 1. 处理 SPU 编号 ====================
@@ -547,11 +553,18 @@ public class ProductWizardServiceImpl implements IProductWizardService {
             log.info("商品主表新增成功，商品ID: {}", productId);
         } else {
             // 编辑逻辑
-            product.setUpdateTime(DateUtils.getNowDate());
-            productService.updateById(product);
-            if(WIZARD_STEP_SECOND.equals(wizardStep)){
+            if (WIZARD_STEP_SECOND.equals(wizardStep)) {
                 product.setSpu(oldProduct.getSpu());
             }
+            keywordChanged = !Objects.equals(oldKeyword, product.getKeyWord());
+            if (keywordChanged) {
+                this.validateSpuCanUse(product.getSpu(), productId);
+                if (StringUtils.isNotEmpty(product.getSpu())) {
+                    updateTagDictPrefix(product.getSpu());
+                }
+            }
+            product.setUpdateTime(DateUtils.getNowDate());
+            productService.updateById(product);
             log.info("商品主表更新成功，商品ID: {}", productId);
         }
 
@@ -570,7 +583,11 @@ public class ProductWizardServiceImpl implements IProductWizardService {
         }
 
         // ==================== 4. 处理商品变体（SKU生成） ====================
-        List<ProductVariant> productVariants = handleProductVariants(product, productId, isInsert);
+        List<ProductVariant> productVariants = handleProductVariants(product, productId, isInsert, keywordChanged);
+
+        if (keywordChanged) {
+            mediaService.syncProductMediaKeyword(product, oldKeyword, productVariants);
+        }
 
         // ==================== 5. 处理媒体文件（仅编辑时需要） ====================
 
@@ -633,10 +650,21 @@ public class ProductWizardServiceImpl implements IProductWizardService {
             updateTagDictPrefix(spu);
             log.info("使用已有 SPU: {}", spu);
         }
-        Product one = productService.getOne(new LambdaQueryWrapper<Product>(Product.class)
-                .select(Product::getProductId).eq(Product::getSpu, spu));
-        if (one != null) {
-            throw new RuntimeException("SPU 已存在");
+        Product one = productService.getOne(new QueryWrapper<Product>()
+                .select("product_id").eq("spu", spu));
+        if (one != null && !Objects.equals(one.getProductId(), product.getProductId())) {
+            throw new ServiceException("SPU 已存在");
+        }
+    }
+
+    private void validateSpuCanUse(String spu, Long productId) {
+        if (StringUtils.isEmpty(spu)) {
+            return;
+        }
+        Product one = productService.getOne(new QueryWrapper<Product>()
+                .select("product_id").eq("spu", spu));
+        if (one != null && !Objects.equals(one.getProductId(), productId)) {
+            throw new ServiceException("SPU 已存在");
         }
     }
 
@@ -653,7 +681,7 @@ public class ProductWizardServiceImpl implements IProductWizardService {
      * @param productId 商品ID
      * @param isInsert  是否为新增操作
      */
-    private List<ProductVariant> handleProductVariants(Product product, Long productId, boolean isInsert) {
+    private List<ProductVariant> handleProductVariants(Product product, Long productId, boolean isInsert, boolean rewriteSku) {
         List<ProductVariant> productVariantList = product.getProductVariantList();
 
         // 如果变体列表为空或 null，直接返回
@@ -677,6 +705,12 @@ public class ProductWizardServiceImpl implements IProductWizardService {
             ProductVariant variant = productVariantList.get(i);
             Long variantId = variant.getVariantId();
 
+            if (rewriteSku) {
+                String sku = this.rewriteSku(product, variant.getSku(), i);
+                variant.setSku(sku);
+                log.debug("根据商品关键词重写 SKU: {}, 变体索引: {}", sku, i);
+            }
+
             if (variantId != null) {
                 // 更新操作
                 existList.add(variantId);
@@ -688,7 +722,7 @@ public class ProductWizardServiceImpl implements IProductWizardService {
                     variant.setPurchaseUrl(product.getPurchaseUrl());
                 }
                 // 生成 SKU（如果未提供）
-                if (StringUtils.isEmpty(variant.getSku())) {
+                if (!rewriteSku && StringUtils.isEmpty(variant.getSku())) {
                     String sku = this.generateSku(product, i);
                     variant.setSku(sku);
                     log.debug("为变体生成 SKU: {}, 变体索引: {}", sku, i);
@@ -734,6 +768,25 @@ public class ProductWizardServiceImpl implements IProductWizardService {
             log.info("批量保存商品变体成功，商品 ID: {}, 变体数量: {}", productId, saveList.size());
         }
         return saveList;
+    }
+
+    private String rewriteSku(Product product, String currentSku, int index) {
+        String prefix = product.getKeyWord();
+        if (StringUtils.isEmpty(prefix)) {
+            prefix = String.valueOf(product.getProductId());
+        }
+
+        if (StringUtils.isNotEmpty(currentSku)) {
+            int suffixIndex = currentSku.lastIndexOf("-");
+            if (suffixIndex >= 0 && suffixIndex < currentSku.length() - 1) {
+                String suffix = currentSku.substring(suffixIndex + 1);
+                if (StringUtils.isNotBlank(suffix)) {
+                    return prefix + "-" + suffix;
+                }
+            }
+        }
+
+        return String.format("%s-%03d", prefix, index + 1);
     }
 
     /**

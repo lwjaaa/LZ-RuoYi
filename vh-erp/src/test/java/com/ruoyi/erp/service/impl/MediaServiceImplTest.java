@@ -3,6 +3,7 @@ package com.ruoyi.erp.service.impl;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.ruoyi.common.config.RuoYiConfig;
+import com.ruoyi.common.exception.ServiceException;
 import com.ruoyi.erp.mapper.MediaMapper;
 import com.ruoyi.erp.mapper.ProductMapper;
 import com.ruoyi.erp.mapper.ProductVariantMapper;
@@ -28,6 +29,7 @@ import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
@@ -178,6 +180,102 @@ class MediaServiceImplTest {
     }
 
     @Test
+    void syncProductMediaKeywordMovesFolderAndRenamesMediaUsingNewKeywordAndSku() throws Exception {
+        Path oldDir = tempDir.resolve("media").resolve("100");
+        Files.createDirectories(oldDir);
+        Files.writeString(oldDir.resolve("100-001.jpg"), "variant");
+        Files.writeString(oldDir.resolve("100-1.jpg"), "main");
+        Files.writeString(oldDir.resolve("100-2.png"), "detail");
+
+        Product product = new Product();
+        product.setProductId(100L);
+        product.setSpu("ABC001");
+
+        List<Media> mediaList = List.of(
+                buildMediaWithKeyword(11L, "100", "100-001.jpg"),
+                buildMediaWithKeyword(12L, "100", "100-1.jpg"),
+                buildMediaWithKeyword(13L, "100", "100-2.png")
+        );
+        when(mediaMapper.selectList(any())).thenReturn(mediaList);
+
+        mediaService.syncProductMediaKeyword(product, "100", List.of(
+                buildVariant(201L, 11L, "ABC001-001"),
+                buildVariant(202L, 11L, "ABC001-002")
+        ));
+
+        Path newDir = tempDir.resolve("media").resolve("ABC001");
+        assertTrue(Files.exists(newDir.resolve("ABC001-001.jpg")));
+        assertTrue(Files.exists(newDir.resolve("ABC001-1.jpg")));
+        assertTrue(Files.exists(newDir.resolve("ABC001-2.png")));
+        assertFalse(Files.exists(oldDir.resolve("100-001.jpg")));
+        assertFalse(Files.exists(oldDir.resolve("100-1.jpg")));
+        assertFalse(Files.exists(oldDir.resolve("100-2.png")));
+
+        Map<Long, String> updatedFilenames = captureUpdatedFilenames();
+        assertEquals("ABC001-001.jpg", updatedFilenames.get(11L));
+        assertEquals("ABC001-1.jpg", updatedFilenames.get(12L));
+        assertEquals("ABC001-2.png", updatedFilenames.get(13L));
+
+        ArgumentCaptor<Media> mediaCaptor = ArgumentCaptor.forClass(Media.class);
+        verify(mediaMapper, atLeast(3)).updateById(mediaCaptor.capture());
+        Map<Long, String> updatedUrls = mediaCaptor.getAllValues().stream()
+                .collect(Collectors.toMap(Media::getMediaId, Media::getNasMediaUrl, (first, second) -> second));
+        assertEquals("/profile/media/ABC001/ABC001-001.jpg", updatedUrls.get(11L));
+        assertEquals("/profile/media/ABC001/ABC001-1.jpg", updatedUrls.get(12L));
+        assertEquals("/profile/media/ABC001/ABC001-2.png", updatedUrls.get(13L));
+    }
+
+    @Test
+    void syncProductMediaKeywordFailsBeforeMovingWhenTargetFileExists() throws Exception {
+        Path oldDir = tempDir.resolve("media").resolve("100");
+        Path newDir = tempDir.resolve("media").resolve("ABC001");
+        Files.createDirectories(oldDir);
+        Files.createDirectories(newDir);
+        Files.writeString(oldDir.resolve("100-1.jpg"), "old");
+        Files.writeString(newDir.resolve("ABC001-1.jpg"), "existing");
+
+        Product product = new Product();
+        product.setProductId(100L);
+        product.setSpu("ABC001");
+
+        when(mediaMapper.selectList(any())).thenReturn(List.of(buildMediaWithKeyword(12L, "100", "100-1.jpg")));
+
+        assertThrows(ServiceException.class,
+                () -> mediaService.syncProductMediaKeyword(product, "100", List.of()));
+        assertTrue(Files.exists(oldDir.resolve("100-1.jpg")));
+        assertEquals("existing", Files.readString(newDir.resolve("ABC001-1.jpg")));
+        verify(mediaMapper, never()).updateById(any(Media.class));
+    }
+
+    @Test
+    void syncProductMediaKeywordFailsBeforeMovingWhenTwoMediaResolveToSameTargetName() throws Exception {
+        Path oldDir = tempDir.resolve("media").resolve("100");
+        Path newDir = tempDir.resolve("media").resolve("ABC001");
+        Files.createDirectories(oldDir);
+        Files.writeString(oldDir.resolve("100-a.jpg"), "first");
+        Files.writeString(oldDir.resolve("100-b.jpg"), "second");
+
+        Product product = new Product();
+        product.setProductId(100L);
+        product.setSpu("ABC001");
+
+        when(mediaMapper.selectList(any())).thenReturn(List.of(
+                buildMediaWithKeyword(11L, "100", "100-a.jpg"),
+                buildMediaWithKeyword(12L, "100", "100-b.jpg")
+        ));
+
+        assertThrows(ServiceException.class,
+                () -> mediaService.syncProductMediaKeyword(product, "100", List.of(
+                        buildVariant(201L, 11L, "ABC001-001"),
+                        buildVariant(202L, 12L, "ABC001-001")
+                )));
+        assertTrue(Files.exists(oldDir.resolve("100-a.jpg")));
+        assertTrue(Files.exists(oldDir.resolve("100-b.jpg")));
+        assertFalse(Files.exists(newDir.resolve("ABC001-001.jpg")));
+        verify(mediaMapper, never()).updateById(any(Media.class));
+    }
+
+    @Test
     void doRenameMediaFilesSupportsTwoFileSwap() throws Exception {
         Path mediaDir = tempDir.resolve("media").resolve("products").resolve("ABC001");
         Files.createDirectories(mediaDir);
@@ -238,6 +336,15 @@ class MediaServiceImplTest {
         media.setProductId(100L);
         media.setFilename(filename);
         media.setNasMediaUrl(MediaFileUtil.generateNasUrl(mediaDir.resolve(filename).toString()));
+        return media;
+    }
+
+    private Media buildMediaWithKeyword(Long mediaId, String keyword, String filename) {
+        Media media = new Media();
+        media.setMediaId(mediaId);
+        media.setProductId(100L);
+        media.setFilename(filename);
+        media.setNasMediaUrl("/profile/media/" + keyword + "/" + filename);
         return media;
     }
 
