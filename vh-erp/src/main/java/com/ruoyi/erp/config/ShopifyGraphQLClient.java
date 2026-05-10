@@ -550,16 +550,27 @@ public class ShopifyGraphQLClient {
      * 批量创建变体 (指定店铺)
      */
     public List<String> createVariantsBulk(Long storeId, String shopifyProductId, List<VariantInput> variants) {
+        return createVariantsBulk(storeId, shopifyProductId, variants, null);
+    }
+
+    /**
+     * 批量创建变体 (指定店铺)
+     */
+    public List<String> createVariantsBulk(Long storeId, String shopifyProductId, List<VariantInput> variants, String strategy) {
         if (variants.isEmpty()) {
             return List.of();
         }
 
         String mutation = ShopifyGraphQLQueries.PRODUCT_VARIANTS_BULK_CREATE.getQuery();
 
-        JsonNode data = execute(storeId, mutation, Map.of(
-                "productId", shopifyProductId,
-                "variants", variants
-        ));
+        Map<String, Object> variables = new HashMap<>();
+        variables.put("productId", shopifyProductId);
+        variables.put("variants", variants);
+        if (StringUtils.isNotEmpty(strategy)) {
+            variables.put("strategy", strategy);
+        }
+
+        JsonNode data = execute(storeId, mutation, variables);
         log.info("批量创建变体成功: storeId={}, shopifyProductId={}, data={}", storeId, shopifyProductId, data);
         checkUserErrors(data, MUTATION_PRODUCT_VARIANTS_BULK_CREATE);
 
@@ -960,8 +971,8 @@ public class ShopifyGraphQLClient {
             """),
 
         PRODUCT_VARIANTS_BULK_CREATE("""
-            mutation productVariantsBulkCreate($productId: ID!, $variants: [ProductVariantsBulkInput!]!) {
-              productVariantsBulkCreate(productId: $productId, variants: $variants) {
+            mutation productVariantsBulkCreate($productId: ID!, $variants: [ProductVariantsBulkInput!]!, $strategy: ProductVariantsBulkCreateStrategy) {
+              productVariantsBulkCreate(productId: $productId, variants: $variants, strategy: $strategy) {
                 userErrors { field message }
                 productVariants {
                   id

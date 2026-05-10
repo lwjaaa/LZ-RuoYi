@@ -35,6 +35,8 @@ import java.util.stream.Collectors;
 @Component
 public class ShopifySyncExecutor {
 
+    private static final String VARIANT_CREATE_STRATEGY_REMOVE_STANDALONE = "REMOVE_STANDALONE_VARIANT";
+
     @Resource
     private ShopifyGraphQLClient shopifyGraphQLClient;
     @Resource
@@ -205,8 +207,9 @@ public class ShopifySyncExecutor {
         // 4. 创建/更新商品
         String shopifyProductId;
         List<String> shopifyMediaIds = new ArrayList<>();
+        boolean isCreateShopifyProduct = StringUtils.isEmpty(product.getShopifyProductId());
         log.info("[商品「{}」] 创建/更新商品", product.getProductTitle());
-        if (StringUtils.isNotEmpty(product.getShopifyProductId())) {
+        if (!isCreateShopifyProduct) {
             ShopifyGraphQLClient.ProductCreateResult updateResult = shopifyGraphQLClient.updateProduct(storeId, product.getShopifyProductId(), productInput, mediaInputs);
             shopifyProductId = updateResult.getProductId();
             shopifyMediaIds = updateResult.getMediaIds();
@@ -234,7 +237,8 @@ public class ShopifySyncExecutor {
         List<ProductVariant> variants = productVariantService.selectListByProductId(productId);
         if (!variants.isEmpty()) {
             log.info("[商品「{}」] 批量创建变体", product.getProductTitle());
-            syncVariants(storeId, shopifyProductId, variants, result);
+            String variantCreateStrategy = isCreateShopifyProduct ? VARIANT_CREATE_STRATEGY_REMOVE_STANDALONE : null;
+            syncVariants(storeId, shopifyProductId, variants, result, variantCreateStrategy);
             log.info("[商品「{}」] 批量创建变体完成", product.getProductTitle());
         }
 
@@ -322,7 +326,7 @@ public class ShopifySyncExecutor {
     /**
      * 同步变体
      */
-    private void syncVariants(Long storeId, String shopifyProductId, List<ProductVariant> variants, StringBuilder result) {
+    private void syncVariants(Long storeId, String shopifyProductId, List<ProductVariant> variants, StringBuilder result, String variantCreateStrategy) {
         List<ShopifyGraphQLClient.VariantInput> variantInputs = new ArrayList<>();
         List<ProductVariant> createVariants = new ArrayList<>();
         ShopifyStore store = shopifyStoreMapper.selectById(storeId);
@@ -369,10 +373,11 @@ public class ShopifySyncExecutor {
         }
 
         try {
-            List<String> variantIds = shopifyGraphQLClient.createVariantsBulk(storeId, shopifyProductId, variantInputs);
+            List<String> variantIds = shopifyGraphQLClient.createVariantsBulk(storeId, shopifyProductId, variantInputs, variantCreateStrategy);
             saveVariantIdsToDatabase(createVariants, variantIds, result);
         } catch (ShopifyApiException e) {
             result.append("❌ 变体批量创建失败: ").append(e.getMessage()).append("\n");
+            throw e;
         }
     }
 
