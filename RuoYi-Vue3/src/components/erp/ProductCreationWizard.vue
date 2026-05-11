@@ -834,7 +834,7 @@
                   @dragstart="handleImageDragStart($event, media)"
                   @dragenter.prevent="handleImageDragEnter($event, index)"
                   @dragleave.prevent="handleImageDragLeave($event)"
-                  :title="media.alt || media.filename"
+                  :title="media.filename"
                   :class="{
                     'drag-over':
                       dragOverIndex === index && draggedImage !== media,
@@ -845,7 +845,7 @@
                       :src="
                         baseUrl + (media.nasMediaUrl || media.shopifyMediaUrl)
                       "
-                      :alt="media.alt || media.filename"
+                      :alt="media.filename"
                       class="image-thumb"
                       :preview-src-list="imagePreviewList"
                       :initial-index="

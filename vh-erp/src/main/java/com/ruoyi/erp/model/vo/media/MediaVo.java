@@ -5,6 +5,7 @@ import lombok.Data;
 import org.springframework.beans.BeanUtils;
 
 import java.io.Serializable;
+import java.util.Date;
 /**
  * erp媒体Vo对象 erp_media
  *
@@ -30,6 +31,18 @@ public class MediaVo implements Serializable
 
     /** 本地nas的媒体URL */
     private String nasMediaUrl;
+
+    /** Shopify 同步用的转码派生媒体 URL */
+    private String transcodedMediaUrl;
+
+    /** 源文件内容 SHA-256，用于判断派生文件是否过期 */
+    private String transcodeSourceHash;
+
+    /** 转码规格版本 */
+    private String transcodeProfile;
+
+    /** 最后转码时间 */
+    private Date transcodeTime;
 
     /** 文件名 */
     private String filename;

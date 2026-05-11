@@ -4,20 +4,27 @@ import com.ruoyi.erp.config.ShopifyGraphQLClient;
 import com.ruoyi.erp.exception.ShopifyApiException;
 import com.ruoyi.erp.mapper.ProductMapper;
 import com.ruoyi.erp.mapper.ShopifyStoreMapper;
+import com.ruoyi.erp.model.domain.Media;
 import com.ruoyi.erp.model.domain.Product;
 import com.ruoyi.erp.model.domain.ProductVariant;
 import com.ruoyi.erp.model.domain.ShopifyStore;
 import com.ruoyi.erp.service.IMediaService;
+import com.ruoyi.erp.service.IMediaTranscodeService;
 import com.ruoyi.erp.service.IProductTagRelService;
 import com.ruoyi.erp.service.IProductVariantService;
+import com.ruoyi.erp.model.vo.media.PreparedMediaUpload;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.mockito.ArgumentCaptor;
 import org.mockito.invocation.Invocation;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.io.File;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -36,7 +43,12 @@ import static org.mockito.Mockito.when;
 
 class ShopifySyncExecutorTest {
 
+    @TempDir
+    Path tempDir;
+
     private ShopifyGraphQLClient shopifyGraphQLClient;
+    private IMediaService mediaService;
+    private IMediaTranscodeService mediaTranscodeService;
     private IProductVariantService productVariantService;
     private ProductMapper productMapper;
     private List<String> variantBulkResult;
@@ -51,6 +63,8 @@ class ShopifySyncExecutorTest {
             }
             return org.mockito.Answers.RETURNS_DEFAULTS.answer(invocation);
         });
+        mediaService = mock(IMediaService.class);
+        mediaTranscodeService = mock(IMediaTranscodeService.class);
         productVariantService = mock(IProductVariantService.class);
         productMapper = mock(ProductMapper.class);
         IProductTagRelService productTagRelService = mock(IProductTagRelService.class);
@@ -65,7 +79,8 @@ class ShopifySyncExecutorTest {
         ReflectionTestUtils.setField(executor, "shopifyGraphQLClient", shopifyGraphQLClient);
         ReflectionTestUtils.setField(executor, "productVariantService", productVariantService);
         ReflectionTestUtils.setField(executor, "shopifyStoreMapper", shopifyStoreMapper);
-        ReflectionTestUtils.setField(executor, "mediaService", mock(IMediaService.class));
+        ReflectionTestUtils.setField(executor, "mediaService", mediaService);
+        ReflectionTestUtils.setField(executor, "mediaTranscodeService", mediaTranscodeService);
         ReflectionTestUtils.setField(executor, "productMapper", productMapper);
         ReflectionTestUtils.setField(executor, "productTagRelService", productTagRelService);
     }
@@ -136,6 +151,53 @@ class ShopifySyncExecutorTest {
         assertNull(args[3]);
     }
 
+    @Test
+    void syncProductUploadsPreparedImageWebpAndVideoWithMatchingShopifyResource() throws Exception {
+        Product product = buildProduct(null);
+        when(productMapper.selectById(10L)).thenReturn(product);
+        when(productVariantService.selectListByProductId(10L)).thenReturn(List.of());
+        when(shopifyGraphQLClient.createProduct(eq(1L), any(), any()))
+                .thenReturn(new ShopifyGraphQLClient.ProductCreateResult("gid://shopify/Product/2001", List.of()));
+
+        Media image = buildMedia(301L, "image.jpg", "IMAGE");
+        Media video = buildMedia(302L, "video.mp4", "VIDEO");
+        String imageOriginalNasMediaUrl = image.getNasMediaUrl();
+        String imageOriginalFilename = image.getFilename();
+        when(mediaService.listByProductId(10L)).thenReturn(List.of(image, video));
+
+        File imageWebp = createPreparedFile("image.webp");
+        File videoFile = createPreparedFile("video.mp4");
+        when(mediaTranscodeService.prepareForShopifyUpload(image)).thenReturn(PreparedMediaUpload.builder()
+                .file(imageWebp)
+                .filename("image.webp")
+                .mimeType("image/webp")
+                .mediaContentType("IMAGE")
+                .transcoded(true)
+                .build());
+        when(mediaTranscodeService.prepareForShopifyUpload(video)).thenReturn(PreparedMediaUpload.builder()
+                .file(videoFile)
+                .filename("video.mp4")
+                .mimeType("video/mp4")
+                .mediaContentType("VIDEO")
+                .transcoded(false)
+                .build());
+        when(shopifyGraphQLClient.stagedUploadMedia(eq(1L), any(), any(), any(), any(), any(Long.class)))
+                .thenReturn(new ShopifyGraphQLClient.StagedUploadResult("https://upload", "https://resource"));
+
+        executor.syncProduct(1L, 10L, 1, 1);
+
+        verify(shopifyGraphQLClient).stagedUploadMedia(eq(1L), eq("image.webp"), eq("image/webp"), eq("IMAGE"), any(), eq(imageWebp.length()));
+        verify(shopifyGraphQLClient).stagedUploadMedia(eq(1L), eq("video.mp4"), eq("video/mp4"), eq("VIDEO"), any(), eq(videoFile.length()));
+        assertEquals(imageOriginalNasMediaUrl, image.getNasMediaUrl());
+        assertEquals(imageOriginalFilename, image.getFilename());
+
+        ArgumentCaptor<Media> mediaUpdateCaptor = forClass(Media.class);
+        verify(mediaService, times(2)).updateMedia(mediaUpdateCaptor.capture());
+        List<Media> mediaUpdates = mediaUpdateCaptor.getAllValues();
+        assertTrue(mediaUpdates.stream().allMatch(update -> update.getNasMediaUrl() == null));
+        assertTrue(mediaUpdates.stream().allMatch(update -> update.getFilename() == null));
+    }
+
     private Product buildProduct(String shopifyProductId) {
         Product product = new Product();
         product.setProductId(10L);
@@ -144,6 +206,22 @@ class ShopifySyncExecutorTest {
         product.setBodyHtml("<p>body</p>");
         product.setDescription("description");
         return product;
+    }
+
+    private Media buildMedia(Long mediaId, String filename, String mediaType) {
+        Media media = new Media();
+        media.setMediaId(mediaId);
+        media.setProductId(10L);
+        media.setFilename(filename);
+        media.setNasMediaUrl("/profile/media/ABC001/" + filename);
+        media.setMediaContentType(mediaType);
+        return media;
+    }
+
+    private File createPreparedFile(String filename) throws Exception {
+        Path file = tempDir.resolve(filename);
+        Files.writeString(file, filename);
+        return file.toFile();
     }
 
     private ProductVariant buildVariant(Long variantId) {

@@ -19,6 +19,9 @@ public interface StoreConstants {
     String INVENTORY_POLICY_DENY = "DENY";
     String INVENTORY_POLICY_CONTINUE = "CONTINUE";
 
+    String PRODUCT_STATUS_DRAFT = "DRAFT";
+    String PRODUCT_STATUS_ACTIVE = "ACTIVE";
+
     /**
      * OAuth 模式
      */

@@ -72,7 +72,7 @@ class ProductWizardServiceImplTest {
 
         List<ProductVariant> savedVariants = captureSavedVariants();
         assertEquals("ABC001-001", savedVariants.get(0).getSku());
-        assertEquals("ABC001-002", savedVariants.get(1).getSku());
+        assertEquals("CUSTOMSKU", savedVariants.get(1).getSku());
         verify(mediaService).syncProductMediaKeyword(product, "100", savedVariants);
         verify(tagDictService).updateMaxSeqBySpuPrefix("ABC", 1);
     }
@@ -92,9 +92,60 @@ class ProductWizardServiceImplTest {
 
         List<ProductVariant> savedVariants = captureSavedVariants();
         assertEquals("NEW001-RED", savedVariants.get(0).getSku());
-        assertEquals("NEW001-002", savedVariants.get(1).getSku());
+        assertEquals("MANUAL", savedVariants.get(1).getSku());
         verify(mediaService).syncProductMediaKeyword(product, "OLD001", savedVariants);
         verify(tagDictService).updateMaxSeqBySpuPrefix("NEW", 1);
+    }
+
+    @Test
+    void saveProductCommonUsesPersistedSkuWhenStepOnePayloadOmitsSku() {
+        Product oldProduct = buildProduct(100L, "OLD001");
+        when(productService.getById(100L)).thenReturn(oldProduct);
+        when(productVariantService.getById(201L)).thenReturn(buildVariant(201L, 11L, "OLD001-RED"));
+        when(productVariantService.getById(202L)).thenReturn(buildVariant(202L, 12L, "MANUAL"));
+
+        Product product = buildProduct(100L, "NEW001");
+        product.setProductVariantList(List.of(
+                buildVariant(201L, 11L, null),
+                buildVariant(202L, 12L, null)
+        ));
+
+        productWizardService.saveProductCommon(product, 1);
+
+        List<ProductVariant> savedVariants = captureSavedVariants();
+        assertEquals("NEW001-RED", savedVariants.get(0).getSku());
+        assertEquals("MANUAL", savedVariants.get(1).getSku());
+        verify(mediaService).syncProductMediaKeyword(product, "OLD001", savedVariants);
+    }
+
+    @Test
+    void saveProductCommonRewritesProductNamePrefixWhenSpuChanges() {
+        Product oldProduct = buildProduct(100L, "OLD001");
+        when(productService.getById(100L)).thenReturn(oldProduct);
+
+        Product product = buildProduct(100L, "NEW001");
+        product.setProductName("OLD001 Modern Chair");
+        product.setProductVariantList(List.of(buildVariant(201L, 11L, "OLD001-RED")));
+
+        productWizardService.saveProductCommon(product, 1);
+
+        Product updatedProduct = captureUpdatedProduct();
+        assertEquals("NEW001 Modern Chair", updatedProduct.getProductName());
+    }
+
+    @Test
+    void saveProductCommonKeepsProductNameWhenItDoesNotStartWithOldKeyword() {
+        Product oldProduct = buildProduct(100L, "OLD001");
+        when(productService.getById(100L)).thenReturn(oldProduct);
+
+        Product product = buildProduct(100L, "NEW001");
+        product.setProductName("Custom Chair");
+        product.setProductVariantList(List.of(buildVariant(201L, 11L, "OLD001-RED")));
+
+        productWizardService.saveProductCommon(product, 1);
+
+        Product updatedProduct = captureUpdatedProduct();
+        assertEquals("Custom Chair", updatedProduct.getProductName());
     }
 
     @Test
@@ -149,5 +200,11 @@ class ProductWizardServiceImplTest {
         ArgumentCaptor<Collection<ProductVariant>> variantCaptor = ArgumentCaptor.forClass(Collection.class);
         verify(productVariantService).saveOrUpdateBatch(variantCaptor.capture());
         return List.copyOf(variantCaptor.getValue());
+    }
+
+    private Product captureUpdatedProduct() {
+        ArgumentCaptor<Product> productCaptor = ArgumentCaptor.forClass(Product.class);
+        verify(productService).updateById(productCaptor.capture());
+        return productCaptor.getValue();
     }
 }

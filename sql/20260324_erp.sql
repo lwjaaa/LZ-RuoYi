@@ -88,6 +88,10 @@ DROP TABLE IF EXISTS `erp_media`;
 CREATE TABLE `erp_media`
 (
     `media_id`           bigint(20) NOT NULL AUTO_INCREMENT,
+    `transcoded_media_url` varchar(2048) DEFAULT NULL COMMENT 'Shopify同步用转码媒体URL',
+    `transcode_source_hash` varchar(64) DEFAULT NULL COMMENT '转码源文件SHA-256',
+    `transcode_profile` varchar(100) DEFAULT NULL COMMENT '转码规格版本',
+    `transcode_time` datetime DEFAULT NULL COMMENT '最后转码时间',
     `product_id`         bigint(20) NOT NULL COMMENT '关联商品ID',
     `shopify_media_id`   varchar(100)  DEFAULT NULL COMMENT 'Shopify媒体ID',
     `shopify_media_url`  varchar(2048) DEFAULT NULL COMMENT 'Shopify媒体URL',

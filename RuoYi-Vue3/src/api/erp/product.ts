@@ -19,11 +19,6 @@ export interface ProductPushRequest {
   storeId?: number
 }
 
-export interface PublishRequest {
-  productIds: number[]
-  storeId?: number
-}
-
 export function listProduct(query: ProductQuery): Promise<ApiResponse<Product[]>> {
   return request({
     url: '/erp/product/list',
@@ -83,13 +78,5 @@ export function getPushResult(taskId: number): Promise<ApiResponse<any>> {
   return request({
     url: '/erp/product/push-result/' + taskId,
     method: 'get'
-  })
-}
-
-export function publishProducts(data: PublishRequest): Promise<ApiResponse<any>> {
-  return request({
-    url: '/erp/product/publish',
-    method: 'post',
-    data: data
   })
 }

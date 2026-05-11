@@ -47,6 +47,13 @@
             <artifactId>spring-boot-starter-webflux</artifactId>
         </dependency>
 
+        <!-- Shopify 同步图片转 WebP 使用 ImageIO 插件，避免依赖系统 cwebp 命令 -->
+        <dependency>
+            <groupId>org.sejda.imageio</groupId>
+            <artifactId>webp-imageio</artifactId>
+            <version>0.1.6</version>
+        </dependency>
+
         <!-- 核心模块-->
         <dependency>
             <groupId>com.ruoyi</groupId>

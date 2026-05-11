@@ -1,6 +1,7 @@
 package com.ruoyi.erp.model.domain;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.annotation.JsonFormat;
@@ -75,13 +76,21 @@ public class ShopifyStore implements Serializable {
     @Excel(name = "缺货销售策略")
     private String inventoryPolicy;
 
-    /** 默认发布 Publication ID，英文逗号分隔 */
-    @Excel(name = "发布渠道ID")
+    /** 自动发布 Publication ID，英文逗号分隔 */
+    @Excel(name = "自动发布渠道ID")
     private String publishPublicationIds;
 
-    /** 默认发布渠道名称，英文逗号分隔 */
-    @Excel(name = "发布渠道名称")
+    /** 自动发布渠道名称，英文逗号分隔 */
+    @Excel(name = "自动发布渠道名称")
     private String publishPublicationNames;
+
+    /** 推送到 Shopify 时的默认商品状态：DRAFT, ACTIVE */
+    @Excel(name = "默认商品状态")
+    private String defaultProductStatus;
+
+    /** 本次从 Shopify 拉取到的 Publication ID，英文逗号分隔，不落库 */
+    @TableField(exist = false)
+    private String availablePublicationIds;
 
     /** 是否启用 (0:禁用, 1:启用) */
     @Excel(name = "是否启用", readConverterExp = "0=禁用,1=启用")

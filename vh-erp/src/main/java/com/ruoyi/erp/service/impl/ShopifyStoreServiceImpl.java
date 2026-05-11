@@ -28,9 +28,12 @@ import reactor.util.retry.Retry;
 
 import java.net.URI;
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.Date;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -78,7 +81,9 @@ public class ShopifyStoreServiceImpl extends ServiceImpl<ShopifyStoreMapper, Sho
         if (StoreConstants.YES.equals(store.getIsDefault())) {
             resetDefaultStore(null);
         }
-        return baseMapper.insert(store);
+        int rows = baseMapper.insert(store);
+        syncAutoPublishPublications(store);
+        return rows;
     }
 
     @Override
@@ -99,6 +104,7 @@ public class ShopifyStoreServiceImpl extends ServiceImpl<ShopifyStoreMapper, Sho
         }
         int rows = baseMapper.updateById(store);
         shopifyGraphQLClient.invalidateStoreCache(store.getStoreId());
+        syncAutoPublishPublications(store);
         return rows;
     }
 
@@ -344,8 +350,78 @@ public class ShopifyStoreServiceImpl extends ServiceImpl<ShopifyStoreMapper, Sho
         if (StringUtils.isEmpty(store.getStatus())) {
             store.setStatus(StringUtils.isNotEmpty(store.getAccessToken()) ? STATUS_CONNECTED : STATUS_DISCONNECTED);
         }
+        store.setDefaultProductStatus(normalizeProductStatus(store.getDefaultProductStatus()));
+        store.setPublishPublicationIds(normalizeCsv(store.getPublishPublicationIds()));
+        store.setAvailablePublicationIds(normalizeCsv(store.getAvailablePublicationIds()));
 
         ensureUniqueShopName(store, edit);
+    }
+
+    private String normalizeProductStatus(String status) {
+        if (StringUtils.isEmpty(status)) {
+            return StoreConstants.PRODUCT_STATUS_DRAFT;
+        }
+        String normalized = status.trim().toUpperCase();
+        if (!StoreConstants.PRODUCT_STATUS_DRAFT.equals(normalized)
+                && !StoreConstants.PRODUCT_STATUS_ACTIVE.equals(normalized)) {
+            throw new ServiceException("默认商品状态只允许 DRAFT 或 ACTIVE");
+        }
+        return normalized;
+    }
+
+    private void syncAutoPublishPublications(ShopifyStore store) {
+        Set<String> selectedIds = parseCsvToSet(store.getPublishPublicationIds());
+        Set<String> availableIds = parseCsvToSet(store.getAvailablePublicationIds());
+        Set<String> syncIds = new LinkedHashSet<>(availableIds.isEmpty() ? selectedIds : availableIds);
+        syncIds.addAll(selectedIds);
+        if (syncIds.isEmpty()) {
+            return;
+        }
+        Map<String, String> selectedNames = buildSelectedPublicationNameMap(store);
+        for (String publicationId : syncIds) {
+            boolean autoPublish = selectedIds.contains(publicationId);
+            try {
+                shopifyGraphQLClient.updatePublicationAutoPublish(store.getStoreId(), publicationId, autoPublish);
+            } catch (ShopifyApiException e) {
+                String publicationName = selectedNames.getOrDefault(publicationId, publicationId);
+                throw new ServiceException("同步自动发布渠道失败：" + publicationName + "，" + e.getMessage());
+            } catch (Exception e) {
+                String publicationName = selectedNames.getOrDefault(publicationId, publicationId);
+                throw new ServiceException("同步自动发布渠道失败：" + publicationName + "，" + e.getMessage());
+            }
+        }
+    }
+
+    private Map<String, String> buildSelectedPublicationNameMap(ShopifyStore store) {
+        List<String> ids = splitCsv(store.getPublishPublicationIds());
+        List<String> names = splitCsv(store.getPublishPublicationNames());
+        return ids.stream().collect(Collectors.toMap(
+                id -> id,
+                id -> {
+                    int index = ids.indexOf(id);
+                    return index >= 0 && index < names.size() ? names.get(index) : id;
+                },
+                (left, right) -> left
+        ));
+    }
+
+    private Set<String> parseCsvToSet(String value) {
+        return new LinkedHashSet<>(splitCsv(value));
+    }
+
+    private List<String> splitCsv(String value) {
+        if (StringUtils.isEmpty(value)) {
+            return List.of();
+        }
+        return Arrays.stream(value.split(","))
+                .map(String::trim)
+                .filter(StringUtils::isNotEmpty)
+                .distinct()
+                .toList();
+    }
+
+    private String normalizeCsv(String value) {
+        return String.join(",", splitCsv(value));
     }
 
     private String normalizeShopName(String shopName) {

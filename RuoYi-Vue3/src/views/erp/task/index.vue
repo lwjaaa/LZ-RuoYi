@@ -399,7 +399,7 @@ export default {
       form: {},
       // 导出地址
       exportUrl: 'erp/task/export',
-      // Shopify 任务配置导入参数
+      // Shopify 任务配置导入参数upload
       upload: {
         // 是否显示弹出层（Shopify 任务配置导入）
         open: false,
@@ -412,7 +412,7 @@ export default {
         // 设置上传的请求头部
         headers: { Authorization: "Bearer " + getToken() },
         // 上传的地址
-        url: process.env.VUE_APP_BASE_API + "/erp/task/importData",
+        url: import.meta.env.VITE_APP_BASE_API + "/erp/task/importData",
         // 下载模板的地址
         templateUrl: 'erp/task/importTemplate'
       },

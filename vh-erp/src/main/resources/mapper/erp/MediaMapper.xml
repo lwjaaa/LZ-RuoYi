@@ -11,16 +11,24 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="shopifyMediaUrl"    column="shopify_media_url"    />
         <result property="stagedUploadUrl"    column="staged_upload_url"    />
         <result property="nasMediaUrl"    column="nas_media_url"    />
+        <result property="transcodedMediaUrl"    column="transcoded_media_url"    />
+        <result property="transcodeSourceHash"    column="transcode_source_hash"    />
+        <result property="transcodeProfile"    column="transcode_profile"    />
+        <result property="transcodeTime"    column="transcode_time"    />
         <result property="filename"    column="filename"    />
         <result property="alt"    column="alt"    />
         <result property="position"    column="position"    />
+        <result property="mediaContentType"    column="media_content_type"    />
         <result property="createTime"    column="create_time"    />
         <result property="updateTime"    column="update_time"    />
         <result property="delFlag"    column="del_flag"    />
     </resultMap>
 
     <sql id="selectMediaVo">
-        select media_id, product_id, shopify_media_id, shopify_media_url, staged_upload_url, nas_media_url, filename, alt, position, create_time, update_time, del_flag from erp_media
+        select media_id, product_id, shopify_media_id, shopify_media_url, staged_upload_url, nas_media_url,
+               transcoded_media_url, transcode_source_hash, transcode_profile, transcode_time,
+               filename, media_content_type, alt, position, create_time, update_time, del_flag
+        from erp_media
     </sql>
 
     <select id="selectMediaList" parameterType="Media" resultMap="MediaResult">
@@ -46,7 +54,12 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="shopifyMediaUrl != null">shopify_media_url,</if>
             <if test="stagedUploadUrl != null">staged_upload_url,</if>
             <if test="nasMediaUrl != null">nas_media_url,</if>
+            <if test="transcodedMediaUrl != null">transcoded_media_url,</if>
+            <if test="transcodeSourceHash != null">transcode_source_hash,</if>
+            <if test="transcodeProfile != null">transcode_profile,</if>
+            <if test="transcodeTime != null">transcode_time,</if>
             <if test="filename != null">filename,</if>
+            <if test="mediaContentType != null">media_content_type,</if>
             <if test="alt != null">alt,</if>
             <if test="position != null">position,</if>
             <if test="createTime != null">create_time,</if>
@@ -59,7 +72,12 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="shopifyMediaUrl != null">#{shopifyMediaUrl},</if>
             <if test="stagedUploadUrl != null">#{stagedUploadUrl},</if>
             <if test="nasMediaUrl != null">#{nasMediaUrl},</if>
+            <if test="transcodedMediaUrl != null">#{transcodedMediaUrl},</if>
+            <if test="transcodeSourceHash != null">#{transcodeSourceHash},</if>
+            <if test="transcodeProfile != null">#{transcodeProfile},</if>
+            <if test="transcodeTime != null">#{transcodeTime},</if>
             <if test="filename != null">#{filename},</if>
+            <if test="mediaContentType != null">#{mediaContentType},</if>
             <if test="alt != null">#{alt},</if>
             <if test="position != null">#{position},</if>
             <if test="createTime != null">#{createTime},</if>
@@ -76,7 +94,12 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="shopifyMediaUrl != null">shopify_media_url = #{shopifyMediaUrl},</if>
             <if test="stagedUploadUrl != null">staged_upload_url = #{stagedUploadUrl},</if>
             <if test="nasMediaUrl != null">nas_media_url = #{nasMediaUrl},</if>
+            <if test="transcodedMediaUrl != null">transcoded_media_url = #{transcodedMediaUrl},</if>
+            <if test="transcodeSourceHash != null">transcode_source_hash = #{transcodeSourceHash},</if>
+            <if test="transcodeProfile != null">transcode_profile = #{transcodeProfile},</if>
+            <if test="transcodeTime != null">transcode_time = #{transcodeTime},</if>
             <if test="filename != null">filename = #{filename},</if>
+            <if test="mediaContentType != null">media_content_type = #{mediaContentType},</if>
             <if test="alt != null">alt = #{alt},</if>
             <if test="position != null">position = #{position},</if>
             <if test="createTime != null">create_time = #{createTime},</if>

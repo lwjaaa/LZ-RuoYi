@@ -187,6 +187,8 @@ export interface ShopifyStore {
   inventoryPolicy?: string
   publishPublicationIds?: string
   publishPublicationNames?: string
+  defaultProductStatus?: string
+  availablePublicationIds?: string
   isActive?: string
   isDefault?: string
   authMode?: string

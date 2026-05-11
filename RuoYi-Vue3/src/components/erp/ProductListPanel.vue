@@ -184,16 +184,6 @@
           >推送 Shopify</el-button
         >
       </el-col>
-      <el-col :span="1.5" class="fixed-actions">
-        <el-button
-          type="primary"
-          plain
-          icon="Upload"
-          @click="handlePublish"
-          v-hasPermi="['erp:product:push']"
-          >发布</el-button
-        >
-      </el-col>
       <right-toolbar
         v-model:showSearch="showSearch"
         @queryTable="getList"
@@ -441,7 +431,7 @@
 
     <!-- Shopify 店铺选择对话框 -->
     <el-dialog
-      :title="storeAction.type === 'push' ? '推送 Shopify' : '发布商品'"
+      title="推送 Shopify"
       v-model="storeAction.open"
       width="460px"
       append-to-body
@@ -530,11 +520,11 @@ import {
   computed,
 } from "vue";
 import { ElMessageBox } from "element-plus";
-import { listProduct, getProduct, delProduct, pushBatch, getPushResult, publishProducts } from "@/api/erp/product";
+import { listProduct, delProduct, pushBatch } from "@/api/erp/product";
 import { listActiveStores } from "@/api/erp/store";
 import { getToken } from "@/utils/auth";
 import { parseTime } from "@/utils/ruoyi";
-import { UploadFilled, ArrowDown, ArrowUp, Promotion } from "@element-plus/icons-vue";
+import { UploadFilled, ArrowDown, ArrowUp } from "@element-plus/icons-vue";
 import type { Product, PageQuery, ShopifyStore } from "@/types/erp";
 
 interface ProductQuery extends PageQuery {
@@ -600,7 +590,6 @@ const expandSearchVisible = ref<boolean>(false);
 const activeStores = ref<ShopifyStore[]>([]);
 const storeAction = reactive({
   open: false,
-  type: "push" as "push" | "publish",
   desc: "",
   storeId: undefined as number | undefined,
   loading: false,
@@ -859,8 +848,7 @@ function loadActiveStores(): Promise<void> {
     });
 }
 
-function openStoreAction(type: "push" | "publish", desc: string): void {
-  storeAction.type = type;
+function openStoreAction(desc: string): void {
   storeAction.desc = desc;
   loadActiveStores().then(() => {
     if (!activeStores.value.length) {
@@ -877,39 +865,20 @@ function submitStoreAction(): void {
     return;
   }
   storeAction.submitting = true;
-  if (storeAction.type === "push") {
-    const isSelected = ids.value.length > 0;
-    pushBatch({
-      productQuery: isSelected ? undefined : queryParams.value,
-      productIds: isSelected ? ids.value : undefined,
-      storeId: storeAction.storeId,
-    })
-      .then((res: any) => {
-        storeAction.open = false;
-        const taskId = res.data?.taskId || res.taskId;
-        if (taskId) {
-          proxy.$modal.msgSuccess("已创建推送任务，任务ID: " + taskId);
-          openTaskProgress(taskId);
-        } else {
-          proxy.$modal.msgWarning("没有可推送的商品");
-        }
-      })
-      .finally(() => {
-        storeAction.submitting = false;
-      });
-    return;
-  }
-
-  publishProducts({
-    productIds: ids.value,
+  const isSelected = ids.value.length > 0;
+  pushBatch({
+    productQuery: isSelected ? undefined : queryParams.value,
+    productIds: isSelected ? ids.value : undefined,
     storeId: storeAction.storeId,
   })
     .then((res: any) => {
       storeAction.open = false;
-      if (res.data) {
-        const { successCount, failedCount } = res.data;
-        proxy.$modal.msgSuccess(`发布完成：成功 ${successCount}，失败 ${failedCount}`);
-        getList();
+      const taskId = res.data?.taskId || res.taskId;
+      if (taskId) {
+        proxy.$modal.msgSuccess("已创建推送任务，任务ID: " + taskId);
+        openTaskProgress(taskId);
+      } else {
+        proxy.$modal.msgWarning("没有可推送的商品");
       }
     })
     .finally(() => {
@@ -924,7 +893,7 @@ function handlePushToShopify(): void {
     proxy.$modal.msgWarning("没有可推送的商品");
     return;
   }
-  openStoreAction("push", isSelected ? `已勾选的 ${count} 个商品` : `当前筛选的 ${count} 个商品`);
+  openStoreAction(isSelected ? `已勾选的 ${count} 个商品` : `当前筛选的 ${count} 个商品`);
 }
 
 function openTaskProgress(taskId: number): void {
@@ -935,15 +904,6 @@ function openTaskProgress(taskId: number): void {
   }).then(() => {
     proxy.$tab.openPage("Shopify 推送任务", "/erp/task");
   }).catch(() => {});
-}
-
-function handlePublish(): void {
-  if (ids.value.length === 0) {
-    proxy.$modal.msgWarning("请先勾选要发布的商品");
-    return;
-  }
-  const count = ids.value.length;
-  openStoreAction("publish", `已勾选的 ${count} 个商品`);
 }
 
 function handleFileUploadProgress(event: any, file: any, fileList: any): void {

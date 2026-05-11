@@ -47,6 +47,22 @@ public class Media implements Serializable
     @Excel(name = "本地nas的媒体URL")
     private String nasMediaUrl;
 
+    /** Shopify 同步用的转码派生媒体 URL */
+    @Excel(name = "Shopify同步转码URL")
+    private String transcodedMediaUrl;
+
+    /** 源文件内容 SHA-256，用于判断派生文件是否过期 */
+    @Excel(name = "转码源文件Hash")
+    private String transcodeSourceHash;
+
+    /** 转码规格版本 */
+    @Excel(name = "转码规格")
+    private String transcodeProfile;
+
+    /** 最后转码时间 */
+    @Excel(name = "最后转码时间")
+    private Date transcodeTime;
+
     /** 文件名 */
     @Excel(name = "文件名")
     private String filename;

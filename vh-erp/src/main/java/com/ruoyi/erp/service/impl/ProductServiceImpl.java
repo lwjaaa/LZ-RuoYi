@@ -2,11 +2,9 @@ package com.ruoyi.erp.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.ruoyi.common.enums.ShopifyProductStatusEnum;
 import com.ruoyi.common.exception.ServiceException;
 import com.ruoyi.common.utils.DateUtils;
 import com.ruoyi.common.utils.StringUtils;
-import com.ruoyi.erp.config.ShopifyGraphQLClient;
 import com.ruoyi.erp.constant.ShopifyTaskContants;
 import com.ruoyi.erp.executor.ShopifySyncExecutor;
 import com.ruoyi.erp.mapper.ProductMapper;
@@ -14,7 +12,6 @@ import com.ruoyi.erp.model.domain.*;
 import com.ruoyi.erp.model.dto.product.ProductQuery;
 import com.ruoyi.erp.model.vo.media.MediaVo;
 import com.ruoyi.erp.model.vo.product.ProductVo;
-import com.ruoyi.erp.model.vo.product.PublishResultVo;
 import com.ruoyi.erp.service.*;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -46,8 +43,6 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
     private IShopifyTaskService shopifyTaskService;
     @Resource
     private ShopifySyncExecutor shopifySyncExecutor;
-    @Resource
-    private ShopifyGraphQLClient shopifyGraphQLClient;
     @Resource
     private IShopifyStoreService shopifyStoreService;
 
@@ -302,69 +297,6 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
         return shopifyTaskService.selectShopifyTaskByTaskId(taskId);
     }
 
-    @Override
-    public Object publishToChannels(Long[] productIds, Long storeId) {
-        if (productIds == null || productIds.length == 0) {
-            throw new ServiceException("商品ID列表不能为空");
-        }
-
-        // 获取店铺
-        ShopifyStore store = resolvePublishStore(storeId);
-
-        // 使用店铺配置的 Publication ID，避免误发布到所有渠道。
-        List<String> publicationIds = parseCsv(store.getPublishPublicationIds());
-        if (publicationIds.isEmpty()) {
-            throw new ServiceException("店铺未配置发布渠道 Publication ID");
-        }
-
-        // 构建发布列表。
-        List<ShopifyGraphQLClient.PublicationInput> publications = publicationIds.stream()
-                .map(publicationId -> ShopifyGraphQLClient.PublicationInput.builder()
-                        .publicationId(publicationId)
-                        .build())
-                .toList();
-
-        PublishResultVo result = new PublishResultVo();
-        result.setSuccessCount(0);
-        result.setFailedCount(0);
-        result.setFailedChannels(new ArrayList<>());
-
-        // 遍历每个商品发布到配置渠道。
-        for (Long productId : productIds) {
-            Product product = this.getById(productId);
-            if (product == null || StringUtils.isEmpty(product.getShopifyProductId())) {
-                // 商品不存在或未同步到Shopify
-                PublishResultVo.ChannelPublishFailed failed = new PublishResultVo.ChannelPublishFailed();
-                failed.setProductId(productId);
-                failed.setError("商品未同步到Shopify");
-                result.getFailedChannels().add(failed);
-                result.setFailedCount(result.getFailedCount() + 1);
-                continue;
-            }
-
-            try {
-                // 发布到配置渠道。
-                shopifyGraphQLClient.publishProduct(store.getStoreId(), product.getShopifyProductId(), publications);
-
-                // 更新商品状态为 ACTIVE
-                product.setStatus(ShopifyProductStatusEnum.ACTIVE.getCode());
-                product.setUpdateTime(DateUtils.getNowDate());
-                this.updateById(product);
-
-                result.setSuccessCount(result.getSuccessCount() + 1);
-            } catch (Exception e) {
-                log.error("发布商品到渠道失败: productId={}, error={}", productId, e.getMessage());
-                PublishResultVo.ChannelPublishFailed failed = new PublishResultVo.ChannelPublishFailed();
-                failed.setProductId(productId);
-                failed.setError(e.getMessage());
-                result.getFailedChannels().add(failed);
-                result.setFailedCount(result.getFailedCount() + 1);
-            }
-        }
-
-        return result;
-    }
-
     private ShopifyStore resolvePublishStore(Long storeId) {
         ShopifyStore store = storeId != null
                 ? shopifyStoreService.selectByStoreId(storeId)
@@ -378,14 +310,5 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
         return store;
     }
 
-    private List<String> parseCsv(String value) {
-        if (StringUtils.isEmpty(value)) {
-            return List.of();
-        }
-        return Arrays.stream(value.split(","))
-                .map(String::trim)
-                .filter(StringUtils::isNotEmpty)
-                .distinct()
-                .toList();
-    }
+
 }

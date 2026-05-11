@@ -8,12 +8,13 @@ import com.ruoyi.common.utils.StringUtils;
 import com.ruoyi.erp.config.ShopifyGraphQLClient;
 import com.ruoyi.erp.constant.ProductConstants;
 import com.ruoyi.erp.constant.ShopifyTaskContants;
+import com.ruoyi.erp.constant.StoreConstants;
 import com.ruoyi.erp.exception.ShopifyApiException;
 import com.ruoyi.erp.mapper.ProductMapper;
 import com.ruoyi.erp.mapper.ShopifyStoreMapper;
 import com.ruoyi.erp.model.domain.*;
+import com.ruoyi.erp.model.vo.media.PreparedMediaUpload;
 import com.ruoyi.erp.service.*;
-import com.ruoyi.erp.utils.MediaFileUtil;
 import com.ruoyi.erp.utils.PriceUtil;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -43,6 +44,8 @@ public class ShopifySyncExecutor {
     private IProductVariantService productVariantService;
     @Resource
     private IMediaService mediaService;
+    @Resource
+    private IMediaTranscodeService mediaTranscodeService;
     @Resource
     private IShopifyTaskService shopifyTaskService;
     @Resource
@@ -187,6 +190,7 @@ public class ShopifySyncExecutor {
         if (product == null) {
             throw new RuntimeException("商品不存在: " + productId);
         }
+        ShopifyStore store = shopifyStoreMapper.selectById(storeId);
 
         StringBuilder result = new StringBuilder();
         result.append(String.format("[商品「%s」] 第 %d/%d 个\n", product.getProductTitle(), index, total));
@@ -200,7 +204,7 @@ public class ShopifySyncExecutor {
         List<String> tagNames = productTagRelService.selectTagCodeListByProductId(productId);
 
         // 3. 构建商品输入和媒体列表
-        ShopifyGraphQLClient.ProductInput productInput = buildProductInput(product, uploadMediaList, tagNames);
+        ShopifyGraphQLClient.ProductInput productInput = buildProductInput(product, uploadMediaList, tagNames, resolveDefaultProductStatus(store));
         List<Media> createMediaList = filterCreateMediaList(uploadMediaList);
         List<ShopifyGraphQLClient.CreateMediaInput> mediaInputs = buildMediaInputs(createMediaList, product);
 
@@ -279,17 +283,8 @@ public class ShopifySyncExecutor {
                     continue;
                 }
 
-                // 根据媒体类型确定 MIME
-                String mimeType = "VIDEO".equals(media.getMediaContentType()) ? "video/mp4" : "image/png";
-                if (localPath.toLowerCase().endsWith(".jpg") || localPath.toLowerCase().endsWith(".jpeg")) {
-                    mimeType = "image/jpeg";
-                } else if (localPath.toLowerCase().endsWith(".webp")) {
-                    mimeType = "image/webp";
-                }
-
-                // 读取文件并上传
-                String oldFilePath = MediaFileUtil.convertUrlToFilePath(media.getNasMediaUrl());
-                File file = new File(oldFilePath);
+                PreparedMediaUpload preparedMedia = mediaTranscodeService.prepareForShopifyUpload(media);
+                File file = preparedMedia.getFile();
                 if (!file.exists()) {
                     result.append("❌ 图片「").append(media.getFilename()).append("」文件不存在: ").append(localPath).append("\n");
                     continue;
@@ -298,8 +293,9 @@ public class ShopifySyncExecutor {
                 try (FileInputStream fis = new FileInputStream(file)) {
                     ShopifyGraphQLClient.StagedUploadResult uploadResult = shopifyGraphQLClient.stagedUploadMedia(
                             storeId,
-                            media.getFilename(),
-                            mimeType,
+                            preparedMedia.getFilename(),
+                            preparedMedia.getMimeType(),
+                            preparedMedia.getMediaContentType(),
                             fis,
                             file.length()
                     );
@@ -311,6 +307,7 @@ public class ShopifySyncExecutor {
                     updateMedia.setShopifyMediaUrl(uploadResult.resourceUrl());
                     mediaService.updateMedia(updateMedia);
                     media.setShopifyMediaUrl(uploadResult.resourceUrl());
+                    media.setMediaContentType(preparedMedia.getMediaContentType());
                     uploadMediaList.add(media);
 
                     result.append("✅ 图片「").append(media.getFilename()).append("」上传成功\n");
@@ -318,6 +315,7 @@ public class ShopifySyncExecutor {
             } catch (Exception e) {
                 log.error("图片「" + media.getFilename() + "」上传失败", e);
                 result.append("❌ 图片「").append(media.getFilename()).append("」上传失败: ").append(e.getMessage()).append("\n");
+                throw new RuntimeException("媒体「" + media.getFilename() + "」上传失败: " + e.getMessage(), e);
             }
         }
         return uploadMediaList;
@@ -515,7 +513,7 @@ public class ShopifySyncExecutor {
     /**
      * 构建商品 GraphQL 输入
      */
-    private ShopifyGraphQLClient.ProductInput buildProductInput(Product product, List<Media> uploadMediaList, List<String> tagNames) {
+    private ShopifyGraphQLClient.ProductInput buildProductInput(Product product, List<Media> uploadMediaList, List<String> tagNames, String defaultProductStatus) {
         ShopifyGraphQLClient.ProductInput input = ShopifyGraphQLClient.ProductInput.builder()
                 .title(product.getProductTitle())
                 .descriptionHtml(product.getBodyHtml())
@@ -527,7 +525,7 @@ public class ShopifySyncExecutor {
                         .description(product.getDescription())
                         .build())
                 .tags(tagNames)
-                .status(ShopifyProductStatusEnum.DRAFT.name())
+                .status(defaultProductStatus)
                 .build();
 
         // 处理选项 - 根据 Shopify 2026-04 API，values 需要是 OptionValueInput 对象数组
@@ -566,5 +564,19 @@ public class ShopifySyncExecutor {
             input.setMetafields(metafieldInput);
         }
         return input;
+    }
+
+    private String resolveDefaultProductStatus(ShopifyStore store) {
+        if (store == null || StringUtils.isEmpty(store.getDefaultProductStatus())) {
+            return ShopifyProductStatusEnum.DRAFT.name();
+        }
+        String status = store.getDefaultProductStatus().trim().toUpperCase();
+        if (StoreConstants.PRODUCT_STATUS_ACTIVE.equals(status)) {
+            return ShopifyProductStatusEnum.ACTIVE.name();
+        }
+        if (StoreConstants.PRODUCT_STATUS_DRAFT.equals(status)) {
+            return ShopifyProductStatusEnum.DRAFT.name();
+        }
+        return ShopifyProductStatusEnum.DRAFT.name();
     }
 }

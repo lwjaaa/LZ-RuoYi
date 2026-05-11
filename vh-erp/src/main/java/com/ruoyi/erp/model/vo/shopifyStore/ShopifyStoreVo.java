@@ -38,6 +38,7 @@ public class ShopifyStoreVo implements Serializable {
     private String inventoryPolicy;
     private String publishPublicationIds;
     private String publishPublicationNames;
+    private String defaultProductStatus;
     private String isActive;
     private String isDefault;
     private String authMode;

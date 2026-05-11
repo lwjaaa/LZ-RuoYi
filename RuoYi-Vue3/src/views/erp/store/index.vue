@@ -1,6 +1,6 @@
 <template>
   <div class="app-container">
-    <el-form :model="queryParams" ref="queryRef" :inline="true" v-show="showSearch" label-width="78px">
+    <el-form :model="queryParams" ref="queryRef" :inline="true" v-show="showSearch" label-width="90px">
       <el-form-item label="店铺名称" prop="storeName">
         <el-input v-model="queryParams.storeName" placeholder="请输入店铺名称" clearable @keyup.enter="handleQuery" />
       </el-form-item>
@@ -72,7 +72,7 @@
           <span>{{ row.inventoryTracked === '1' ? row.defaultInventoryQuantity ?? 0 : '不跟踪' }}</span>
         </template>
       </el-table-column>
-      <el-table-column label="发布渠道" prop="publishPublicationNames" min-width="180" show-overflow-tooltip>
+      <el-table-column label="自动发布渠道" prop="publishPublicationNames" min-width="180" show-overflow-tooltip>
         <template #default="{ row }">
           {{ row.publishPublicationNames || row.publishPublicationIds || '-' }}
         </template>
@@ -99,8 +99,8 @@
       @pagination="getList"
     />
 
-    <el-dialog :title="title" v-model="open" width="880px" append-to-body>
-      <el-form ref="storeRef" :model="form" :rules="rules" label-width="130px">
+    <el-dialog :title="title" v-model="open" width="880px" append-to-body :close-on-click-modal="!saveLoading">
+      <el-form ref="storeRef" v-loading="saveLoading" :model="form" :rules="rules" label-width="130px">
         <el-divider content-position="left">基础信息</el-divider>
         <el-row :gutter="16">
           <el-col :span="12">
@@ -209,10 +209,18 @@
           </el-col>
         </el-row>
 
-        <el-divider content-position="left">发布渠道</el-divider>
+        <el-divider content-position="left">自动发布渠道</el-divider>
         <el-row :gutter="16">
+          <el-col :span="12">
+            <el-form-item label="默认商品状态" prop="defaultProductStatus">
+              <el-select v-model="form.defaultProductStatus" style="width: 100%">
+                <el-option label="草稿" value="DRAFT" />
+                <el-option label="在售" value="ACTIVE" />
+              </el-select>
+            </el-form-item>
+          </el-col>
           <el-col :span="24">
-            <el-form-item label="渠道选择">
+            <el-form-item label="自动发布渠道">
               <div class="inline-resource">
                 <el-select
                   v-model="selectedPublicationIds"
@@ -247,8 +255,8 @@
       </el-form>
       <template #footer>
         <div class="dialog-footer">
-          <el-button type="primary" @click="submitForm">确定</el-button>
-          <el-button @click="cancel">取消</el-button>
+          <el-button type="primary" :loading="saveLoading" @click="submitForm">确定</el-button>
+          <el-button :disabled="saveLoading" @click="cancel">取消</el-button>
         </div>
       </template>
     </el-dialog>
@@ -272,6 +280,7 @@ const multiple = ref(true)
 const total = ref(0)
 const open = ref(false)
 const title = ref('')
+const saveLoading = ref(false)
 const resourceLoading = ref(false)
 const locationOptions = ref<ShopifyResourceOption[]>([])
 const publicationOptions = ref<ShopifyResourceOption[]>([])
@@ -317,6 +326,8 @@ function createDefaultForm(): ShopifyStore {
     inventoryPolicy: 'DENY',
     publishPublicationIds: '',
     publishPublicationNames: '',
+    defaultProductStatus: 'DRAFT',
+    availablePublicationIds: '',
     isActive: '1',
     isDefault: '0',
     authMode: 'PRIVATE_APP',
@@ -383,21 +394,32 @@ function handleUpdate(row?: ShopifyStore): void {
 }
 
 function submitForm(): void {
+  if (saveLoading.value) {
+    return
+  }
   proxy.$refs.storeRef.validate((valid: boolean) => {
     if (!valid) {
       return
     }
     syncPublicationFields()
+    saveLoading.value = true
     const request = form.value.storeId ? updateStore(form.value) : addStore(form.value)
-    request.then(() => {
-      proxy.$modal.msgSuccess(form.value.storeId ? '修改成功' : '新增成功')
-      open.value = false
-      getList()
-    })
+    request
+      .then(() => {
+        proxy.$modal.msgSuccess(form.value.storeId ? '修改成功' : '新增成功')
+        open.value = false
+        getList()
+      })
+      .finally(() => {
+        saveLoading.value = false
+      })
   })
 }
 
 function cancel(): void {
+  if (saveLoading.value) {
+    return
+  }
   open.value = false
   reset()
 }
@@ -450,9 +472,10 @@ function loadPublications(): void {
   fetchStorePublications(currentStoreId.value as number)
     .then((res: any) => {
       publicationOptions.value = res.data || []
+      form.value.availablePublicationIds = publicationOptions.value.map((item) => item.id).join(',')
       selectedPublicationIds.value = publicationOptions.value.map((item) => item.id)
       handlePublicationChange()
-      proxy.$modal.msgSuccess('发布渠道已拉取')
+      proxy.$modal.msgSuccess('自动发布渠道已拉取')
     })
     .finally(() => {
       resourceLoading.value = false
@@ -480,6 +503,7 @@ function handlePublicationChange(): void {
 }
 
 function syncPublicationFields(): void {
+  form.value.availablePublicationIds = publicationOptions.value.map((item) => item.id).join(',')
   const ids = splitCsv(form.value.publishPublicationIds)
   selectedPublicationIds.value = ids
   form.value.publishPublicationIds = ids.join(',')

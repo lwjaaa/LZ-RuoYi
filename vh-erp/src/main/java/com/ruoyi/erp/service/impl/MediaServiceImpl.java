@@ -365,6 +365,11 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, Media> implements
                 if (!operation.oldPath.equals(operation.newPath)) {
                     Files.move(operation.oldPath, operation.newPath);
                 }
+                if (operation.oldTranscodedPath != null && operation.newTranscodedPath != null
+                        && !operation.oldTranscodedPath.equals(operation.newTranscodedPath)) {
+                    Files.createDirectories(operation.newTranscodedPath.getParent());
+                    Files.move(operation.oldTranscodedPath, operation.newTranscodedPath);
+                }
             } catch (IOException e) {
                 throw new ServiceException("移动媒体文件失败: " + operation.oldPath + " -> " + operation.newPath);
             }
@@ -373,10 +378,12 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, Media> implements
             mediaUpdate.setMediaId(operation.media.getMediaId());
             mediaUpdate.setFilename(operation.newFilename);
             mediaUpdate.setNasMediaUrl(operation.newNasMediaUrl);
+            mediaUpdate.setTranscodedMediaUrl(operation.newTranscodedMediaUrl);
             mediaUpdate.setUpdateTime(DateUtils.getNowDate());
             this.updateById(mediaUpdate);
         }
 
+        deleteEmptyShopifySyncDirectory(Paths.get(RuoYiConfig.getMediaPath(), oldKeyword, "_shopify_sync").normalize());
         deleteEmptyOldKeywordDirectory(oldKeyword, targetDir);
         log.info("商品媒体关键词同步完成，商品ID: {}, 旧关键词: {}, 新关键词: {}, 媒体数量: {}",
                 product.getProductId(), oldKeyword, newKeyword, operations.size());
@@ -404,6 +411,7 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, Media> implements
                                                                      Path targetDir) {
         List<MediaMoveOperation> operations = new ArrayList<>();
         Set<Path> plannedTargetPaths = new HashSet<>();
+        Set<Path> plannedTranscodedTargetPaths = new HashSet<>();
         int sequence = 1;
 
         for (Media media : mediaList) {
@@ -435,10 +443,67 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, Media> implements
             }
 
             String newNasUrl = MediaFileUtil.generateNasUrl(MediaFileUtil.fixFileSeparator(newPath.toString()));
-            operations.add(new MediaMoveOperation(media, oldPath, newPath, newFilename, newNasUrl));
+            TranscodedMoveInfo transcodedMoveInfo = buildTranscodedMoveInfo(media, oldPath, newPath);
+            if (transcodedMoveInfo.newPath() != null) {
+                if (!plannedTranscodedTargetPaths.add(transcodedMoveInfo.newPath())) {
+                    throw new ServiceException("目标转码媒体文件名重复: " + transcodedMoveInfo.newPath());
+                }
+                if (!transcodedMoveInfo.oldPath().equals(transcodedMoveInfo.newPath()) && Files.exists(transcodedMoveInfo.newPath())) {
+                    throw new ServiceException("目标转码媒体文件已存在: " + transcodedMoveInfo.newPath());
+                }
+            }
+
+            operations.add(new MediaMoveOperation(
+                    media,
+                    oldPath,
+                    newPath,
+                    newFilename,
+                    newNasUrl,
+                    transcodedMoveInfo.oldPath(),
+                    transcodedMoveInfo.newPath(),
+                    transcodedMoveInfo.newNasUrl()));
         }
 
         return operations;
+    }
+
+    private TranscodedMoveInfo buildTranscodedMoveInfo(Media media, Path oldPath, Path newPath) {
+        Path oldTranscodedPath = resolveExistingTranscodedPath(media, oldPath);
+        if (oldTranscodedPath == null) {
+            return new TranscodedMoveInfo(null, null, null);
+        }
+
+        String newTranscodedFilename = buildTranscodedFilename(newPath.getFileName().toString());
+        Path newTranscodedPath = newPath.getParent()
+                .resolve("_shopify_sync")
+                .resolve(newTranscodedFilename)
+                .normalize();
+        String newTranscodedNasUrl = MediaFileUtil.generateNasUrl(MediaFileUtil.fixFileSeparator(newTranscodedPath.toString()));
+        return new TranscodedMoveInfo(oldTranscodedPath, newTranscodedPath, newTranscodedNasUrl);
+    }
+
+    private Path resolveExistingTranscodedPath(Media media, Path oldPath) {
+        if (StringUtils.isNotEmpty(media.getTranscodedMediaUrl())) {
+            String transcodedFilePath = MediaFileUtil.convertUrlToFilePath(media.getTranscodedMediaUrl());
+            if (StringUtils.isNotEmpty(transcodedFilePath)) {
+                Path path = Paths.get(transcodedFilePath).normalize();
+                if (Files.isRegularFile(path)) {
+                    return path;
+                }
+            }
+        }
+
+        Path expectedPath = oldPath.getParent()
+                .resolve("_shopify_sync")
+                .resolve(buildTranscodedFilename(oldPath.getFileName().toString()))
+                .normalize();
+        return Files.isRegularFile(expectedPath) ? expectedPath : null;
+    }
+
+    private String buildTranscodedFilename(String filename) {
+        int dotIndex = filename.lastIndexOf('.');
+        String basename = dotIndex > 0 ? filename.substring(0, dotIndex) : filename;
+        return basename + ".webp";
     }
 
     private void deleteEmptyOldKeywordDirectory(String oldKeyword, Path targetDir) {
@@ -462,14 +527,24 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, Media> implements
         private final Path newPath;
         private final String newFilename;
         private final String newNasMediaUrl;
+        private final Path oldTranscodedPath;
+        private final Path newTranscodedPath;
+        private final String newTranscodedMediaUrl;
 
-        private MediaMoveOperation(Media media, Path oldPath, Path newPath, String newFilename, String newNasMediaUrl) {
+        private MediaMoveOperation(Media media, Path oldPath, Path newPath, String newFilename, String newNasMediaUrl,
+                                   Path oldTranscodedPath, Path newTranscodedPath, String newTranscodedMediaUrl) {
             this.media = media;
             this.oldPath = oldPath;
             this.newPath = newPath;
             this.newFilename = newFilename;
             this.newNasMediaUrl = newNasMediaUrl;
+            this.oldTranscodedPath = oldTranscodedPath;
+            this.newTranscodedPath = newTranscodedPath;
+            this.newTranscodedMediaUrl = newTranscodedMediaUrl;
         }
+    }
+
+    private record TranscodedMoveInfo(Path oldPath, Path newPath, String newNasUrl) {
     }
 
     private void collectAllMediaRenameTasks(List<Media> mediaList,
@@ -509,6 +584,7 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, Media> implements
                 // 将 URL 转换为文件路径
                 String filePath = MediaFileUtil.convertUrlToFilePath(nasMediaUrl);
                 File file = new File(filePath);
+                deleteDerivedMediaFile(media, file);
 
                 if (file.exists() && file.isFile()) {
                     boolean deleted = file.delete();
@@ -536,6 +612,78 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, Media> implements
      *
      * @param variantList 变体列表
      */
+    private void deleteDerivedMediaFile(Media media, File sourceFile) {
+        Set<Path> derivedPaths = new LinkedHashSet<>();
+        if (StringUtils.isNotEmpty(media.getTranscodedMediaUrl())) {
+            String transcodedFilePath = MediaFileUtil.convertUrlToFilePath(media.getTranscodedMediaUrl());
+            if (StringUtils.isNotEmpty(transcodedFilePath)) {
+                derivedPaths.add(Paths.get(transcodedFilePath).normalize());
+            }
+        }
+        Path expectedDerivedPath = buildExpectedDerivedWebpPath(sourceFile);
+        if (expectedDerivedPath != null) {
+            derivedPaths.add(expectedDerivedPath);
+        }
+
+        for (Path derivedPath : derivedPaths) {
+            deleteFileIfExists(derivedPath, media.getMediaId());
+        }
+    }
+
+    private Path buildExpectedDerivedWebpPath(File sourceFile) {
+        if (sourceFile == null || sourceFile.getParentFile() == null) {
+            return null;
+        }
+        String filename = sourceFile.getName();
+        String extension = getLowerExtension(filename);
+        if (!Set.of("jpg", "jpeg", "png", "bmp", "webp").contains(extension)) {
+            return null;
+        }
+        int dotIndex = filename.lastIndexOf('.');
+        String basename = dotIndex > 0 ? filename.substring(0, dotIndex) : filename;
+        return sourceFile.getParentFile().toPath()
+                .resolve("_shopify_sync")
+                .resolve(basename + ".webp")
+                .normalize();
+    }
+
+    private String getLowerExtension(String filename) {
+        if (StringUtils.isEmpty(filename)) {
+            return "";
+        }
+        int dotIndex = filename.lastIndexOf('.');
+        if (dotIndex < 0 || dotIndex == filename.length() - 1) {
+            return "";
+        }
+        return filename.substring(dotIndex + 1).toLowerCase(Locale.ROOT);
+    }
+
+    private void deleteFileIfExists(Path filePath, Long mediaId) {
+        try {
+            if (Files.exists(filePath) && Files.isRegularFile(filePath)) {
+                Files.delete(filePath);
+                log.info("删除 Shopify 同步派生媒体文件成功: {}", filePath);
+                deleteEmptyShopifySyncDirectory(filePath.getParent());
+            }
+        } catch (Exception e) {
+            log.warn("删除 Shopify 同步派生媒体文件失败，媒体ID: {}, 文件: {}, 错误: {}",
+                    mediaId, filePath, e.getMessage());
+        }
+    }
+
+    private void deleteEmptyShopifySyncDirectory(Path directory) {
+        if (directory == null || !"_shopify_sync".equals(directory.getFileName().toString())) {
+            return;
+        }
+        try (Stream<Path> children = Files.list(directory)) {
+            if (children.findAny().isEmpty()) {
+                Files.delete(directory);
+            }
+        } catch (Exception e) {
+            log.debug("清理空的 Shopify 同步派生目录失败: {}, 错误: {}", directory, e.getMessage());
+        }
+    }
+
     private void renameVariantMediaFiles(List<ProductVariant> variantList, List<Media> mediaList,
                                          List<MediaRenameVo> toRenameList) {
         // 第一步：收集需要重命名的媒体文件

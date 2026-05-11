@@ -36,6 +36,8 @@ public class ShopifyStoreEdit implements Serializable {
     private String inventoryPolicy;
     private String publishPublicationIds;
     private String publishPublicationNames;
+    private String defaultProductStatus;
+    private String availablePublicationIds;
     private String isActive;
     private String isDefault;
     private String authMode;

@@ -365,7 +365,7 @@ export default {
         // 设置上传的请求头部
         headers: { Authorization: "Bearer " + getToken() },
         // 上传的地址
-        url: process.env.VUE_APP_BASE_API + "/erp/variant/importData",
+        url:  import.meta.env.VITE_APP_BASE_API + "/erp/variant/importData",
         // 下载模板的地址
         templateUrl: 'erp/variant/importTemplate'
       },

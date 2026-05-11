@@ -182,39 +182,61 @@ class MediaServiceImplTest {
     @Test
     void syncProductMediaKeywordMovesFolderAndRenamesMediaUsingNewKeywordAndSku() throws Exception {
         Path oldDir = tempDir.resolve("media").resolve("100");
+        Path oldDerivedDir = oldDir.resolve("_shopify_sync");
         Files.createDirectories(oldDir);
+        Files.createDirectories(oldDerivedDir);
         Files.writeString(oldDir.resolve("100-001.jpg"), "variant");
+        Files.writeString(oldDir.resolve("100-manual.jpg"), "manual-variant");
         Files.writeString(oldDir.resolve("100-1.jpg"), "main");
         Files.writeString(oldDir.resolve("100-2.png"), "detail");
+        Files.writeString(oldDerivedDir.resolve("100-001.webp"), "variant-webp");
+        Files.writeString(oldDerivedDir.resolve("100-manual.webp"), "manual-variant-webp");
+        Files.writeString(oldDerivedDir.resolve("100-1.webp"), "main-webp");
+        Files.writeString(oldDerivedDir.resolve("100-2.webp"), "detail-webp");
 
         Product product = new Product();
         product.setProductId(100L);
         product.setSpu("ABC001");
 
         List<Media> mediaList = List.of(
-                buildMediaWithKeyword(11L, "100", "100-001.jpg"),
-                buildMediaWithKeyword(12L, "100", "100-1.jpg"),
-                buildMediaWithKeyword(13L, "100", "100-2.png")
+                buildMediaWithTranscodedKeyword(11L, "100", "100-001.jpg", "100-001.webp"),
+                buildMediaWithTranscodedKeyword(12L, "100", "100-1.jpg", "100-1.webp"),
+                buildMediaWithTranscodedKeyword(13L, "100", "100-2.png", "100-2.webp"),
+                buildMediaWithTranscodedKeyword(14L, "100", "100-manual.jpg", "100-manual.webp")
         );
         when(mediaMapper.selectList(any())).thenReturn(mediaList);
 
         mediaService.syncProductMediaKeyword(product, "100", List.of(
                 buildVariant(201L, 11L, "ABC001-001"),
-                buildVariant(202L, 11L, "ABC001-002")
+                buildVariant(202L, 14L, "MANUAL")
         ));
 
         Path newDir = tempDir.resolve("media").resolve("ABC001");
+        Path newDerivedDir = newDir.resolve("_shopify_sync");
         assertTrue(Files.exists(newDir.resolve("ABC001-001.jpg")));
         assertTrue(Files.exists(newDir.resolve("ABC001-1.jpg")));
         assertTrue(Files.exists(newDir.resolve("ABC001-2.png")));
+        assertTrue(Files.exists(newDir.resolve("MANUAL.jpg")));
+        assertTrue(Files.exists(newDerivedDir.resolve("ABC001-001.webp")));
+        assertTrue(Files.exists(newDerivedDir.resolve("ABC001-1.webp")));
+        assertTrue(Files.exists(newDerivedDir.resolve("ABC001-2.webp")));
+        assertTrue(Files.exists(newDerivedDir.resolve("MANUAL.webp")));
         assertFalse(Files.exists(oldDir.resolve("100-001.jpg")));
+        assertFalse(Files.exists(oldDir.resolve("100-manual.jpg")));
         assertFalse(Files.exists(oldDir.resolve("100-1.jpg")));
         assertFalse(Files.exists(oldDir.resolve("100-2.png")));
+        assertFalse(Files.exists(oldDerivedDir.resolve("100-001.webp")));
+        assertFalse(Files.exists(oldDerivedDir.resolve("100-manual.webp")));
+        assertFalse(Files.exists(oldDerivedDir.resolve("100-1.webp")));
+        assertFalse(Files.exists(oldDerivedDir.resolve("100-2.webp")));
+        assertFalse(Files.exists(oldDerivedDir));
+        assertFalse(Files.exists(oldDir));
 
         Map<Long, String> updatedFilenames = captureUpdatedFilenames();
         assertEquals("ABC001-001.jpg", updatedFilenames.get(11L));
         assertEquals("ABC001-1.jpg", updatedFilenames.get(12L));
         assertEquals("ABC001-2.png", updatedFilenames.get(13L));
+        assertEquals("MANUAL.jpg", updatedFilenames.get(14L));
 
         ArgumentCaptor<Media> mediaCaptor = ArgumentCaptor.forClass(Media.class);
         verify(mediaMapper, atLeast(3)).updateById(mediaCaptor.capture());
@@ -223,6 +245,14 @@ class MediaServiceImplTest {
         assertEquals("/profile/media/ABC001/ABC001-001.jpg", updatedUrls.get(11L));
         assertEquals("/profile/media/ABC001/ABC001-1.jpg", updatedUrls.get(12L));
         assertEquals("/profile/media/ABC001/ABC001-2.png", updatedUrls.get(13L));
+        assertEquals("/profile/media/ABC001/MANUAL.jpg", updatedUrls.get(14L));
+
+        Map<Long, String> updatedTranscodedUrls = mediaCaptor.getAllValues().stream()
+                .collect(Collectors.toMap(Media::getMediaId, Media::getTranscodedMediaUrl, (first, second) -> second));
+        assertEquals("/profile/media/ABC001/_shopify_sync/ABC001-001.webp", updatedTranscodedUrls.get(11L));
+        assertEquals("/profile/media/ABC001/_shopify_sync/ABC001-1.webp", updatedTranscodedUrls.get(12L));
+        assertEquals("/profile/media/ABC001/_shopify_sync/ABC001-2.webp", updatedTranscodedUrls.get(13L));
+        assertEquals("/profile/media/ABC001/_shopify_sync/MANUAL.webp", updatedTranscodedUrls.get(14L));
     }
 
     @Test
@@ -312,6 +342,29 @@ class MediaServiceImplTest {
         assertEquals("b", Files.readString(mediaDir.resolve("c.jpg")));
     }
 
+    @Test
+    void deleteMediaFilesFromDiskDeletesOriginalAndShopifyDerivedWebp() throws Exception {
+        Path mediaDir = tempDir.resolve("media").resolve("ABC001");
+        Path derivedDir = mediaDir.resolve("_shopify_sync");
+        Files.createDirectories(derivedDir);
+        Path original = mediaDir.resolve("ABC001-1.jpg");
+        Path derived = derivedDir.resolve("ABC001-1.webp");
+        Files.writeString(original, "original");
+        Files.writeString(derived, "derived");
+
+        Media media = new Media();
+        media.setMediaId(51L);
+        media.setFilename("ABC001-1.jpg");
+        media.setNasMediaUrl(MediaFileUtil.generateNasUrl(MediaFileUtil.fixFileSeparator(original.toString())));
+        media.setTranscodedMediaUrl(MediaFileUtil.generateNasUrl(MediaFileUtil.fixFileSeparator(derived.toString())));
+
+        mediaService.deleteMediaFilesFromDisk(List.of(media));
+
+        assertFalse(Files.exists(original));
+        assertFalse(Files.exists(derived));
+        assertFalse(Files.exists(derivedDir));
+    }
+
     private Product buildProduct(Long productId, String spu, List<Media> mediaList, List<ProductVariant> variantList) {
         Product product = new Product();
         product.setProductId(productId);
@@ -345,6 +398,14 @@ class MediaServiceImplTest {
         media.setProductId(100L);
         media.setFilename(filename);
         media.setNasMediaUrl("/profile/media/" + keyword + "/" + filename);
+        return media;
+    }
+
+    private Media buildMediaWithTranscodedKeyword(Long mediaId, String keyword, String filename, String transcodedFilename) {
+        Media media = buildMediaWithKeyword(mediaId, keyword, filename);
+        media.setTranscodedMediaUrl("/profile/media/" + keyword + "/_shopify_sync/" + transcodedFilename);
+        media.setTranscodeSourceHash("hash-" + mediaId);
+        media.setTranscodeProfile("webp-q82-max2400-v1");
         return media;
     }
 

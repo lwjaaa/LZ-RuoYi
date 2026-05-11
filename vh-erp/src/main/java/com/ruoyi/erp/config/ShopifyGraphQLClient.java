@@ -66,8 +66,10 @@ public class ShopifyGraphQLClient {
     private static final String MUTATION_PRODUCT_CREATE = "productCreate";
     private static final String MUTATION_PRODUCT_UPDATE = "productUpdate";
     private static final String MUTATION_PRODUCT_VARIANTS_BULK_CREATE = "productVariantsBulkCreate";
+    private static final String MUTATION_PUBLICATION_UPDATE = "publicationUpdate";
 
     private static final String RESOURCE_TYPE_IMAGE = "IMAGE";
+    private static final String RESOURCE_TYPE_VIDEO = "VIDEO";
     private static final String HTTP_METHOD_POST = "POST";
 
     private static final String MULTIPART_BOUNDARY_PREFIX = "----ShopifyBoundary";
@@ -359,11 +361,20 @@ public class ShopifyGraphQLClient {
      * 上传媒体文件并返回 Shopify 媒体信息 (指定店铺)
      */
     public StagedUploadResult stagedUploadMedia(Long storeId, String filename, String mimeType, InputStream inputStream, long fileSize) {
-        log.info("获取媒体文件上传地址: storeId={}, filename={}, mimeType={}, fileSize={}", storeId, filename, mimeType, fileSize);
+        return stagedUploadMedia(storeId, filename, mimeType, RESOURCE_TYPE_IMAGE, inputStream, fileSize);
+    }
+
+    /**
+     * 上传媒体文件并返回 Shopify staged upload 信息。
+     */
+    public StagedUploadResult stagedUploadMedia(Long storeId, String filename, String mimeType, String resource, InputStream inputStream, long fileSize) {
+        String uploadResource = StringUtils.isEmpty(resource) ? RESOURCE_TYPE_IMAGE : resource;
+        log.info("获取媒体文件上传地址: storeId={}, filename={}, mimeType={}, resource={}, fileSize={}",
+                storeId, filename, mimeType, uploadResource, fileSize);
         String mutation = ShopifyGraphQLQueries.STAGED_UPLOADS_CREATE.getQuery();
 
         StagedUploadInput input = StagedUploadInput.builder()
-                .resource(RESOURCE_TYPE_IMAGE)
+                .resource(uploadResource)
                 .filename(filename)
                 .mimeType(mimeType)
                 .httpMethod(HTTP_METHOD_POST)
@@ -629,6 +640,20 @@ public class ShopifyGraphQLClient {
             }
         }
         return publications;
+    }
+
+    /**
+     * 设置 Publication 是否自动发布新商品。
+     */
+    public void updatePublicationAutoPublish(Long storeId, String publicationId, boolean autoPublish) {
+        if (StringUtils.isEmpty(publicationId)) {
+            throw new ShopifyApiException("Publication ID 不能为空");
+        }
+        JsonNode data = execute(storeId, ShopifyGraphQLQueries.PUBLICATION_UPDATE.getQuery(), Map.of(
+                "id", publicationId,
+                "input", PublicationUpdateInput.builder().autoPublish(autoPublish).build()
+        ));
+        checkUserErrors(data, MUTATION_PUBLICATION_UPDATE);
     }
 
     /**
@@ -1051,6 +1076,18 @@ public class ShopifyGraphQLClient {
                 }
               }
             }
+            """),
+
+        PUBLICATION_UPDATE("""
+            mutation publicationUpdate($id: ID!, $input: PublicationUpdateInput!) {
+              publicationUpdate(id: $id, input: $input) {
+                userErrors { field message }
+                publication {
+                  id
+                  autoPublish
+                }
+              }
+            }
             """);
 
         private final String query;
@@ -1126,6 +1163,18 @@ public class ShopifyGraphQLClient {
         private String publicationId;
         private String channelId;
         private Boolean isPublished;
+    }
+
+    /**
+     * Publication 自动发布设置输入。
+     */
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public static class PublicationUpdateInput {
+        private Boolean autoPublish;
     }
 
     /**

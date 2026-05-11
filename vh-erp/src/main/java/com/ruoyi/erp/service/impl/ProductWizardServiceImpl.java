@@ -562,6 +562,17 @@ public class ProductWizardServiceImpl implements IProductWizardService {
                 if (StringUtils.isNotEmpty(product.getSpu())) {
                     updateTagDictPrefix(product.getSpu());
                 }
+                rewriteProductNamePrefix(product, oldKeyword);
+                //补充变体的数据，sku，主图id
+                product.getProductVariantList().forEach(variant -> {
+                    if(variant.getVariantId() != null){
+                        ProductVariant oldVariant = productVariantService.getById(variant.getVariantId());
+                        if(oldVariant != null){
+                            variant.setSku(oldVariant.getSku());
+                            variant.setMediaId(oldVariant.getMediaId());
+                        }
+                    }
+                });
             }
             product.setUpdateTime(DateUtils.getNowDate());
             productService.updateById(product);
@@ -583,7 +594,7 @@ public class ProductWizardServiceImpl implements IProductWizardService {
         }
 
         // ==================== 4. 处理商品变体（SKU生成） ====================
-        List<ProductVariant> productVariants = handleProductVariants(product, productId, isInsert, keywordChanged);
+        List<ProductVariant> productVariants = handleProductVariants(product, productId, isInsert, keywordChanged, oldKeyword);
 
         if (keywordChanged) {
             mediaService.syncProductMediaKeyword(product, oldKeyword, productVariants);
@@ -681,7 +692,7 @@ public class ProductWizardServiceImpl implements IProductWizardService {
      * @param productId 商品ID
      * @param isInsert  是否为新增操作
      */
-    private List<ProductVariant> handleProductVariants(Product product, Long productId, boolean isInsert, boolean rewriteSku) {
+    private List<ProductVariant> handleProductVariants(Product product, Long productId, boolean isInsert, boolean rewriteSku, String oldKeyword) {
         List<ProductVariant> productVariantList = product.getProductVariantList();
 
         // 如果变体列表为空或 null，直接返回
@@ -706,7 +717,7 @@ public class ProductWizardServiceImpl implements IProductWizardService {
             Long variantId = variant.getVariantId();
 
             if (rewriteSku) {
-                String sku = this.rewriteSku(product, variant.getSku(), i);
+                String sku = this.rewriteSku(product, variant.getSku(), i, oldKeyword);
                 variant.setSku(sku);
                 log.debug("根据商品关键词重写 SKU: {}, 变体索引: {}", sku, i);
             }
@@ -770,23 +781,31 @@ public class ProductWizardServiceImpl implements IProductWizardService {
         return saveList;
     }
 
-    private String rewriteSku(Product product, String currentSku, int index) {
+    private String rewriteSku(Product product, String currentSku, int index, String oldKeyword) {
         String prefix = product.getKeyWord();
         if (StringUtils.isEmpty(prefix)) {
             prefix = String.valueOf(product.getProductId());
         }
 
         if (StringUtils.isNotEmpty(currentSku)) {
-            int suffixIndex = currentSku.lastIndexOf("-");
-            if (suffixIndex >= 0 && suffixIndex < currentSku.length() - 1) {
-                String suffix = currentSku.substring(suffixIndex + 1);
-                if (StringUtils.isNotBlank(suffix)) {
-                    return prefix + "-" + suffix;
-                }
+            if (StringUtils.isNotEmpty(oldKeyword) && currentSku.startsWith(oldKeyword)) {
+                return prefix + currentSku.substring(oldKeyword.length());
             }
+            return currentSku;
         }
 
         return String.format("%s-%03d", prefix, index + 1);
+    }
+
+    private void rewriteProductNamePrefix(Product product, String oldKeyword) {
+        String productName = product.getProductName();
+        String newKeyword = product.getKeyWord();
+        if (StringUtils.isEmpty(productName) || StringUtils.isEmpty(oldKeyword) || StringUtils.isEmpty(newKeyword)) {
+            return;
+        }
+        if (productName.startsWith(oldKeyword)) {
+            product.setProductName(newKeyword + productName.substring(oldKeyword.length()));
+        }
     }
 
     /**

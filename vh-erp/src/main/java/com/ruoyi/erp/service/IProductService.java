@@ -100,12 +100,4 @@ public interface IProductService extends IService<Product>
      */
     public Object getPushResult(Long taskId);
 
-    /**
-     * 发布商品到所有渠道
-     *
-     * @param productIds 商品ID列表
-     * @param storeId 店铺ID（可选）
-     * @return 发布结果
-     */
-    Object publishToChannels(Long[] productIds, Long storeId);
 }
