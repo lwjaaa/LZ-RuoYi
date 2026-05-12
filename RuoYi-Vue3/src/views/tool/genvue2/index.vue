@@ -275,7 +275,7 @@ import {
 import ImportTable from "./importTable";
 import CreateTable from "./createTable";
 import hljs from "highlight.js/lib/core";
-import "highlight.js/styles/github-gist.css";
+import "highlight.js/styles/github.css";
 import {
   Search,
   Refresh,

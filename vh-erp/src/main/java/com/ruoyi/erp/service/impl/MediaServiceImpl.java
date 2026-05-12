@@ -20,6 +20,7 @@ import com.ruoyi.erp.model.vo.media.MediaRenameVo;
 import com.ruoyi.erp.model.vo.media.MediaVo;
 import com.ruoyi.erp.model.vo.media.RenameOperationVo;
 import com.ruoyi.erp.service.IMediaService;
+import com.ruoyi.erp.service.IProductQualityService;
 import com.ruoyi.erp.utils.MediaFileUtil;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -52,6 +53,8 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, Media> implements
     private ProductMapper productMapper;
     @Resource
     private ProductVariantMapper productVariantMapper;
+    @Resource
+    private IProductQualityService productQualityService;
 
     //region mybatis代码
 
@@ -949,6 +952,7 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, Media> implements
             this.save(media);
         }
 
+        productQualityService.refreshProductMissingFields(productId);
         return this.listByProductId(productId);
     }
 

@@ -7,6 +7,8 @@ import lombok.Data;
 import org.springframework.beans.BeanUtils;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 /**
@@ -21,6 +23,9 @@ public class ProductVo implements Serializable
     private static final long serialVersionUID = 1L;
 
     private Long productId;
+
+    /** 商品名称 */
+    private String productName;
 
     /** Shopify平台商品ID (唯一映射) */
     private String shopifyProductId;
@@ -87,9 +92,15 @@ public class ProductVo implements Serializable
     @JsonFormat(pattern = "yyyy-MM-dd")
     private Date createTime;
 
+    /** 创建人 */
+    private String createBy;
+
     /** 更新时间 */
     @JsonFormat(pattern = "yyyy-MM-dd")
     private Date updateTime;
+
+    /** 更新人 */
+    private String updateBy;
 
     /** 备注 */
     private String remark;
@@ -98,6 +109,38 @@ public class ProductVo implements Serializable
     private List<ProductVariant> productVariantList;
 
     private List<String> tagCodeList;
+
+    private String mainMediaUrl;
+
+    private List<String> mediaUrlList;
+
+    private Integer mediaCount;
+
+    private Integer variantCount;
+
+    private String skuPreview;
+
+    private Integer priceMin;
+
+    private Integer priceMax;
+
+    private Integer purchasePriceMin;
+
+    private Integer purchasePriceMax;
+
+    private BigDecimal profitRateMin;
+
+    private BigDecimal profitRateMax;
+
+    private List<String> missingFields;
+
+    private Boolean needResync;
+
+    private Long latestTaskId;
+
+    private String latestTaskStatus;
+
+    private String latestTaskError;
 
 
      /**
@@ -112,6 +155,9 @@ public class ProductVo implements Serializable
         }
         ProductVo productVo = new ProductVo();
         BeanUtils.copyProperties(product, productVo);
+        productVo.setMediaUrlList(new ArrayList<>());
+        productVo.setMissingFields(new ArrayList<>());
+        productVo.setNeedResync(false);
         return productVo;
     }
 }

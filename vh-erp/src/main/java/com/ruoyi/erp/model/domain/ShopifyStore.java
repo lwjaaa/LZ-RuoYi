@@ -88,6 +88,10 @@ public class ShopifyStore implements Serializable {
     @Excel(name = "默认商品状态")
     private String defaultProductStatus;
 
+    /** 商品资料必填字段编码，英文逗号分隔 */
+    @Excel(name = "商品资料必填字段")
+    private String requiredProductFields;
+
     /** 本次从 Shopify 拉取到的 Publication ID，英文逗号分隔，不落库 */
     @TableField(exist = false)
     private String availablePublicationIds;

@@ -2,6 +2,7 @@ package com.ruoyi.erp.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.ruoyi.erp.model.domain.Product;
+import com.ruoyi.erp.model.vo.product.ProductWorkbenchSummaryVo;
 
 import java.util.List;
 
@@ -21,6 +22,14 @@ public interface ProductMapper extends BaseMapper<Product>
      * @return erp商品集合
      */
     public List<Product> selectProductList(Product product);
+
+    /**
+     * 查询商品工作台统计。
+     *
+     * @param product 商品查询条件
+     * @return 工作台统计
+     */
+    public ProductWorkbenchSummaryVo selectWorkbenchSummary(Product product);
 
     /**
      * 删除erp商品

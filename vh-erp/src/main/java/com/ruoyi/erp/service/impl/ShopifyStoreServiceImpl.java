@@ -17,6 +17,7 @@ import com.ruoyi.erp.model.dto.shopifyStore.ShopifyStoreQuery;
 import com.ruoyi.erp.model.vo.shopifyStore.ShopifyResourceOptionVo;
 import com.ruoyi.erp.model.vo.shopifyStore.ShopifyStoreVo;
 import com.ruoyi.erp.service.IShopifyStoreService;
+import com.ruoyi.erp.util.ProductListMetrics;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Lazy;
@@ -351,6 +352,7 @@ public class ShopifyStoreServiceImpl extends ServiceImpl<ShopifyStoreMapper, Sho
             store.setStatus(StringUtils.isNotEmpty(store.getAccessToken()) ? STATUS_CONNECTED : STATUS_DISCONNECTED);
         }
         store.setDefaultProductStatus(normalizeProductStatus(store.getDefaultProductStatus()));
+        store.setRequiredProductFields(ProductListMetrics.normalizeRequiredFields(store.getRequiredProductFields()));
         store.setPublishPublicationIds(normalizeCsv(store.getPublishPublicationIds()));
         store.setAvailablePublicationIds(normalizeCsv(store.getAvailablePublicationIds()));
 

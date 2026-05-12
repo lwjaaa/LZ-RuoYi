@@ -22,6 +22,7 @@ CREATE TABLE `erp_shopify_store` (
     `publish_publication_ids` text COMMENT '自动发布 Publication ID，英文逗号分隔',
     `publish_publication_names` text COMMENT '自动发布渠道名称，英文逗号分隔',
     `default_product_status` varchar(16) DEFAULT 'DRAFT' COMMENT '推送到 Shopify 时的默认商品状态：DRAFT, ACTIVE',
+    `required_product_fields` varchar(512) DEFAULT 'TITLE,SPU,MAIN_MEDIA,DESCRIPTION,BODY_HTML,VARIANT,PRICE,FREIGHT,VARIANT_MEDIA,SKU' COMMENT '商品资料必填字段编码，英文逗号分隔',
     `is_active`         char(1)         DEFAULT '1' COMMENT '是否启用 (0:禁用, 1:启用)',
     `is_default`        char(1)         DEFAULT '0' COMMENT '是否默认店铺 (0:否, 1:是)',
     `auth_mode`         varchar(20)     DEFAULT 'PRIVATE_APP' COMMENT '认证模式: PRIVATE_APP, OAUTH',

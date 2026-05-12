@@ -227,8 +227,8 @@ function selectActiveResult() {
 function highlightText(text) {
   if (!text) return ''
   if (!search.value) return text
-  const keyword = escapeRegExp(search.value)
-  const reg = new RegExp(`(${keyword})`, 'gi')
+  const searchKeyword = escapeRegExp(search.value)
+  const reg = new RegExp(`(${searchKeyword})`, 'gi')
   return text.replace(reg, '<span class="highlight">$1</span>')
 }
 

@@ -249,6 +249,20 @@
           </el-col>
         </el-row>
 
+        <el-divider content-position="left">商品资料规则</el-divider>
+        <el-form-item label="必填字段">
+          <el-select
+            v-model="selectedRequiredFields"
+            multiple
+            collapse-tags
+            collapse-tags-tooltip
+            placeholder="请选择商品资料必填项"
+            style="width: 100%"
+          >
+            <el-option v-for="item in productMissingFieldOptions" :key="item.value" :label="item.label" :value="item.value" />
+          </el-select>
+        </el-form-item>
+
         <el-form-item label="备注">
           <el-input v-model="form.remark" type="textarea" :rows="2" />
         </el-form-item>
@@ -267,6 +281,7 @@
 import { computed, getCurrentInstance, reactive, ref, toRefs } from 'vue'
 import { addStore, delStore, fetchStoreLocations, fetchStorePublications, getStore, listStore, testStoreConnection, updateStore } from '@/api/erp/store'
 import { parseTime } from '@/utils/ruoyi'
+import { defaultRequiredMissingFields, productMissingFieldOptions, splitFieldCodes } from '@/utils/erp/productWorkbench'
 import type { ShopifyResourceOption, ShopifyStore, ShopifyStoreQuery } from '@/types/erp'
 
 const { proxy } = getCurrentInstance() as any
@@ -285,6 +300,7 @@ const resourceLoading = ref(false)
 const locationOptions = ref<ShopifyResourceOption[]>([])
 const publicationOptions = ref<ShopifyResourceOption[]>([])
 const selectedPublicationIds = ref<string[]>([])
+const selectedRequiredFields = ref<string[]>([...defaultRequiredMissingFields])
 
 const data = reactive({
   queryParams: {
@@ -327,6 +343,7 @@ function createDefaultForm(): ShopifyStore {
     publishPublicationIds: '',
     publishPublicationNames: '',
     defaultProductStatus: 'DRAFT',
+    requiredProductFields: defaultRequiredMissingFields.join(','),
     availablePublicationIds: '',
     isActive: '1',
     isDefault: '0',
@@ -361,6 +378,7 @@ function resetQuery(): void {
 function reset(): void {
   form.value = createDefaultForm()
   selectedPublicationIds.value = []
+  selectedRequiredFields.value = [...defaultRequiredMissingFields]
   locationOptions.value = []
   publicationOptions.value = []
   proxy.resetForm('storeRef')
@@ -387,6 +405,10 @@ function handleUpdate(row?: ShopifyStore): void {
   getStore(storeId).then((res: any) => {
     form.value = { ...createDefaultForm(), ...res.data, refreshToken: '' }
     selectedPublicationIds.value = splitCsv(form.value.publishPublicationIds)
+    selectedRequiredFields.value = splitFieldCodes(form.value.requiredProductFields)
+    if (!selectedRequiredFields.value.length) {
+      selectedRequiredFields.value = [...defaultRequiredMissingFields]
+    }
     seedPublicationOptions()
     open.value = true
     title.value = '修改 Shopify 店铺'
@@ -402,6 +424,7 @@ function submitForm(): void {
       return
     }
     syncPublicationFields()
+    syncRequiredFields()
     saveLoading.value = true
     const request = form.value.storeId ? updateStore(form.value) : addStore(form.value)
     request
@@ -510,6 +533,10 @@ function syncPublicationFields(): void {
   form.value.publishPublicationNames = ids
     .map((id) => publicationOptions.value.find((item) => item.id === id)?.name || id)
     .join(',')
+}
+
+function syncRequiredFields(): void {
+  form.value.requiredProductFields = selectedRequiredFields.value.join(',')
 }
 
 function seedPublicationOptions(): void {

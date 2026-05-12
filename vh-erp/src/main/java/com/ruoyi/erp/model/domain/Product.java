@@ -85,9 +85,14 @@ public class Product implements Serializable
     @Excel(name = "最后一次同步错误信息或结果")
     private String syncMessage;
 
+    /** 商品资料缺失字段编码，英文逗号分隔 */
+    @TableField("missing_fields")
+    @Excel(name = "商品资料缺失字段")
+    private String missingFieldCodes;
+
     /** 最后同步时间 */
-    @JsonFormat(pattern = "yyyy-MM-dd")
-    @Excel(name = "最后同步时间", width = 30, dateFormat = "yyyy-MM-dd")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    @Excel(name = "最后同步时间", width = 30, dateFormat = "yyyy-MM-dd HH:mm:ss")
     private Date lastSyncTime;
 
     /** 乐观锁版本号 */
@@ -126,16 +131,16 @@ public class Product implements Serializable
     private String createBy;
 
     /** 创建时间 */
-    @JsonFormat(pattern = "yyyy-MM-dd")
-    @Excel(name = "创建时间", width = 30, dateFormat = "yyyy-MM-dd")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    @Excel(name = "创建时间", width = 30, dateFormat = "yyyy-MM-dd HH:mm:ss")
     private Date createTime;
 
     /** 更新者 */
     private String updateBy;
 
     /** 更新时间 */
-    @JsonFormat(pattern = "yyyy-MM-dd")
-    @Excel(name = "更新时间", width = 30, dateFormat = "yyyy-MM-dd")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    @Excel(name = "更新时间", width = 30, dateFormat = "yyyy-MM-dd HH:mm:ss")
     private Date updateTime;
 
     /** 备注 */
@@ -152,6 +157,21 @@ public class Product implements Serializable
     @TableField(exist = false)
     private List<Long> tagIds;
 
+    /** 工作台关键词，匹配标题、SPU、SKU 或 Shopify ID */
+    @TableField(exist = false)
+    private String searchKeyword;
+
+    /** 资料完整度快捷分组：incomplete */
+    @TableField(exist = false)
+    private String qualityState;
+
+    /** 当前目标店铺，仅用于店铺上下文和最新任务查询 */
+    @TableField(exist = false)
+    private Long storeId;
+
+    /** 更新人筛选 */
+    @TableField(exist = false)
+    private String updatedBy;
 
     /** 请求参数 */
     @JsonInclude(JsonInclude.Include.NON_EMPTY)

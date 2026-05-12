@@ -29,14 +29,41 @@ public class ProductQuery implements Serializable
     /** 商品标题 */
     private String productTitle;
 
+    /** 工作台关键词，匹配标题、SPU、SKU 或 Shopify ID */
+    private String searchKeyword;
+
     /** SPU */
     private String spu;
+
+    /** 商品类别 */
+    private String category;
+
+    /** 商品类型 */
+    private String productType;
+
+    /** 来源URL */
+    private String sourceUrl;
+
+    /** 采购链接 */
+    private String purchaseUrl;
 
     /** 发布状态 */
     private String status;
 
     /** 同步状态 */
     private String syncStatus;
+
+    /** 资料完整度快捷分组：incomplete/complete */
+    private String qualityState;
+
+    /** 当前目标店铺，仅用于店铺上下文和最新任务查询 */
+    private Long storeId;
+
+    /** 标签筛选 */
+    private List<Long> tagIds;
+
+    /** 更新人 */
+    private String updatedBy;
 
     /** 最后同步时间 */
     @JsonFormat(pattern = "yyyy-MM-dd")

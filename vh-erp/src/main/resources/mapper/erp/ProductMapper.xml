@@ -19,6 +19,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="mainMediaId"    column="main_media_id"    />
         <result property="syncStatus"    column="sync_status"    />
         <result property="syncMessage"    column="sync_message"    />
+        <result property="missingFieldCodes"    column="missing_fields"    />
         <result property="lastSyncTime"    column="last_sync_time"    />
         <result property="version"    column="version"    />
         <result property="description"    column="description"    />
@@ -70,19 +71,81 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     </resultMap>
 
     <sql id="selectProductVo">
-        select product_name, product_id, shopify_product_id, product_title, spu, category, product_type, source_url, purchase_url, option_json, status, body_html, main_media_id, sync_status, sync_message, last_sync_time, version, description, description_cn, size, material, note, note_cn, package_include, create_by, create_time, update_by, update_time, remark, del_flag from erp_product
+        select product_name, product_id, shopify_product_id, product_title, spu, category, product_type, source_url, purchase_url, option_json, status, body_html, main_media_id, sync_status, sync_message, missing_fields, last_sync_time, version, description, description_cn, size, material, note, note_cn, package_include, create_by, create_time, update_by, update_time, remark, del_flag from erp_product
+    </sql>
+
+    <sql id="productFilterConditions">
+            <if test="shopifyProductId != null  and shopifyProductId != ''"> and shopify_product_id = #{shopifyProductId}</if>
+            <if test="productTitle != null  and productTitle != ''"> and product_title like concat('%', #{productTitle}, '%')</if>
+            <if test="searchKeyword != null and searchKeyword != ''">
+                and (
+                    product_title like concat('%', #{searchKeyword}, '%')
+                    or spu like concat('%', #{searchKeyword}, '%')
+                    or shopify_product_id like concat('%', #{searchKeyword}, '%')
+                    or exists (
+                        select 1
+                        from erp_product_variant pv
+                        where pv.product_id = erp_product.product_id
+                        and pv.sku like concat('%', #{searchKeyword}, '%')
+                    )
+                )
+            </if>
+            <if test="spu != null  and spu != ''"> and spu like concat('%', #{spu}, '%')</if>
+            <if test="category != null and category != ''"> and category like concat('%', #{category}, '%')</if>
+            <if test="productType != null and productType != ''"> and product_type = #{productType}</if>
+            <if test="sourceUrl != null and sourceUrl != ''"> and source_url like concat('%', #{sourceUrl}, '%')</if>
+            <if test="purchaseUrl != null and purchaseUrl != ''"> and purchase_url like concat('%', #{purchaseUrl}, '%')</if>
+            <if test="status != null  and status != ''"> and status = #{status}</if>
+            <if test="syncStatus != null  and syncStatus != ''"> and sync_status = #{syncStatus}</if>
+            <if test="updatedBy != null and updatedBy != ''"> and update_by like concat('%', #{updatedBy}, '%')</if>
+            <if test="tagIds != null and tagIds.size() > 0">
+                and exists (
+                    select 1
+                    from erp_product_tag_rel ptr
+                    where ptr.product_id = erp_product.product_id
+                    and ptr.tag_id in
+                    <foreach item="tagId" collection="tagIds" open="(" separator="," close=")">
+                        #{tagId}
+                    </foreach>
+                )
+            </if>
+            <if test="'complete'.equals(qualityState)"> and (missing_fields is null or missing_fields = '')</if>
+            <if test="'incomplete'.equals(qualityState)"> and missing_fields is not null and missing_fields != ''</if>
+            <if test="params.beginLastSyncTime != null and params.beginLastSyncTime != '' and params.endLastSyncTime != null and params.endLastSyncTime != ''"> and DATE_FORMAT(last_sync_time, '%Y-%m-%d') between #{params.beginLastSyncTime} and #{params.endLastSyncTime}</if>
+            <if test="params.beginCreateBy != null and params.beginCreateBy != '' and params.endCreateBy != null and params.endCreateBy != ''"> and DATE_FORMAT(create_by, '%Y-%m-%d') between #{params.beginCreateBy} and #{params.endCreateBy}</if>
     </sql>
 
     <select id="selectProductList" parameterType="Product" resultMap="ProductResult">
         <include refid="selectProductVo"/>
-        <where>  
-            <if test="shopifyProductId != null  and shopifyProductId != ''"> and shopify_product_id = #{shopifyProductId}</if>
-            <if test="productTitle != null  and productTitle != ''"> and product_title like concat('%', #{productTitle}, '%')</if>
-            <if test="spu != null  and spu != ''"> and spu like concat('%', #{spu}, '%')</if>
-            <if test="status != null  and status != ''"> and status = #{status}</if>
-            <if test="syncStatus != null  and syncStatus != ''"> and sync_status = #{syncStatus}</if>
-            <if test="params.beginLastSyncTime != null and params.beginLastSyncTime != '' and params.endLastSyncTime != null and params.endLastSyncTime != ''"> and DATE_FORMAT(last_sync_time, '%Y-%m-%d') between #{params.beginLastSyncTime} and #{params.endLastSyncTime}</if>
-            <if test="params.beginCreateBy != null and params.beginCreateBy != '' and params.endCreateBy != null and params.endCreateBy != ''"> and DATE_FORMAT(create_by, '%Y-%m-%d') between #{params.beginCreateBy} and #{params.endCreateBy}</if>
+        <where>
+            <include refid="productFilterConditions"/>
+        </where>
+    </select>
+
+    <select id="selectWorkbenchSummary" parameterType="Product" resultType="com.ruoyi.erp.model.vo.product.ProductWorkbenchSummaryVo">
+        select
+            count(1) as totalCount,
+            coalesce(sum(case
+                when shopify_product_id is null
+                    or shopify_product_id = ''
+                    or sync_status is null
+                    or sync_status = ''
+                    or sync_status = '0'
+                then 1 else 0 end), 0) as pendingPushCount,
+            coalesce(sum(case when sync_status = '2' then 1 else 0 end), 0) as syncFailedCount,
+            coalesce(sum(case when sync_status = '3' then 1 else 0 end), 0) as syncingCount,
+            coalesce(sum(case
+                when sync_status = '1'
+                    and shopify_product_id is not null
+                    and shopify_product_id != ''
+                then 1 else 0 end), 0) as syncedCount,
+            0 as needResyncCount,
+            coalesce(sum(case
+                when missing_fields is not null and missing_fields != ''
+                then 1 else 0 end), 0) as incompleteCount
+        from erp_product
+        <where>
+            <include refid="productFilterConditions"/>
         </where>
     </select>
 

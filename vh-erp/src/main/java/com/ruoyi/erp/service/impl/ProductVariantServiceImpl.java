@@ -10,6 +10,7 @@ import com.ruoyi.erp.mapper.ProductVariantMapper;
 import com.ruoyi.erp.model.domain.ProductVariant;
 import com.ruoyi.erp.model.dto.productVariant.ProductVariantQuery;
 import com.ruoyi.erp.model.vo.productVariant.ProductVariantVo;
+import com.ruoyi.erp.service.IProductQualityService;
 import com.ruoyi.erp.service.IProductVariantService;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
@@ -29,6 +30,8 @@ public class ProductVariantServiceImpl extends ServiceImpl<ProductVariantMapper,
 
     @Resource
     private ProductVariantMapper productVariantMapper;
+    @Resource
+    private IProductQualityService productQualityService;
 
     //region mybatis代码
     /**
@@ -65,7 +68,8 @@ public class ProductVariantServiceImpl extends ServiceImpl<ProductVariantMapper,
     public int insertProductVariant(ProductVariant productVariant)
     {
         productVariant.setCreateTime(DateUtils.getNowDate());
-        return productVariantMapper.insertProductVariant(productVariant);
+        int rows = productVariantMapper.insertProductVariant(productVariant);
+        return rows;
     }
 
     /**
@@ -77,8 +81,15 @@ public class ProductVariantServiceImpl extends ServiceImpl<ProductVariantMapper,
     @Override
     public int updateProductVariant(ProductVariant productVariant)
     {
+        ProductVariant oldVariant = productVariant.getVariantId() == null ? null : productVariantMapper.selectById(productVariant.getVariantId());
         productVariant.setUpdateTime(DateUtils.getNowDate());
-        return productVariantMapper.updateProductVariant(productVariant);
+        int rows = productVariantMapper.updateProductVariant(productVariant);
+        List<Long> productIds = new ArrayList<>();
+        if (oldVariant != null) {
+            productIds.add(oldVariant.getProductId());
+        }
+        productIds.add(productVariant.getProductId());
+        return rows;
     }
 
     /**
@@ -90,7 +101,12 @@ public class ProductVariantServiceImpl extends ServiceImpl<ProductVariantMapper,
     @Override
     public int deleteProductVariantByVariantIds(Long[] variantIds)
     {
-        return productVariantMapper.deleteProductVariantByVariantIds(variantIds);
+        List<Long> productIds = listByIds(List.of(variantIds)).stream()
+                .map(ProductVariant::getProductId)
+                .filter(Objects::nonNull)
+                .toList();
+        int rows = productVariantMapper.deleteProductVariantByVariantIds(variantIds);
+        return rows;
     }
 
     /**
@@ -102,7 +118,9 @@ public class ProductVariantServiceImpl extends ServiceImpl<ProductVariantMapper,
     @Override
     public int deleteProductVariantByVariantId(Long variantId)
     {
-        return productVariantMapper.deleteProductVariantByVariantId(variantId);
+        ProductVariant variant = productVariantMapper.selectById(variantId);
+        int rows = productVariantMapper.deleteProductVariantByVariantId(variantId);
+        return rows;
     }
     //endregion
     @Override

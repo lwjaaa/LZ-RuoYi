@@ -1,10 +1,10 @@
 package com.ruoyi.erp.service;
 
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.ruoyi.erp.model.domain.Product;
 import com.ruoyi.erp.model.dto.product.ProductQuery;
 import com.ruoyi.erp.model.vo.product.ProductVo;
+import com.ruoyi.erp.model.vo.product.ProductWorkbenchSummaryVo;
 
 import java.util.List;
 /**
@@ -32,6 +32,8 @@ public interface IProductService extends IService<Product>
      */
     public List<ProductVo> selectProductList(Product product);
 
+    ProductWorkbenchSummaryVo getWorkbenchSummary(Product product);
+
 
     /**
      * 批量删除erp商品
@@ -40,22 +42,6 @@ public interface IProductService extends IService<Product>
      * @return 结果
      */
     public int deleteProductByProductIds(Long[] productIds);
-
-    /**
-     * 删除erp商品信息
-     * 
-     * @param productId erp商品主键
-     * @return 结果
-     */
-    public int deleteProductByProductId(Long productId);
-    //endregion
-    /**
-     * 获取查询条件
-     *
-     * @param productQuery 查询条件对象
-     * @return 查询条件
-     */
-    QueryWrapper<Product> getQueryWrapper(ProductQuery productQuery);
 
     /**
      * 转换vo
@@ -99,5 +85,7 @@ public interface IProductService extends IService<Product>
      * @return 结果
      */
     public Object getPushResult(Long taskId);
+
+    Object publishToChannels(Long[] productIds, Long storeId);
 
 }

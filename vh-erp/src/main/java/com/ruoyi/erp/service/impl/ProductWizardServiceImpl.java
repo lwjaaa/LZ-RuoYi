@@ -59,6 +59,8 @@ public class ProductWizardServiceImpl implements IProductWizardService {
     private RedisCache redisCache;
     @Autowired
     private IFormSuggestionService formSuggestionService;
+    @Autowired
+    private IProductQualityService productQualityService;
 
     private static final Integer WIZARD_STEP_FIRST = 1;
     private static final Integer WIZARD_STEP_SECOND = 2;
@@ -628,6 +630,7 @@ public class ProductWizardServiceImpl implements IProductWizardService {
         log.info("通用商品保存方法执行完成，商品ID: {}, SPU: {}, 总耗时: {}ms",
                 productId, product.getSpu(), endTime - startTime);
 
+        productQualityService.refreshProductMissingFields(productId);
         return productId;
     }
 
@@ -766,10 +769,13 @@ public class ProductWizardServiceImpl implements IProductWizardService {
                         mediaIdList.add(productVariant.getMediaId());
                     }
                 }
-                List<Media> media = mediaService.listByIds(mediaIdList);
-                mediaService.removeByIds(media);
-                mediaService.deleteMediaFilesFromDisk(media);
-                log.info("删除其他变体成功，商品 ID: {}, 保留变体ID：{}", productId, existList);
+                if (CollectionUtil.isNotEmpty(mediaIdList)) {
+                    List<Media> media = mediaService.listByIds(mediaIdList);
+                    mediaService.removeByIds(media);
+                    mediaService.deleteMediaFilesFromDisk(media);
+                    log.info("删除其他变体成功，商品 ID: {}, 保留变体ID：{}", productId, existList);
+                }
+
             }
         }
 

@@ -49,6 +49,33 @@ export interface Product {
   tagIds?: number[]
   params?: Record<string, unknown>
   mediaList?: Media[]
+  tagCodeList?: string[]
+  mainMediaUrl?: string
+  mediaUrlList?: string[]
+  mediaCount?: number
+  variantCount?: number
+  skuPreview?: string
+  priceMin?: number | null
+  priceMax?: number | null
+  purchasePriceMin?: number | null
+  purchasePriceMax?: number | null
+  profitRateMin?: number | null
+  profitRateMax?: number | null
+  missingFields?: string[]
+  needResync?: boolean
+  latestTaskId?: number
+  latestTaskStatus?: string
+  latestTaskError?: string
+}
+
+export interface ProductWorkbenchSummary {
+  totalCount?: number
+  pendingPushCount?: number
+  syncFailedCount?: number
+  syncingCount?: number
+  syncedCount?: number
+  needResyncCount?: number
+  incompleteCount?: number
 }
 
 export interface ProductOption {
@@ -131,6 +158,7 @@ export interface Media {
   shopifyMediaUrl?: string
   stagedUploadUrl?: string
   nasMediaUrl?: string
+  transcodedMediaUrl?: string
   filename?: string
   alt?: string
   position?: number
@@ -188,6 +216,7 @@ export interface ShopifyStore {
   publishPublicationIds?: string
   publishPublicationNames?: string
   defaultProductStatus?: string
+  requiredProductFields?: string
   availablePublicationIds?: string
   isActive?: string
   isDefault?: string

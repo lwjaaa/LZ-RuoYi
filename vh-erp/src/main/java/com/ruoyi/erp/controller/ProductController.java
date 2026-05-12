@@ -49,6 +49,16 @@ public class ProductController extends BaseController {
     }
 
     /**
+     * 查询商品工作台概览
+     */
+    @PreAuthorize("@ss.hasPermi('erp:product:list')")
+    @GetMapping("/workbench-summary")
+    public AjaxResult workbenchSummary(ProductQuery productQuery) {
+        Product product = ProductQuery.queryToObj(productQuery);
+        return success(productService.getWorkbenchSummary(product));
+    }
+
+    /**
      * 导出erp商品列表
      */
     @PreAuthorize("@ss.hasPermi('erp:product:export')")
@@ -118,6 +128,16 @@ public class ProductController extends BaseController {
                 request.getStoreId()
         );
         return taskId == null ? success() : success(java.util.Map.of("taskId", taskId));
+    }
+
+    /**
+     * 批量发布已同步商品到店铺配置的渠道
+     */
+    @PreAuthorize("@ss.hasPermi('erp:product:push')")
+    @Log(title = "批量发布渠道", businessType = BusinessType.OTHER)
+    @PostMapping("/publish-channels")
+    public AjaxResult publishChannels(@RequestBody ProductPushRequest request) {
+        return success(productService.publishToChannels(request.getProductIds(), request.getStoreId()));
     }
 
     /**

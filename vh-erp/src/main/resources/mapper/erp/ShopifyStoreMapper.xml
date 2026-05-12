@@ -23,6 +23,7 @@
         <result property="publishPublicationIds" column="publish_publication_ids"/>
         <result property="publishPublicationNames" column="publish_publication_names"/>
         <result property="defaultProductStatus" column="default_product_status"/>
+        <result property="requiredProductFields" column="required_product_fields"/>
         <result property="isActive" column="is_active"/>
         <result property="isDefault" column="is_default"/>
         <result property="authMode" column="auth_mode"/>
@@ -43,7 +44,7 @@
                inventory_location_id, inventory_location_name, inventory_tracked,
                default_inventory_quantity, inventory_policy,
                publish_publication_ids, publish_publication_names, default_product_status,
-               is_active, is_default, auth_mode, status, last_sync_time, sync_count,
+               required_product_fields, is_active, is_default, auth_mode, status, last_sync_time, sync_count,
                remark, create_by, create_time, update_by, update_time, del_flag
         FROM erp_shopify_store
         WHERE del_flag = '0'
