@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.erp.mapper.ShopifyTaskDetailMapper">
+
+    <resultMap type="com.ruoyi.erp.model.domain.ShopifyTaskDetail" id="ShopifyTaskDetailResult">
+        <result property="detailId" column="detail_id" />
+        <result property="taskId" column="task_id" />
+        <result property="storeId" column="store_id" />
+        <result property="shopName" column="shop_name" />
+        <result property="productId" column="product_id" />
+        <result property="itemType" column="item_type" />
+        <result property="itemId" column="item_id" />
+        <result property="itemName" column="item_name" />
+        <result property="shopifyId" column="shopify_id" />
+        <result property="step" column="step" />
+        <result property="status" column="status" />
+        <result property="errorCode" column="error_code" />
+        <result property="errorField" column="error_field" />
+        <result property="inputIndex" column="input_index" />
+        <result property="errorMessage" column="error_message" />
+        <result property="createTime" column="create_time" />
+        <result property="updateTime" column="update_time" />
+    </resultMap>
+
+    <sql id="selectShopifyTaskDetailVo">
+        select detail_id, task_id, store_id, shop_name, product_id, item_type, item_id,
+               item_name, shopify_id, step, status, error_code, error_field, input_index,
+               error_message, create_time, update_time
+        from erp_shopify_task_detail
+    </sql>
+
+    <select id="selectShopifyTaskDetailByDetailId" parameterType="Long" resultMap="ShopifyTaskDetailResult">
+        <include refid="selectShopifyTaskDetailVo"/>
+        where detail_id = #{detailId}
+    </select>
+
+    <select id="selectShopifyTaskDetailList" parameterType="com.ruoyi.erp.model.domain.ShopifyTaskDetail" resultMap="ShopifyTaskDetailResult">
+        <include refid="selectShopifyTaskDetailVo"/>
+        <where>
+            <if test="taskId != null"> and task_id = #{taskId}</if>
+            <if test="storeId != null"> and store_id = #{storeId}</if>
+            <if test="productId != null"> and product_id = #{productId}</if>
+            <if test="itemType != null and itemType != ''"> and item_type = #{itemType}</if>
+            <if test="status != null and status != ''"> and status = #{status}</if>
+        </where>
+        order by create_time asc, detail_id asc
+    </select>
+
+    <select id="selectLatestProductDetail" resultMap="ShopifyTaskDetailResult">
+        <include refid="selectShopifyTaskDetailVo"/>
+        where product_id = #{productId}
+          and item_type = 'PRODUCT'
+        <if test="storeId != null">
+          and store_id = #{storeId}
+        </if>
+        order by create_time desc, detail_id desc
+        limit 1
+    </select>
+
+    <select id="selectItemTypeStats" resultType="com.ruoyi.erp.model.vo.shopifyTask.ShopifyTaskDiagnosticStatVo">
+        select item_type as name, count(1) as total
+        from erp_shopify_task_detail
+        where task_id = #{taskId}
+        group by item_type
+        order by total desc, item_type asc
+    </select>
+
+    <select id="selectStatusStats" resultType="com.ruoyi.erp.model.vo.shopifyTask.ShopifyTaskDiagnosticStatVo">
+        select status as name, count(1) as total
+        from erp_shopify_task_detail
+        where task_id = #{taskId}
+        group by status
+        order by total desc, status asc
+    </select>
+
+    <select id="selectFailedStepStats" resultType="com.ruoyi.erp.model.vo.shopifyTask.ShopifyTaskDiagnosticStatVo">
+        select coalesce(nullif(step, ''), 'UNKNOWN') as name, count(1) as total
+        from erp_shopify_task_detail
+        where task_id = #{taskId}
+          and status in ('FAILED', 'PART_SUCCESS')
+        group by coalesce(nullif(step, ''), 'UNKNOWN')
+        order by total desc, name asc
+    </select>
+
+    <select id="selectTopErrors" resultType="com.ruoyi.erp.model.vo.shopifyTask.ShopifyTaskErrorStatVo">
+        select error_code as errorCode,
+               error_field as errorField,
+               coalesce(nullif(error_message, ''), '未知错误') as errorMessage,
+               count(1) as total
+        from erp_shopify_task_detail
+        where task_id = #{taskId}
+          and status in ('FAILED', 'PART_SUCCESS')
+          and (error_code is not null or error_field is not null or error_message is not null)
+        group by error_code, error_field, coalesce(nullif(error_message, ''), '未知错误')
+        order by total desc, max(create_time) desc
+        limit #{limit}
+    </select>
+
+    <select id="selectRecentFailures" resultMap="ShopifyTaskDetailResult">
+        <include refid="selectShopifyTaskDetailVo"/>
+        where task_id = #{taskId}
+          and status in ('FAILED', 'PART_SUCCESS')
+        order by create_time desc, detail_id desc
+        limit #{limit}
+    </select>
+
+    <insert id="insertShopifyTaskDetail" parameterType="com.ruoyi.erp.model.domain.ShopifyTaskDetail">
+        insert into erp_shopify_task_detail
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="detailId != null">detail_id,</if>
+            <if test="taskId != null">task_id,</if>
+            <if test="storeId != null">store_id,</if>
+            <if test="shopName != null and shopName != ''">shop_name,</if>
+            <if test="productId != null">product_id,</if>
+            <if test="itemType != null and itemType != ''">item_type,</if>
+            <if test="itemId != null">item_id,</if>
+            <if test="itemName != null">item_name,</if>
+            <if test="shopifyId != null">shopify_id,</if>
+            <if test="step != null">step,</if>
+            <if test="status != null">status,</if>
+            <if test="errorCode != null">error_code,</if>
+            <if test="errorField != null">error_field,</if>
+            <if test="inputIndex != null">input_index,</if>
+            <if test="errorMessage != null">error_message,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateTime != null">update_time,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="detailId != null">#{detailId},</if>
+            <if test="taskId != null">#{taskId},</if>
+            <if test="storeId != null">#{storeId},</if>
+            <if test="shopName != null and shopName != ''">#{shopName},</if>
+            <if test="productId != null">#{productId},</if>
+            <if test="itemType != null and itemType != ''">#{itemType},</if>
+            <if test="itemId != null">#{itemId},</if>
+            <if test="itemName != null">#{itemName},</if>
+            <if test="shopifyId != null">#{shopifyId},</if>
+            <if test="step != null">#{step},</if>
+            <if test="status != null">#{status},</if>
+            <if test="errorCode != null">#{errorCode},</if>
+            <if test="errorField != null">#{errorField},</if>
+            <if test="inputIndex != null">#{inputIndex},</if>
+            <if test="errorMessage != null">#{errorMessage},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+        </trim>
+    </insert>
+
+    <update id="updateShopifyTaskDetail" parameterType="com.ruoyi.erp.model.domain.ShopifyTaskDetail">
+        update erp_shopify_task_detail
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="shopifyId != null">shopify_id = #{shopifyId},</if>
+            <if test="step != null">step = #{step},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="errorCode != null">error_code = #{errorCode},</if>
+            <if test="errorField != null">error_field = #{errorField},</if>
+            <if test="inputIndex != null">input_index = #{inputIndex},</if>
+            <if test="errorMessage != null">error_message = #{errorMessage},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+        </trim>
+        where detail_id = #{detailId}
+    </update>
+</mapper>

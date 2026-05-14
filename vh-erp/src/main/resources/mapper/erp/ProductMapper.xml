@@ -7,6 +7,9 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     <resultMap type="Product" id="ProductResult">
         <result property="productId"    column="product_id"    />
         <result property="shopifyProductId"    column="shopify_product_id"    />
+        <result property="storeId"    column="store_id"    />
+        <result property="shopifyUpdatedAt"    column="shopify_updated_at"    />
+        <result property="lastShopifyImportTime"    column="last_shopify_import_time"    />
         <result property="productTitle"    column="product_title"    />
         <result property="spu"    column="spu"    />
         <result property="category"    column="category"    />
@@ -45,7 +48,10 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="productName"    column="product_name"    />
         <result property="variantId"    column="variant_id"    />
         <result property="productId"    column="product_id"    />
+        <result property="storeId"    column="store_id"    />
         <result property="shopifyVariantId"    column="shopify_variant_id"    />
+        <result property="shopifyInventoryItemId"    column="shopify_inventory_item_id"    />
+        <result property="lastShopifyImportTime"    column="last_shopify_import_time"    />
         <result property="sku"    column="sku"    />
         <result property="price"    column="price"    />
         <result property="compareAtPrice"    column="compare_at_price"    />
@@ -71,11 +77,12 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     </resultMap>
 
     <sql id="selectProductVo">
-        select product_name, product_id, shopify_product_id, product_title, spu, category, product_type, source_url, purchase_url, option_json, status, body_html, main_media_id, sync_status, sync_message, missing_fields, last_sync_time, version, description, description_cn, size, material, note, note_cn, package_include, create_by, create_time, update_by, update_time, remark, del_flag from erp_product
+        select product_name, product_id, shopify_product_id, store_id, shopify_updated_at, last_shopify_import_time, product_title, spu, category, product_type, source_url, purchase_url, option_json, status, body_html, main_media_id, sync_status, sync_message, missing_fields, last_sync_time, version, description, description_cn, size, material, note, note_cn, package_include, create_by, create_time, update_by, update_time, remark, del_flag from erp_product
     </sql>
 
     <sql id="productFilterConditions">
             <if test="shopifyProductId != null  and shopifyProductId != ''"> and shopify_product_id = #{shopifyProductId}</if>
+            <if test="storeId != null"> and store_id = #{storeId}</if>
             <if test="productTitle != null  and productTitle != ''"> and product_title like concat('%', #{productTitle}, '%')</if>
             <if test="searchKeyword != null and searchKeyword != ''">
                 and (

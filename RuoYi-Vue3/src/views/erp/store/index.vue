@@ -82,11 +82,25 @@
           {{ parseTime(row.lastSyncTime, '{y}-{m}-{d} {h}:{i}') || '-' }}
         </template>
       </el-table-column>
-      <el-table-column label="操作" align="center" width="230" fixed="right">
+      <el-table-column label="操作" align="center" width="220" fixed="right">
         <template #default="{ row }">
-          <el-button link type="primary" icon="Edit" @click="handleUpdate(row)" v-hasPermi="['erp:store:edit']">修改</el-button>
-          <el-button link type="success" icon="Connection" @click="handleTest(row)" v-hasPermi="['erp:store:query']">测试</el-button>
-          <el-button link type="danger" icon="Delete" @click="handleDelete(row)" v-hasPermi="['erp:store:remove']">删除</el-button>
+          <div class="operation-actions">
+            <el-button link type="warning" icon="Operation" @click="handleApiCall(row)" v-hasPermi="['erp:store:edit']">接口</el-button>
+            <el-button link type="primary" icon="Edit" @click="handleUpdate(row)" v-hasPermi="['erp:store:edit']">修改</el-button>
+            <el-dropdown trigger="click" class="operation-more">
+              <el-button link type="primary" class="operation-more-button">更多<el-icon class="el-icon--right"><ArrowDown /></el-icon></el-button>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item icon="Connection" @click="handleTest(row)" v-hasPermi="['erp:store:query']">测试</el-dropdown-item>
+                  <el-dropdown-item icon="Promotion" @click="handlePublishUpdate(row)" v-hasPermi="['erp:store:edit']">自动发布渠道</el-dropdown-item>
+                  <el-dropdown-item icon="Refresh" @click="handleProductImport(row, 'incremental')" v-hasPermi="['erp:store:edit']">增量同步商品</el-dropdown-item>
+                  <el-dropdown-item icon="UploadFilled" @click="handleProductImport(row, 'full')" v-hasPermi="['erp:store:edit']">全量同步商品</el-dropdown-item>
+                  <el-dropdown-item icon="View" @click="handleImportCursor(row)" v-hasPermi="['erp:store:query']">同步游标</el-dropdown-item>
+                  <el-dropdown-item icon="Delete" @click="handleDelete(row)" v-hasPermi="['erp:store:remove']">删除</el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
+          </div>
         </template>
       </el-table-column>
     </el-table>
@@ -209,46 +223,6 @@
           </el-col>
         </el-row>
 
-        <el-divider content-position="left">自动发布渠道</el-divider>
-        <el-row :gutter="16">
-          <el-col :span="12">
-            <el-form-item label="默认商品状态" prop="defaultProductStatus">
-              <el-select v-model="form.defaultProductStatus" style="width: 100%">
-                <el-option label="草稿" value="DRAFT" />
-                <el-option label="在售" value="ACTIVE" />
-              </el-select>
-            </el-form-item>
-          </el-col>
-          <el-col :span="24">
-            <el-form-item label="自动发布渠道">
-              <div class="inline-resource">
-                <el-select
-                  v-model="selectedPublicationIds"
-                  multiple
-                  filterable
-                  allow-create
-                  default-first-option
-                  style="width: 100%"
-                  @change="handlePublicationChange"
-                >
-                  <el-option v-for="item in publicationOptions" :key="item.id" :label="item.name" :value="item.id" />
-                </el-select>
-                <el-button :loading="resourceLoading" @click="loadPublications">拉取</el-button>
-              </div>
-            </el-form-item>
-          </el-col>
-          <el-col :span="24">
-            <el-form-item label="Publication ID">
-              <el-input v-model="form.publishPublicationIds" type="textarea" :rows="2" placeholder="多个 ID 使用英文逗号分隔" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="24">
-            <el-form-item label="渠道名称">
-              <el-input v-model="form.publishPublicationNames" placeholder="多个名称使用英文逗号分隔" />
-            </el-form-item>
-          </el-col>
-        </el-row>
-
         <el-divider content-position="left">商品资料规则</el-divider>
         <el-form-item label="必填字段">
           <el-select
@@ -274,15 +248,136 @@
         </div>
       </template>
     </el-dialog>
+
+    <el-dialog title="自动发布渠道" v-model="publishOpen" width="640px" append-to-body :close-on-click-modal="!saveLoading">
+      <el-form v-loading="saveLoading" :model="form" label-width="120px">
+        <el-form-item label="店铺名称">
+          <el-input v-model="form.storeName" disabled />
+        </el-form-item>
+        <el-form-item label="默认商品状态" prop="defaultProductStatus">
+          <el-select v-model="form.defaultProductStatus" style="width: 100%">
+            <el-option label="草稿" value="DRAFT" />
+            <el-option label="在售" value="ACTIVE" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="自动发布渠道">
+          <div class="inline-resource">
+            <el-select
+              v-model="selectedPublicationIds"
+              multiple
+              filterable
+              allow-create
+              default-first-option
+              style="width: 100%"
+              @change="handlePublicationChange"
+            >
+              <el-option v-for="item in publicationOptions" :key="item.id" :label="item.name" :value="item.id" />
+            </el-select>
+            <el-button :loading="resourceLoading" @click="loadPublications">拉取</el-button>
+          </div>
+        </el-form-item>
+        <el-form-item label="Publication ID">
+          <el-input v-model="form.publishPublicationIds" type="textarea" :rows="2" placeholder="多个 ID 使用英文逗号分隔" />
+        </el-form-item>
+        <el-form-item label="渠道名称">
+          <el-input v-model="form.publishPublicationNames" placeholder="多个名称使用英文逗号分隔" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button type="primary" :loading="saveLoading" @click="submitPublishForm">确定</el-button>
+          <el-button :disabled="saveLoading" @click="cancelPublish">取消</el-button>
+        </div>
+      </template>
+    </el-dialog>
+
+    <el-dialog title="Shopify 接口调用" v-model="apiCallOpen" width="920px" append-to-body :close-on-click-modal="!apiCallLoading">
+      <el-form :model="apiCallForm" label-width="92px">
+        <el-row :gutter="16">
+          <el-col :span="12">
+            <el-form-item label="店铺">
+              <el-input :model-value="apiCallStore?.storeName || ''" disabled />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="Shop Name">
+              <el-input :model-value="apiCallStore?.shopName || ''" disabled />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="Method">
+              <el-radio-group v-model="apiCallForm.method">
+                <el-radio-button label="GET" />
+                <el-radio-button label="POST" />
+                <el-radio-button label="PUT" />
+                <el-radio-button label="DELETE" />
+              </el-radio-group>
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="Mode">
+              <el-radio-group v-model="apiCallForm.mode">
+                <el-radio-button label="GRAPHQL">GraphQL</el-radio-button>
+                <el-radio-button label="JSON">JSON</el-radio-button>
+              </el-radio-group>
+            </el-form-item>
+          </el-col>
+          <el-col :span="24">
+            <el-form-item label="URL">
+              <el-input v-model="apiCallForm.url" />
+            </el-form-item>
+          </el-col>
+          <template v-if="apiCallForm.mode === 'GRAPHQL'">
+            <el-col :span="24">
+              <el-form-item label="Query">
+                <el-input v-model="apiCallForm.query" type="textarea" :rows="8" class="api-call-textarea" />
+              </el-form-item>
+            </el-col>
+            <el-col :span="24">
+              <el-form-item label="Variables">
+                <div class="api-call-editor">
+                  <el-input v-model="apiCallForm.variables" type="textarea" :rows="5" class="api-call-textarea" />
+                  <el-button icon="MagicStick" @click="formatApiCallJson('variables')">格式化</el-button>
+                </div>
+              </el-form-item>
+            </el-col>
+          </template>
+          <template v-else>
+            <el-col :span="24">
+              <el-form-item label="Body">
+                <div class="api-call-editor">
+                  <el-input v-model="apiCallForm.body" type="textarea" :rows="10" class="api-call-textarea" />
+                  <el-button icon="MagicStick" @click="formatApiCallJson('body')">格式化</el-button>
+                </div>
+              </el-form-item>
+            </el-col>
+          </template>
+        </el-row>
+      </el-form>
+      <div v-if="apiCallResult" class="api-response">
+        <div class="api-response-meta">
+          <el-tag :type="apiCallStatusType">{{ apiCallResult.statusCode }}</el-tag>
+          <span>{{ apiCallResult.durationMs ?? 0 }}ms</span>
+          <span>{{ apiCallResult.contentType || '-' }}</span>
+        </div>
+        <pre class="api-response-body">{{ formattedApiCallResponse }}</pre>
+      </div>
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button type="primary" :loading="apiCallLoading" @click="submitApiCall">调用</el-button>
+          <el-button :disabled="apiCallLoading" @click="cancelApiCall">关闭</el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, getCurrentInstance, reactive, ref, toRefs } from 'vue'
-import { addStore, delStore, fetchStoreLocations, fetchStorePublications, getStore, listStore, testStoreConnection, updateStore } from '@/api/erp/store'
+import { addStore, callStoreApi, delStore, fetchStoreLocations, fetchStorePublications, getShopifyProductImportCursor, getStore, importShopifyProductsFull, importShopifyProductsIncremental, listStore, testStoreConnection, updateStore } from '@/api/erp/store'
 import { parseTime } from '@/utils/ruoyi'
 import { defaultRequiredMissingFields, productMissingFieldOptions, splitFieldCodes } from '@/utils/erp/productWorkbench'
-import type { ShopifyResourceOption, ShopifyStore, ShopifyStoreQuery } from '@/types/erp'
+import type { ShopifyApiCallRequest, ShopifyApiCallResponse, ShopifyProductImportCursor, ShopifyResourceOption, ShopifyStore, ShopifyStoreQuery } from '@/types/erp'
 
 const { proxy } = getCurrentInstance() as any
 
@@ -294,13 +389,26 @@ const single = ref(true)
 const multiple = ref(true)
 const total = ref(0)
 const open = ref(false)
+const publishOpen = ref(false)
+const apiCallOpen = ref(false)
 const title = ref('')
 const saveLoading = ref(false)
 const resourceLoading = ref(false)
+const apiCallLoading = ref(false)
 const locationOptions = ref<ShopifyResourceOption[]>([])
 const publicationOptions = ref<ShopifyResourceOption[]>([])
 const selectedPublicationIds = ref<string[]>([])
 const selectedRequiredFields = ref<string[]>([...defaultRequiredMissingFields])
+const apiCallStore = ref<ShopifyStore | null>(null)
+const apiCallResult = ref<ShopifyApiCallResponse | null>(null)
+const apiCallForm = reactive<ShopifyApiCallRequest>({
+  method: 'POST',
+  url: '',
+  mode: 'GRAPHQL',
+  query: '{ shop { name } }',
+  variables: '{}',
+  body: '{}'
+})
 
 const data = reactive({
   queryParams: {
@@ -324,6 +432,32 @@ const data = reactive({
 const { queryParams, form, rules } = toRefs(data)
 
 const currentStoreId = computed(() => form.value.storeId)
+const formattedApiCallResponse = computed(() => {
+  if (!apiCallResult.value) {
+    return ''
+  }
+  const rawBody = apiCallResult.value.rawBody
+  if (rawBody) {
+    return formatJsonForDisplay(rawBody)
+  }
+  if (apiCallResult.value.body === undefined || apiCallResult.value.body === null) {
+    return ''
+  }
+  if (typeof apiCallResult.value.body === 'string') {
+    return formatJsonForDisplay(apiCallResult.value.body)
+  }
+  return JSON.stringify(apiCallResult.value.body, null, 2)
+})
+const apiCallStatusType = computed(() => {
+  const statusCode = apiCallResult.value?.statusCode || 0
+  if (statusCode >= 400) {
+    return 'danger'
+  }
+  if (statusCode >= 300) {
+    return 'warning'
+  }
+  return 'success'
+})
 
 function createDefaultForm(): ShopifyStore {
   return {
@@ -415,6 +549,34 @@ function handleUpdate(row?: ShopifyStore): void {
   })
 }
 
+function handlePublishUpdate(row: ShopifyStore): void {
+  reset()
+  if (!row.storeId) {
+    return
+  }
+  getStore(row.storeId).then((res: any) => {
+    form.value = { ...createDefaultForm(), ...res.data, refreshToken: '' }
+    selectedPublicationIds.value = splitCsv(form.value.publishPublicationIds)
+    seedPublicationOptions()
+    publishOpen.value = true
+  })
+}
+
+function handleApiCall(row: ShopifyStore): void {
+  if (!row.storeId) {
+    return
+  }
+  apiCallStore.value = row
+  apiCallResult.value = null
+  apiCallForm.method = 'POST'
+  apiCallForm.mode = 'GRAPHQL'
+  apiCallForm.url = getDefaultApiCallUrl(row)
+  apiCallForm.query = '{ shop { name } }'
+  apiCallForm.variables = '{}'
+  apiCallForm.body = '{}'
+  apiCallOpen.value = true
+}
+
 function submitForm(): void {
   if (saveLoading.value) {
     return
@@ -439,11 +601,62 @@ function submitForm(): void {
   })
 }
 
+function submitPublishForm(): void {
+  if (saveLoading.value) {
+    return
+  }
+  syncPublicationFields()
+  saveLoading.value = true
+  updateStore(form.value)
+    .then(() => {
+      proxy.$modal.msgSuccess('自动发布渠道修改成功')
+      publishOpen.value = false
+      getList()
+    })
+    .finally(() => {
+      saveLoading.value = false
+  })
+}
+
+function submitApiCall(): void {
+  if (apiCallLoading.value || !apiCallStore.value?.storeId) {
+    return
+  }
+  if (!validateApiCallForm()) {
+    return
+  }
+  apiCallLoading.value = true
+  apiCallResult.value = null
+  callStoreApi(apiCallStore.value.storeId, { ...apiCallForm })
+    .then((res: any) => {
+      apiCallResult.value = res.data
+    })
+    .finally(() => {
+      apiCallLoading.value = false
+    })
+}
+
 function cancel(): void {
   if (saveLoading.value) {
     return
   }
   open.value = false
+  reset()
+}
+
+function cancelApiCall(): void {
+  if (apiCallLoading.value) {
+    return
+  }
+  apiCallOpen.value = false
+  apiCallResult.value = null
+}
+
+function cancelPublish(): void {
+  if (saveLoading.value) {
+    return
+  }
+  publishOpen.value = false
   reset()
 }
 
@@ -470,6 +683,46 @@ function handleTest(row: ShopifyStore): void {
     proxy.$modal.msgSuccess('连接成功')
     getList()
   })
+}
+
+function handleProductImport(row: ShopifyStore, mode: 'full' | 'incremental'): void {
+  if (!row.storeId) {
+    return
+  }
+  const label = mode === 'full' ? '全量同步' : '增量同步'
+  const request = mode === 'full' ? importShopifyProductsFull : importShopifyProductsIncremental
+  proxy.$modal.confirm(`是否确认对店铺「${row.storeName || row.shopName}」发起 Shopify 商品${label}？`)
+    .then(() => request(row.storeId as number))
+    .then((res: any) => {
+      proxy.$modal.msgSuccess(`任务已创建：${res.data}`)
+      getList()
+    })
+    .catch(() => {})
+}
+
+function handleImportCursor(row: ShopifyStore): void {
+  if (!row.storeId) {
+    return
+  }
+  getShopifyProductImportCursor(row.storeId).then((res: any) => {
+    const cursor = res.data as ShopifyProductImportCursor
+    proxy.$modal.alert(formatCursor(cursor), 'Shopify 商品同步游标')
+  })
+}
+
+function formatCursor(cursor?: ShopifyProductImportCursor | null): string {
+  if (!cursor) {
+    return '暂无同步游标'
+  }
+  return [
+    `状态：${cursor.status || '-'}`,
+    `同步模式：${cursor.syncMode || '-'}`,
+    `上次成功 Shopify 更新时间：${parseTime(cursor.lastSuccessUpdatedAt, '{y}-{m}-{d} {h}:{i}:{s}') || '-'}`,
+    `上次成功完成时间：${parseTime(cursor.lastSuccessSyncTime, '{y}-{m}-{d} {h}:{i}:{s}') || '-'}`,
+    `最近任务ID：${cursor.lastTaskId || '-'}`,
+    `最近 Bulk Operation：${cursor.lastBulkOperationId || '-'}`,
+    `错误摘要：${cursor.lastErrorSummary || '-'}`
+  ].join('\n')
 }
 
 function loadLocations(): void {
@@ -552,6 +805,78 @@ function splitCsv(value?: string): string[] {
   return value.split(',').map((item) => item.trim()).filter(Boolean)
 }
 
+function getDefaultApiCallUrl(row: ShopifyStore): string {
+  if (row.baseUrl) {
+    return row.baseUrl
+  }
+  const shopName = (row.shopName || '').replace(/\.myshopify\.com$/i, '')
+  const apiVersion = row.apiVersion || '2026-04'
+  return `https://${shopName}.myshopify.com/admin/api/${apiVersion}/graphql.json`
+}
+
+function validateApiCallForm(): boolean {
+  if (!apiCallForm.url?.trim()) {
+    proxy.$modal.msgError('接口地址不能为空')
+    return false
+  }
+  if (apiCallForm.mode === 'GRAPHQL') {
+    if (!apiCallForm.query?.trim()) {
+      proxy.$modal.msgError('GraphQL 查询不能为空')
+      return false
+    }
+    return validateJsonObjectText(apiCallForm.variables, 'Variables')
+  }
+  return validateJsonText(apiCallForm.body, 'Body')
+}
+
+function validateJsonObjectText(value: string | undefined, label: string): boolean {
+  if (!validateJsonText(value, label)) {
+    return false
+  }
+  if (!value?.trim()) {
+    return true
+  }
+  const parsed = JSON.parse(value)
+  if (!parsed || Array.isArray(parsed) || typeof parsed !== 'object') {
+    proxy.$modal.msgError(`${label} 必须是 JSON 对象`)
+    return false
+  }
+  return true
+}
+
+function validateJsonText(value: string | undefined, label: string): boolean {
+  if (!value?.trim()) {
+    return true
+  }
+  try {
+    JSON.parse(value)
+    return true
+  } catch (_error) {
+    proxy.$modal.msgError(`${label} JSON格式不正确`)
+    return false
+  }
+}
+
+function formatApiCallJson(field: 'variables' | 'body'): void {
+  const value = apiCallForm[field]
+  if (!value?.trim()) {
+    return
+  }
+  try {
+    apiCallForm[field] = JSON.stringify(JSON.parse(value), null, 2)
+  } catch (_error) {
+    proxy.$modal.msgError('JSON格式不正确')
+  }
+}
+
+function formatJsonForDisplay(value: string): string {
+  try {
+    return JSON.stringify(JSON.parse(value), null, 2)
+  } catch (_error) {
+    return value
+  }
+}
+
 function validateLocation(_rule: unknown, value: string, callback: (error?: Error) => void): void {
   if (form.value.inventoryTracked === '1' && !value) {
     callback(new Error('启用库存跟踪时必须配置库存仓库'))
@@ -600,5 +925,72 @@ getList()
   display: flex;
   gap: 8px;
   width: 100%;
+}
+
+.operation-actions {
+  align-items: center;
+  display: inline-flex;
+  gap: 12px;
+  justify-content: center;
+  line-height: 1;
+}
+
+.operation-actions :deep(.el-button) {
+  margin-left: 0;
+}
+
+.operation-more {
+  align-items: center;
+  display: inline-flex;
+}
+
+.operation-more-button {
+  align-items: center;
+  display: inline-flex;
+}
+
+.api-call-editor {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.api-call-editor .el-button {
+  align-self: flex-start;
+}
+
+.api-response {
+  border-top: 1px solid #ebeef5;
+  margin-top: 4px;
+  padding-top: 12px;
+}
+
+.api-response-meta {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.api-response-body {
+  background: #f6f8fa;
+  border: 1px solid #ebeef5;
+  border-radius: 4px;
+  color: #1f2937;
+  font-family: Consolas, 'SFMono-Regular', monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  margin: 0;
+  max-height: 320px;
+  overflow: auto;
+  padding: 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+:deep(.api-call-textarea textarea) {
+  font-family: Consolas, 'SFMono-Regular', monospace;
+  font-size: 12px;
+  line-height: 1.5;
 }
 </style>

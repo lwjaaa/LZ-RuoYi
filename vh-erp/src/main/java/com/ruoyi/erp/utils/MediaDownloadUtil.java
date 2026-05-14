@@ -300,6 +300,7 @@ public class MediaDownloadUtil {
         
         // 设置商品ID
         media.setProductId(product.getProductId());
+        media.setStoreId(product.getStoreId());
         
         media.setNasMediaUrl(MediaFileUtil.generateNasUrl(result.filePath));
 

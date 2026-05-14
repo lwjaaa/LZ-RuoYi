@@ -137,6 +137,9 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, Media> implements
         Long productId = mediaQuery.getProductId();
         queryWrapper.eq(StringUtils.isNotNull(productId), "product_id", productId);
 
+        Long storeId = mediaQuery.getStoreId();
+        queryWrapper.eq(StringUtils.isNotNull(storeId), "store_id", storeId);
+
         String shopifyMediaId = mediaQuery.getShopifyMediaId();
         queryWrapper.eq(StringUtils.isNotEmpty(shopifyMediaId), "shopify_media_id", shopifyMediaId);
 
@@ -271,6 +274,7 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, Media> implements
                 Long mediaId = media.getMediaId();
                 Media editMedia = new Media();
                 BeanUtils.copyBeanProp(editMedia, media);
+                editMedia.setStoreId(product.getStoreId());
 
                 // 设置 position（从 0 开始）
                 editMedia.setPosition(i);
@@ -300,6 +304,7 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, Media> implements
                 } else {
                     // 新增媒体
                     editMedia.setProductId(productId);
+                    editMedia.setStoreId(product.getStoreId());
                     editMedia.setCreateTime(DateUtils.getNowDate());
                     this.save(editMedia);
                     keepMediaIds.add(editMedia.getMediaId());

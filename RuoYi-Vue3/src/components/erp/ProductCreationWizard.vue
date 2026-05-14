@@ -212,7 +212,25 @@
           </el-row>
 
           <el-row :gutter="20">
-            <el-col :span="24">
+            <el-col :span="12">
+              <el-form-item label="店铺" prop="storeId">
+                <el-select
+                  v-model="step1FormData.storeId"
+                  placeholder="请选择店铺"
+                  filterable
+                  :loading="storeLoading"
+                  style="width: 100%"
+                >
+                  <el-option
+                    v-for="store in activeStores"
+                    :key="store.storeId"
+                    :label="store.isDefault === '1' ? `${store.storeName}（默认）` : store.storeName"
+                    :value="store.storeId"
+                  />
+                </el-select>
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
               <el-form-item label="商品名称" prop="productName">
                 <el-input
                   v-model="step1FormData.productName"
@@ -1510,6 +1528,7 @@ import {
   calculateShipping,
 } from "@/api/erp/productWizard";
 import { getProduct } from "@/api/erp/product";
+import { listActiveStores } from "@/api/erp/store";
 import { treeList } from "@/api/erp/tag";
 import { scanMedia } from "@/api/erp/media";
 import { batchGetSuggestions } from "@/api/erp/formSuggestion";
@@ -1538,6 +1557,7 @@ import type {
   ProductVariant,
   TagDictMenu,
   Media,
+  ShopifyStore,
 } from "@/types/erp";
 
 const { proxy } = getCurrentInstance() as any;
@@ -1645,6 +1665,7 @@ const dragOverVariant = ref<ProductVariant | null>(null); // 存储当前拖拽�
 
 interface Step1FormData {
   productId: number | undefined;
+  storeId: number | undefined;
   spu: string;
   productName: string;
   sourceUrl: string;
@@ -1673,12 +1694,16 @@ interface Step2FormData {
 /** 第一步表单数据 */
 const step1FormData = reactive<Step1FormData>({
   productId: undefined,
+  storeId: undefined,
   spu: "",
   productName: "",
   sourceUrl: "",
   purchaseUrl: "",
   tagIds: [],
 });
+
+const activeStores = ref<ShopifyStore[]>([]);
+const storeLoading = ref<boolean>(false);
 
 /** 第二步表单数据 */
 const step2FormData = reactive<Step2FormData>({
@@ -2240,6 +2265,7 @@ const getMenuTag = (tagIds: number[] | number[][]): TagDictMenu[] | null => {
 
 // 第一步校验规则
 const step1Rules: FormRules = {
+  storeId: [{ required: true, message: "请选择店铺", trigger: "change" }],
   spu: [{ required: true, message: "SPU 不能为空", trigger: "blur" }],
   productName: [
     { required: true, message: "商品名称不能为空", trigger: "blur" },
@@ -2580,6 +2606,25 @@ function flattenTagList(tagList: TagDictMenu[]): TagDictMenu[] {
 }
 const currentProductId = ref<number | null>(null);
 const selectedTagIds = ref<number[]>([]);
+
+function getDefaultStoreId(): number | undefined {
+  const defaultStore = activeStores.value.find((store) => store.isDefault === "1") || activeStores.value[0];
+  return defaultStore?.storeId;
+}
+
+async function loadActiveStores(): Promise<void> {
+  storeLoading.value = true;
+  try {
+    const response = await listActiveStores();
+    activeStores.value = response.data || [];
+    const defaultStoreId = getDefaultStoreId();
+    if (!step1FormData.storeId && defaultStoreId) {
+      step1FormData.storeId = defaultStoreId;
+    }
+  } finally {
+    storeLoading.value = false;
+  }
+}
 // 打开编辑页面
 const open = async (
   outsizeTagIds: number[] | null,
@@ -2588,6 +2633,7 @@ const open = async (
 ): Promise<void> => {
   currentProductId.value = productId;
   selectedTagIds.value = outsizeTagIds || [];
+  await loadActiveStores();
 
   // 重置第一步表单并加载数据
   await resetAndLoadData(step);
@@ -2712,6 +2758,7 @@ const handleLoadStep1Data = async (): Promise<void> => {
   // 填充第一步表单
   Object.assign(step1FormData, {
     productId: productData.productId,
+    storeId: productData.storeId,
     spu: productData.spu,
     productName: productData.productName,
     sourceUrl: productData.sourceUrl,
@@ -2764,6 +2811,7 @@ function buildStep1ComparableData() {
   return {
     step1FormData: {
       productId: step1FormData.productId,
+      storeId: step1FormData.storeId,
       spu: step1FormData.spu,
       productName: step1FormData.productName,
       sourceUrl: step1FormData.sourceUrl,
@@ -2905,6 +2953,7 @@ function resetForm(step) {
     // 重置第一步表单数据
     Object.assign(step1FormData, {
       productId: null,
+      storeId: getDefaultStoreId(),
       spu: "",
       productName: "",
       category: "",

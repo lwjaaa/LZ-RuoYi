@@ -1,18 +1,27 @@
 package com.ruoyi.erp.executor;
 
-import com.ruoyi.erp.config.ShopifyGraphQLClient;
-import com.ruoyi.erp.exception.ShopifyApiException;
+import com.ruoyi.erp.shopify.client.ShopifyGraphQLClient;
+import com.ruoyi.erp.shopify.enums.*;
+import com.ruoyi.erp.constant.ProductConstants;
+import com.ruoyi.erp.shopify.exception.ShopifyApiException;
+import com.ruoyi.erp.shopify.exception.ShopifyUserError;
+import com.ruoyi.erp.shopify.model.ProductCreateResult;
+import com.ruoyi.erp.shopify.model.StagedUploadResult;
 import com.ruoyi.erp.mapper.ProductMapper;
 import com.ruoyi.erp.mapper.ShopifyStoreMapper;
 import com.ruoyi.erp.model.domain.Media;
 import com.ruoyi.erp.model.domain.Product;
 import com.ruoyi.erp.model.domain.ProductVariant;
 import com.ruoyi.erp.model.domain.ShopifyStore;
+import com.ruoyi.erp.model.domain.ShopifyTask;
+import com.ruoyi.erp.model.domain.ShopifyTaskDetail;
+import com.ruoyi.erp.model.vo.media.PreparedMediaUpload;
 import com.ruoyi.erp.service.IMediaService;
 import com.ruoyi.erp.service.IMediaTranscodeService;
 import com.ruoyi.erp.service.IProductTagRelService;
 import com.ruoyi.erp.service.IProductVariantService;
-import com.ruoyi.erp.model.vo.media.PreparedMediaUpload;
+import com.ruoyi.erp.service.IShopifyTaskDetailService;
+import com.ruoyi.erp.service.IShopifyTaskService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -29,11 +38,11 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentCaptor.forClass;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentCaptor.forClass;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockingDetails;
 import static org.mockito.Mockito.never;
@@ -50,6 +59,8 @@ class ShopifySyncExecutorTest {
     private IMediaService mediaService;
     private IMediaTranscodeService mediaTranscodeService;
     private IProductVariantService productVariantService;
+    private IShopifyTaskService shopifyTaskService;
+    private IShopifyTaskDetailService shopifyTaskDetailService;
     private ProductMapper productMapper;
     private List<String> variantBulkResult;
     private ShopifySyncExecutor executor;
@@ -66,12 +77,15 @@ class ShopifySyncExecutorTest {
         mediaService = mock(IMediaService.class);
         mediaTranscodeService = mock(IMediaTranscodeService.class);
         productVariantService = mock(IProductVariantService.class);
+        shopifyTaskService = mock(IShopifyTaskService.class);
+        shopifyTaskDetailService = mock(IShopifyTaskDetailService.class);
         productMapper = mock(ProductMapper.class);
         IProductTagRelService productTagRelService = mock(IProductTagRelService.class);
         ShopifyStoreMapper shopifyStoreMapper = mock(ShopifyStoreMapper.class);
 
         ShopifyStore store = new ShopifyStore();
         store.setStoreId(1L);
+        store.setShopName("demo-shop");
         store.setInventoryTracked("0");
         when(shopifyStoreMapper.selectById(1L)).thenReturn(store);
 
@@ -83,6 +97,8 @@ class ShopifySyncExecutorTest {
         ReflectionTestUtils.setField(executor, "mediaTranscodeService", mediaTranscodeService);
         ReflectionTestUtils.setField(executor, "productMapper", productMapper);
         ReflectionTestUtils.setField(executor, "productTagRelService", productTagRelService);
+        ReflectionTestUtils.setField(executor, "shopifyTaskService", shopifyTaskService);
+        ReflectionTestUtils.setField(executor, "shopifyTaskDetailService", shopifyTaskDetailService);
     }
 
     @Test
@@ -92,8 +108,9 @@ class ShopifySyncExecutorTest {
         when(productVariantService.updateProductVariant(any())).thenReturn(1);
 
         StringBuilder result = new StringBuilder();
-        invokeSyncVariants(List.of(first, second), result, null);
+        boolean failed = invokeSyncVariants(List.of(first, second), result, null);
 
+        assertTrue(!failed);
         ArgumentCaptor<ProductVariant> captor = forClass(ProductVariant.class);
         verify(productVariantService, times(2)).updateProductVariant(captor.capture());
 
@@ -106,16 +123,16 @@ class ShopifySyncExecutorTest {
     }
 
     @Test
-    void syncVariantsThrowsWhenShopifyReturnsFewerIds() throws Exception {
+    void syncVariantsReportsFailureWhenShopifyReturnsFewerIds() throws Exception {
         ProductVariant first = buildVariant(101L);
         ProductVariant second = buildVariant(102L);
         variantBulkResult = List.of("gid://shopify/ProductVariant/1001");
 
         StringBuilder result = new StringBuilder();
-        ShopifyApiException exception = assertThrows(ShopifyApiException.class,
-                () -> invokeSyncVariants(List.of(first, second), result, null));
+        boolean failed = invokeSyncVariants(List.of(first, second), result, null);
 
-        assertTrue(exception.getMessage().contains("Shopify 返回的变体 ID 数量"));
+        assertTrue(failed);
+        assertTrue(result.toString().contains("Shopify 返回的变体 ID 数量"));
         verify(productVariantService, never()).updateProductVariant(any());
     }
 
@@ -124,7 +141,7 @@ class ShopifySyncExecutorTest {
         Product product = buildProduct(null);
         when(productMapper.selectById(10L)).thenReturn(product);
         when(shopifyGraphQLClient.createProduct(eq(1L), any(), any()))
-                .thenReturn(new ShopifyGraphQLClient.ProductCreateResult("gid://shopify/Product/2001", List.of()));
+                .thenReturn(new ProductCreateResult("gid://shopify/Product/2001", List.of()));
         when(productVariantService.selectListByProductId(10L)).thenReturn(List.of(buildVariant(101L), buildVariant(102L)));
         when(productVariantService.updateProductVariant(any())).thenReturn(1);
 
@@ -140,7 +157,7 @@ class ShopifySyncExecutorTest {
         Product product = buildProduct("gid://shopify/Product/2001");
         when(productMapper.selectById(10L)).thenReturn(product);
         when(shopifyGraphQLClient.updateProduct(eq(1L), eq("gid://shopify/Product/2001"), any(), any()))
-                .thenReturn(new ShopifyGraphQLClient.ProductCreateResult("gid://shopify/Product/2001", List.of()));
+                .thenReturn(new ProductCreateResult("gid://shopify/Product/2001", List.of()));
         when(productVariantService.selectListByProductId(10L)).thenReturn(List.of(buildVariant(101L), buildVariant(102L)));
         when(productVariantService.updateProductVariant(any())).thenReturn(1);
 
@@ -157,7 +174,7 @@ class ShopifySyncExecutorTest {
         when(productMapper.selectById(10L)).thenReturn(product);
         when(productVariantService.selectListByProductId(10L)).thenReturn(List.of());
         when(shopifyGraphQLClient.createProduct(eq(1L), any(), any()))
-                .thenReturn(new ShopifyGraphQLClient.ProductCreateResult("gid://shopify/Product/2001", List.of()));
+                .thenReturn(new ProductCreateResult("gid://shopify/Product/2001", List.of()));
 
         Media image = buildMedia(301L, "image.jpg", "IMAGE");
         Media video = buildMedia(302L, "video.mp4", "VIDEO");
@@ -182,7 +199,7 @@ class ShopifySyncExecutorTest {
                 .transcoded(false)
                 .build());
         when(shopifyGraphQLClient.stagedUploadMedia(eq(1L), any(), any(), any(), any(), any(Long.class)))
-                .thenReturn(new ShopifyGraphQLClient.StagedUploadResult("https://upload", "https://resource"));
+                .thenReturn(new StagedUploadResult("https://upload", "https://resource"));
 
         executor.syncProduct(1L, 10L, 1, 1);
 
@@ -196,6 +213,56 @@ class ShopifySyncExecutorTest {
         List<Media> mediaUpdates = mediaUpdateCaptor.getAllValues();
         assertTrue(mediaUpdates.stream().allMatch(update -> update.getNasMediaUrl() == null));
         assertTrue(mediaUpdates.stream().allMatch(update -> update.getFilename() == null));
+    }
+
+    @Test
+    void executeMarksProductPartialAndRecordsVariantUserErrorWhenVariantCreationFails() {
+        ShopifyTask task = new ShopifyTask();
+        task.setTaskId(900L);
+        task.setStoreId(1L);
+        task.setShopName("demo-shop");
+        task.setTotalCount(1);
+        when(shopifyTaskService.selectShopifyTaskByTaskId(900L)).thenReturn(task);
+
+        Product product = buildProduct(null);
+        when(productMapper.selectById(10L)).thenReturn(product);
+        when(mediaService.listByProductId(10L)).thenReturn(List.of());
+        when(shopifyGraphQLClient.createProduct(eq(1L), any(), any()))
+                .thenReturn(new ProductCreateResult("gid://shopify/Product/2001", List.of()));
+        when(productVariantService.selectListByProductId(10L)).thenReturn(List.of(buildVariant(101L), buildVariant(102L)));
+        when(shopifyGraphQLClient.createVariantsBulk(eq(1L), eq("gid://shopify/Product/2001"), any(), eq("REMOVE_STANDALONE_VARIANT")))
+                .thenThrow(new ShopifyApiException(
+                        "variants.1.optionValues.0.name: Option value does not exist",
+                        List.of(new ShopifyUserError("variants.1.optionValues.0.name", "Option value does not exist", "INVALID", 1))));
+
+        executor.execute(900L, List.of(10L));
+
+        ArgumentCaptor<Product> productCaptor = forClass(Product.class);
+        verify(productMapper, atLeastOnce()).updateById(productCaptor.capture());
+        Product statusUpdate = productCaptor.getAllValues().stream()
+                .filter(update -> ProductConstants.SYNC_STATUS_PART_SUCCESS.equals(update.getSyncStatus()))
+                .findFirst()
+                .orElseThrow();
+        assertEquals(10L, statusUpdate.getProductId());
+
+        ArgumentCaptor<ShopifyTask> taskCaptor = forClass(ShopifyTask.class);
+        verify(shopifyTaskService, atLeastOnce()).updateShopifyTask(taskCaptor.capture());
+        ShopifyTask finalTask = taskCaptor.getAllValues().get(taskCaptor.getAllValues().size() - 1);
+        assertEquals(ShopifyTaskStatus.PART_SUCCESS.getCode(), finalTask.getTaskStatus());
+        assertEquals(1, finalTask.getPartialCount());
+        assertEquals(0, finalTask.getFailedCount());
+
+        ArgumentCaptor<ShopifyTaskDetail> detailCaptor = forClass(ShopifyTaskDetail.class);
+        verify(shopifyTaskDetailService, atLeastOnce()).save(detailCaptor.capture());
+        ShopifyTaskDetail failedVariantDetail = detailCaptor.getAllValues().stream()
+                .filter(detail -> ShopifyTaskDetailItemType.VARIANT.getCode().equals(detail.getItemType()))
+                .filter(detail -> ShopifyTaskDetailStatus.FAILED.getCode().equals(detail.getStatus()))
+                .findFirst()
+                .orElseThrow();
+        assertEquals(102L, failedVariantDetail.getItemId());
+        assertEquals("variants.1.optionValues.0.name", failedVariantDetail.getErrorField());
+        assertEquals("INVALID", failedVariantDetail.getErrorCode());
+        assertEquals("Option value does not exist", failedVariantDetail.getErrorMessage());
     }
 
     private Product buildProduct(String shopifyProductId) {
@@ -233,12 +300,12 @@ class ShopifySyncExecutorTest {
         return variant;
     }
 
-    private void invokeSyncVariants(List<ProductVariant> variants, StringBuilder result, String variantCreateStrategy) throws Exception {
+    private boolean invokeSyncVariants(List<ProductVariant> variants, StringBuilder result, String variantCreateStrategy) throws Exception {
         Method method = ShopifySyncExecutor.class.getDeclaredMethod(
                 "syncVariants", Long.class, String.class, List.class, StringBuilder.class, String.class);
         method.setAccessible(true);
         try {
-            method.invoke(executor, 1L, "gid://shopify/Product/2001", variants, result, variantCreateStrategy);
+            return (boolean) method.invoke(executor, 1L, "gid://shopify/Product/2001", variants, result, variantCreateStrategy);
         } catch (InvocationTargetException e) {
             if (e.getCause() instanceof Exception exception) {
                 throw exception;

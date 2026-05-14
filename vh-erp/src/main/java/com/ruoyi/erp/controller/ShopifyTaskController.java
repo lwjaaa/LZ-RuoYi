@@ -19,10 +19,14 @@ import com.ruoyi.common.core.controller.BaseController;
 import com.ruoyi.common.core.domain.AjaxResult;
 import com.ruoyi.common.enums.BusinessType;
 import com.ruoyi.erp.model.domain.ShopifyTask;
+import com.ruoyi.erp.model.domain.ShopifyTaskDetail;
+import com.ruoyi.erp.model.dto.shopifyTask.ShopifyTaskDetailQuery;
 import com.ruoyi.erp.model.vo.shopifyTask.ShopifyTaskVo;
+import com.ruoyi.erp.model.vo.shopifyTask.ShopifyTaskDetailVo;
 import com.ruoyi.erp.model.dto.shopifyTask.ShopifyTaskQuery;
 import com.ruoyi.erp.model.dto.shopifyTask.ShopifyTaskInsert;
 import com.ruoyi.erp.model.dto.shopifyTask.ShopifyTaskEdit;
+import com.ruoyi.erp.service.IShopifyTaskDetailService;
 import com.ruoyi.erp.service.IShopifyTaskService;
 import com.ruoyi.common.utils.poi.ExcelUtil;
 import com.ruoyi.common.core.page.TableDataInfo;
@@ -39,6 +43,8 @@ public class ShopifyTaskController extends BaseController
 {
     @Resource
     private IShopifyTaskService shopifyTaskService;
+    @Resource
+    private IShopifyTaskDetailService shopifyTaskDetailService;
 
     /**
      * 查询Shopify 任务配置列表
@@ -79,6 +85,33 @@ public class ShopifyTaskController extends BaseController
     {
         ShopifyTask shopifyTask = shopifyTaskService.selectShopifyTaskByTaskId(taskId);
         return success(ShopifyTaskVo.objToVo(shopifyTask));
+    }
+
+    /**
+     * 获取 Shopify 同步任务诊断汇总
+     */
+    @PreAuthorize("@ss.hasPermi('erp:task:query')")
+    @GetMapping(value = "/{taskId}/diagnostics")
+    public AjaxResult diagnostics(@PathVariable("taskId") Long taskId)
+    {
+        return success(shopifyTaskDetailService.selectTaskDiagnostics(taskId));
+    }
+
+    /**
+     * 查询 Shopify 同步任务明细
+     */
+    @PreAuthorize("@ss.hasPermi('erp:task:query')")
+    @GetMapping(value = "/{taskId}/details")
+    public TableDataInfo details(@PathVariable("taskId") Long taskId, ShopifyTaskDetailQuery query)
+    {
+        query.setTaskId(taskId);
+        ShopifyTaskDetail detail = ShopifyTaskDetailQuery.queryToObj(query);
+        startPage();
+        List<ShopifyTaskDetail> list = shopifyTaskDetailService.selectShopifyTaskDetailList(detail);
+        List<ShopifyTaskDetailVo> listVo = list.stream().map(ShopifyTaskDetailVo::objToVo).collect(Collectors.toList());
+        TableDataInfo table = getDataTable(list);
+        table.setRows(listVo);
+        return table;
     }
 
     /**

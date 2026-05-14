@@ -1,12 +1,11 @@
 package com.ruoyi.erp.service.impl;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.ruoyi.common.exception.ServiceException;
 import com.ruoyi.common.utils.DateUtils;
 import com.ruoyi.common.utils.StringUtils;
-import com.ruoyi.erp.config.ShopifyGraphQLClient;
-import com.ruoyi.erp.constant.ShopifyTaskContants;
+import com.ruoyi.erp.shopify.client.ShopifyGraphQLClient;
+import com.ruoyi.erp.shopify.enums.*;
 import com.ruoyi.erp.executor.ShopifySyncExecutor;
 import com.ruoyi.erp.mapper.ProductMapper;
 import com.ruoyi.erp.model.domain.*;
@@ -15,6 +14,8 @@ import com.ruoyi.erp.model.vo.media.MediaVo;
 import com.ruoyi.erp.model.vo.product.ProductVo;
 import com.ruoyi.erp.model.vo.product.ProductWorkbenchSummaryVo;
 import com.ruoyi.erp.service.*;
+import com.ruoyi.erp.shopify.model.PublicationInput;
+import com.ruoyi.erp.shopify.model.PublicationResult;
 import com.ruoyi.erp.util.ProductListMetrics;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -25,7 +26,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * erp商品Service业务层处理
+ * erp商品Service业务层处理。
  *
  * @author lwj
  * @date 2026-03-26
@@ -44,6 +45,8 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
     private IMediaService mediaService;
     @Resource
     private IShopifyTaskService shopifyTaskService;
+    @Resource
+    private IShopifyTaskDetailService shopifyTaskDetailService;
     @Resource
     private ShopifySyncExecutor shopifySyncExecutor;
     @Resource
@@ -92,27 +95,11 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
         if (productId == null) {
             return null;
         }
-        LambdaQueryWrapper<ShopifyTask> wrapper = new LambdaQueryWrapper<ShopifyTask>()
-                .eq(ShopifyTask::getBusinessType, ShopifyTaskContants.TASK_BUSINESS_TYPE_PRODUCT)
-                .like(ShopifyTask::getBusinessIds, String.valueOf(productId))
-                .orderByDesc(ShopifyTask::getCreateTime)
-                .last("limit 20");
-        if (storeId != null) {
-            wrapper.eq(ShopifyTask::getStoreId, storeId);
+        ShopifyTaskDetail detail = shopifyTaskDetailService.selectLatestProductDetail(productId, storeId);
+        if (detail == null || detail.getTaskId() == null) {
+            return null;
         }
-        return shopifyTaskService.list(wrapper).stream()
-                .filter(task -> businessIdsContain(task.getBusinessIds(), productId))
-                .findFirst()
-                .orElse(null);
-    }
-
-    private boolean businessIdsContain(String businessIds, Long productId) {
-        if (StringUtils.isEmpty(businessIds) || productId == null) {
-            return false;
-        }
-        return Arrays.stream(businessIds.split(","))
-                .map(String::trim)
-                .anyMatch(id -> String.valueOf(productId).equals(id));
+        return shopifyTaskService.selectShopifyTaskByTaskId(detail.getTaskId());
     }
 
     /**
@@ -168,7 +155,7 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
     @Override
     public String importProductData(List<Product> productList, Boolean isUpdateSupport, String operName) {
         if (StringUtils.isEmpty(productList)) {
-            throw new ServiceException("导入erp商品数据不能为空！");
+            throw new ServiceException("导入erp商品数据不能为空");
         }
         int successNum = 0;
         int failureNum = 0;
@@ -229,20 +216,18 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
         }
 
         // 创建 ShopifyTask
-        ShopifyStore store = resolvePublishStore(storeId);
+        ShopifyStore store = resolvePublishStoreForProducts(productIds, storeId);
 
         ShopifyTask task = new ShopifyTask();
         task.setStoreId(store.getStoreId());
         task.setShopName(store.getShopName());
-        task.setTaskName("批量推送商品-" + DateUtils.getNowDate());
-        task.setTaskGroup(ShopifyTaskContants.TASK_GROUP_PRODUCT);
-        task.setTaskType(ShopifyTaskContants.TASK_TYPE_PRODUCT_SYNC_BATCH);
-        task.setBusinessType(ShopifyTaskContants.TASK_BUSINESS_TYPE_PRODUCT);
-        task.setBusinessIds(String.join(",", productIds.stream().map(String::valueOf).toList()));
-        task.setTaskStatus(ShopifyTaskContants.TASK_STATUS_PENDING);
+        task.setTaskName("批量推送商品" + DateUtils.getNowDate());
+        task.setTaskType(ShopifyTaskType.PRODUCT_SYNC_BATCH.getCode());
+        task.setTaskStatus(ShopifyTaskStatus.PENDING.getCode());
         task.setProgress(0);
         task.setTotalCount(productIds.size());
         task.setSuccessCount(0);
+        task.setPartialCount(0);
         task.setFailedCount(0);
         task.setCreateTime(new Date());
         shopifyTaskService.insertShopifyTask(task);
@@ -271,24 +256,22 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
             return null;
         }
 
-        ShopifyStore store = resolvePublishStore(storeId);
+        ShopifyStore store = resolvePublishStoreForProducts(productIdList, storeId);
 
         // 创建 ShopifyTask
         ShopifyTask task = new ShopifyTask();
-        task.setTaskName("批量推送商品-" + DateUtils.getNowDate());
+        task.setTaskName("批量推送商品" + DateUtils.getNowDate());
         task.setStoreId(store.getStoreId());
         task.setShopName(store.getShopName());
-        task.setTaskGroup("0");
-        task.setTaskType("PRODUCT_CREATE_BATCH");
-        task.setBusinessType("PRODUCT");
-        task.setBusinessIds(String.join(",", productIdList.stream().map(String::valueOf).toList()));
-        task.setTaskStatus("PENDING");
+        task.setTaskType(ShopifyTaskType.PRODUCT_SYNC_BATCH.getCode());
+        task.setTaskStatus(ShopifyTaskStatus.PENDING.getCode());
         task.setProgress(0);
         task.setTotalCount(productIdList.size());
         task.setSuccessCount(0);
+        task.setPartialCount(0);
         task.setFailedCount(0);
         task.setCreateTime(new Date());
-        shopifyTaskService.save(task);
+        shopifyTaskService.insertShopifyTask(task);
 
         // 异步执行
         shopifySyncExecutor.execute(task.getTaskId(), productIdList);
@@ -310,8 +293,8 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
             throw new ServiceException("请选择需要发布的商品");
         }
 
-        ShopifyStore store = resolvePublishStore(storeId);
-        List<ShopifyGraphQLClient.PublicationInput> publications = buildPublicationInputs(store.getPublishPublicationIds());
+        ShopifyStore store = resolvePublishStoreForProducts(Arrays.asList(productIds), storeId);
+        List<PublicationInput> publications = buildPublicationInputs(store.getPublishPublicationIds());
         if (publications.isEmpty()) {
             throw new ServiceException("当前店铺未配置发布渠道，请先在店铺配置中维护 Publication ID");
         }
@@ -331,7 +314,7 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
                 continue;
             }
             try {
-                List<ShopifyGraphQLClient.PublicationResult> result = shopifyGraphQLClient.publishProduct(
+                List<PublicationResult> result = shopifyGraphQLClient.publishProduct(
                         store.getStoreId(),
                         product.getShopifyProductId(),
                         publications
@@ -360,14 +343,14 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
         return result;
     }
 
-    private List<ShopifyGraphQLClient.PublicationInput> buildPublicationInputs(String publicationIds) {
+    private List<PublicationInput> buildPublicationInputs(String publicationIds) {
         if (StringUtils.isEmpty(publicationIds)) {
             return Collections.emptyList();
         }
         return Arrays.stream(publicationIds.split(","))
                 .map(String::trim)
                 .filter(StringUtils::isNotEmpty)
-                .map(publicationId -> ShopifyGraphQLClient.PublicationInput.builder()
+                .map(publicationId -> PublicationInput.builder()
                         .publicationId(publicationId)
                         .build())
                 .toList();
@@ -384,6 +367,43 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
             throw new ServiceException("店铺已禁用");
         }
         return store;
+    }
+
+    private ShopifyStore resolvePublishStoreForProducts(List<Long> productIds, Long requestedStoreId) {
+        if (productIds == null || productIds.isEmpty()) {
+            return resolvePublishStore(requestedStoreId);
+        }
+
+        List<Long> distinctProductIds = productIds.stream()
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        if (distinctProductIds.isEmpty()) {
+            throw new ServiceException("请选择需要推送的商品");
+        }
+
+        List<Product> products = this.listByIds(distinctProductIds);
+        if (products.size() != distinctProductIds.size()) {
+            throw new ServiceException("部分商品不存在，无法创建 Shopify 推送任务");
+        }
+
+        if (products.stream().anyMatch(product -> product.getStoreId() == null)) {
+            throw new ServiceException("商品未绑定店铺，无法推送到 Shopify");
+        }
+
+        List<Long> storeIds = products.stream()
+                .map(Product::getStoreId)
+                .distinct()
+                .toList();
+        if (storeIds.size() != 1) {
+            throw new ServiceException("请选择同一店铺下的商品进行 Shopify 推送");
+        }
+
+        Long productStoreId = storeIds.get(0);
+        if (requestedStoreId != null && !Objects.equals(requestedStoreId, productStoreId)) {
+            throw new ServiceException("所选商品所属店铺与目标店铺不一致");
+        }
+        return resolvePublishStore(productStoreId);
     }
 
 

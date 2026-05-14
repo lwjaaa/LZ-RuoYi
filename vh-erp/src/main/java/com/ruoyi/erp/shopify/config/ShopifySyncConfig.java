@@ -1,4 +1,4 @@
-package com.ruoyi.erp.config;
+package com.ruoyi.erp.shopify.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -7,7 +7,7 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import java.util.concurrent.ThreadPoolExecutor;
 
 /**
- * Shopify 同步异步执行器配置
+ * Shopify 同步异步执行器配置。
  */
 @Configuration
 public class ShopifySyncConfig {

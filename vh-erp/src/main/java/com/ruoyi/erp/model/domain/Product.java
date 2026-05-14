@@ -37,6 +37,18 @@ public class Product implements Serializable
     @Excel(name = "Shopify平台商品ID (唯一映射)")
     private String shopifyProductId;
 
+    /** 所属 Shopify 店铺 ID */
+    @Excel(name = "所属店铺ID")
+    private Long storeId;
+
+    /** Shopify 远端商品更新时间 */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private Date shopifyUpdatedAt;
+
+    /** 最近一次 Shopify 反向导入成功时间 */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private Date lastShopifyImportTime;
+
     /** 商品标题 */
     @Excel(name = "商品标题")
     private String productTitle;
@@ -164,10 +176,6 @@ public class Product implements Serializable
     /** 资料完整度快捷分组：incomplete */
     @TableField(exist = false)
     private String qualityState;
-
-    /** 当前目标店铺，仅用于店铺上下文和最新任务查询 */
-    @TableField(exist = false)
-    private Long storeId;
 
     /** 更新人筛选 */
     @TableField(exist = false)

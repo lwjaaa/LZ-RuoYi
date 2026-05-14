@@ -20,6 +20,9 @@ public class MediaVo implements Serializable
     /** 关联商品ID */
     private Long productId;
 
+    /** 所属 Shopify 店铺 ID */
+    private Long storeId;
+
     /** Shopify媒体ID */
     private String shopifyMediaId;
 
@@ -55,6 +58,9 @@ public class MediaVo implements Serializable
 
     /** 媒体类型:VIDEO/IMAGE/MODEL_3D/EXTERNAL_VIDEO */
     private String mediaContentType;
+
+    /** 最近一次 Shopify 反向导入成功时间 */
+    private Date lastShopifyImportTime;
 
 
      /**

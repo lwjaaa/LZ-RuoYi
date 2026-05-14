@@ -43,6 +43,18 @@ test("failed sync status has higher priority than need-resync", () => {
   assert.equal(state.primaryAction, "修复");
 });
 
+test("partial sync status points users to task details", () => {
+  const state = productWorkbench.getProductSyncState({
+    syncStatus: "4",
+    latestTaskStatus: "PART_SUCCESS",
+    latestTaskError: "variant failed",
+  });
+
+  assert.equal(state.key, "partial");
+  assert.equal(state.primaryAction, "查看明细");
+  assert.equal(state.description, "variant failed");
+});
+
 test("synced products with newer local edits are marked for resync", () => {
   const state = productWorkbench.getProductSyncState({
     syncStatus: "1",

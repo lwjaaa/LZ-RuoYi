@@ -23,6 +23,9 @@ public class ProductVariantQuery implements Serializable
     /** 关联商品主表ID */
     private Long productId;
 
+    /** 所属 Shopify 店铺 ID */
+    private Long storeId;
+
     /** Shopify平台变体ID */
     private String shopifyVariantId;
 

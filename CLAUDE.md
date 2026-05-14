@@ -90,8 +90,6 @@ Execute SQL scripts in order:
 1. `sql/20240629_init1.sql` - Base system tables
 2. `sql/20240629_init2.sql` - System data
 3. `sql/20260324_erp.sql` - ERP module tables
-4. `sql/20260324_erp_menu.sql` - ERP menu data
-5. `sql/20260427_form_suggestion.sql` - Form suggestion tables
 5. `sql/20260427_form_suggestion.sql` - Form suggestion tables
 
 Database name: `lz-ruoyi` (configurable in `application-dev.yml`)

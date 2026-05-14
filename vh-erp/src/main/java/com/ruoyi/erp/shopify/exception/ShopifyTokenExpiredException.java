@@ -1,4 +1,4 @@
-package com.ruoyi.erp.exception;
+package com.ruoyi.erp.shopify.exception;
 
 /**
  * Shopify Token 过期异常

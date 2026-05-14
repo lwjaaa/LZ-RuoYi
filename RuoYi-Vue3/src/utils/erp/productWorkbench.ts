@@ -1,4 +1,4 @@
-export type ProductSyncStateKey = "pending" | "running" | "synced" | "need_resync" | "failed";
+export type ProductSyncStateKey = "pending" | "running" | "synced" | "need_resync" | "failed" | "partial";
 
 export interface ProductSyncInput {
   syncStatus?: string | null;
@@ -58,7 +58,18 @@ export function getProductSyncState(product: ProductSyncInput): ProductSyncState
   const latestTaskStatus = (product.latestTaskStatus || "").toUpperCase();
   const hasShopifyId = Boolean(product.shopifyProductId);
 
-  if (syncStatus === "2" || latestTaskStatus === "FAILED" || latestTaskStatus === "PART_SUCCESS") {
+  if (syncStatus === "4" || latestTaskStatus === "PART_SUCCESS") {
+    return {
+      key: "partial",
+      label: "部分成功",
+      tagType: "warning",
+      className: "is-partial",
+      primaryAction: "查看明细",
+      description: product.latestTaskError || product.syncMessage || "商品已同步，但部分变体或媒体失败，需要查看任务明细",
+    };
+  }
+
+  if (syncStatus === "2" || latestTaskStatus === "FAILED") {
     return {
       key: "failed",
       label: "同步失败",

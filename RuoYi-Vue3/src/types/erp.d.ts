@@ -16,6 +16,9 @@ export interface PageQuery {
 export interface Product {
   productId: number
   shopifyProductId?: string
+  storeId?: number
+  shopifyUpdatedAt?: string | Date | null
+  lastShopifyImportTime?: string | Date | null
   productTitle: string
   productName?: string
   spu: string
@@ -95,7 +98,10 @@ export interface ProductOptionValue {
 export interface ProductVariant {
   variantId: number
   productId: number
+  storeId?: number
   shopifyVariantId?: string
+  shopifyInventoryItemId?: string
+  lastShopifyImportTime?: string | Date | null
   sku: string
   price: number | null
   compareAtPrice?: number | null
@@ -154,6 +160,7 @@ export interface TagDictMenu {
 export interface Media {
   mediaId: number
   productId?: number
+  storeId?: number
   shopifyMediaId?: string
   shopifyMediaUrl?: string
   stagedUploadUrl?: string
@@ -163,6 +170,7 @@ export interface Media {
   alt?: string
   position?: number
   mediaContentType?: string
+  lastShopifyImportTime?: string | Date | null
   createTime?: Date
   updateTime?: Date
 }
@@ -172,26 +180,62 @@ export interface Task {
   storeId?: number
   shopName?: string
   taskName?: string
-  taskGroup?: string
   taskType?: string
-  businessType?: string
-  businessIds?: string
   taskStatus?: string
   progress?: number
   errorMessage?: string
-  resultData?: string
   executionTime?: number
   startTime?: Date
   endTime?: Date
   totalCount?: number
   successCount?: number
+  partialCount?: number
   failedCount?: number
   createBy?: string
   createTime?: Date
   updateBy?: string
   updateTime?: Date
-  remark?: string
   params?: Record<string, unknown>
+}
+
+export interface ShopifyTaskDetail {
+  detailId: number
+  taskId: number
+  storeId?: number
+  shopName?: string
+  productId?: number
+  itemType?: 'PRODUCT' | 'VARIANT' | 'MEDIA' | string
+  itemId?: number
+  itemName?: string
+  shopifyId?: string
+  step?: string
+  status?: 'SUCCESS' | 'FAILED' | 'PART_SUCCESS' | 'SKIPPED' | string
+  errorCode?: string
+  errorField?: string
+  inputIndex?: number
+  errorMessage?: string
+  createTime?: string | Date
+}
+
+export interface ShopifyTaskDiagnosticStat {
+  name?: string
+  total?: number
+}
+
+export interface ShopifyTaskErrorStat {
+  errorCode?: string
+  errorField?: string
+  errorMessage?: string
+  total?: number
+}
+
+export interface ShopifyTaskDiagnostics {
+  taskId: number
+  itemTypeStats?: ShopifyTaskDiagnosticStat[]
+  statusStats?: ShopifyTaskDiagnosticStat[]
+  failedStepStats?: ShopifyTaskDiagnosticStat[]
+  topErrors?: ShopifyTaskErrorStat[]
+  recentFailures?: ShopifyTaskDetail[]
 }
 
 export interface ShopifyStore {
@@ -245,6 +289,37 @@ export interface ShopifyResourceOption {
   name: string
 }
 
+export interface ShopifyApiCallRequest {
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE'
+  url: string
+  mode: 'GRAPHQL' | 'JSON'
+  query?: string
+  variables?: string
+  body?: string
+}
+
+export interface ShopifyApiCallResponse {
+  statusCode?: number
+  contentType?: string
+  body?: unknown
+  rawBody?: string
+  durationMs?: number
+}
+
+export interface ShopifyProductImportCursor {
+  cursorId?: number
+  storeId?: number
+  syncMode?: string
+  status?: string
+  lastSuccessUpdatedAt?: string | Date | null
+  lastSuccessSyncTime?: string | Date | null
+  lastBulkOperationId?: string
+  lastTaskId?: number
+  lastErrorSummary?: string
+  createTime?: string | Date
+  updateTime?: string | Date
+}
+
 export interface ProductTag {
   relId: number
   productId: number
@@ -264,6 +339,7 @@ export interface ExchangeRate {
 }
 
 export interface SelectionInfoData {
+  storeId?: number
   tagIds?: number[]
   spu?: string
   sourceUrl?: string
@@ -273,6 +349,7 @@ export interface SelectionInfoData {
 
 export interface BaseInfoData {
   productId: number | undefined;
+  storeId?: number;
   spu: string;
   productTitle: string;
   category: string;

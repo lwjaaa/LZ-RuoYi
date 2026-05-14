@@ -5,6 +5,7 @@ import com.ruoyi.erp.model.domain.Product;
 import com.ruoyi.erp.model.domain.ProductVariant;
 import com.ruoyi.erp.model.domain.ShopifyTask;
 import com.ruoyi.erp.model.vo.product.ProductVo;
+import com.ruoyi.erp.shopify.enums.ShopifyTaskStatus;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -37,7 +38,7 @@ class ProductListMetricsTest {
         Media detailMedia = media(11L, "/profile/chair/detail.jpg");
         ShopifyTask task = new ShopifyTask();
         task.setTaskId(300L);
-        task.setTaskStatus("FAILED");
+        task.setTaskStatus(ShopifyTaskStatus.FAILED.getCode());
         task.setErrorMessage("media upload failed");
 
         ProductVo vo = ProductVo.objToVo(product);
@@ -55,7 +56,7 @@ class ProductListMetricsTest {
         assertEquals(new BigDecimal("0.31"), vo.getProfitRateMax());
         assertTrue(vo.getNeedResync());
         assertEquals(300L, vo.getLatestTaskId());
-        assertEquals("FAILED", vo.getLatestTaskStatus());
+        assertEquals(ShopifyTaskStatus.FAILED.getCode(), vo.getLatestTaskStatus());
         assertEquals("media upload failed", vo.getLatestTaskError());
     }
 

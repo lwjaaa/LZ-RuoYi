@@ -7,7 +7,10 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     <resultMap type="ProductVariant" id="ProductVariantResult">
         <result property="variantId"    column="variant_id"    />
         <result property="productId"    column="product_id"    />
+        <result property="storeId"    column="store_id"    />
         <result property="shopifyVariantId"    column="shopify_variant_id"    />
+        <result property="shopifyInventoryItemId"    column="shopify_inventory_item_id"    />
+        <result property="lastShopifyImportTime"    column="last_shopify_import_time"    />
         <result property="sku"    column="sku"    />
         <result property="price"    column="price"    />
         <result property="compareAtPrice"    column="compare_at_price"    />
@@ -33,13 +36,14 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     </resultMap>
 
     <sql id="selectProductVariantVo">
-        select variant_id, product_id, shopify_variant_id, sku, price, compare_at_price, purchase_price, purchase_url, option_values, media_id, position, pk_width, pk_height, pk_length, material_weight, pk_weight, freight, is_actual_shipment, unit_cost_price, create_by, create_time, update_by, update_time, remark, del_flag from erp_product_variant
+        select variant_id, product_id, store_id, shopify_variant_id, shopify_inventory_item_id, last_shopify_import_time, sku, price, compare_at_price, purchase_price, purchase_url, option_values, media_id, position, pk_width, pk_height, pk_length, material_weight, pk_weight, freight, is_actual_shipment, unit_cost_price, create_by, create_time, update_by, update_time, remark, del_flag from erp_product_variant
     </sql>
 
     <select id="selectProductVariantList" parameterType="ProductVariant" resultMap="ProductVariantResult">
         <include refid="selectProductVariantVo"/>
         <where>  
             <if test="productId != null "> and product_id = #{productId}</if>
+            <if test="storeId != null "> and store_id = #{storeId}</if>
             <if test="shopifyVariantId != null  and shopifyVariantId != ''"> and shopify_variant_id = #{shopifyVariantId}</if>
             <if test="sku != null  and sku != ''"> and sku = #{sku}</if>
             <if test="price != null "> and price = #{price}</if>
@@ -58,7 +62,10 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         insert into erp_product_variant
         <trim prefix="(" suffix=")" suffixOverrides=",">
             <if test="productId != null">product_id,</if>
+            <if test="storeId != null">store_id,</if>
             <if test="shopifyVariantId != null">shopify_variant_id,</if>
+            <if test="shopifyInventoryItemId != null">shopify_inventory_item_id,</if>
+            <if test="lastShopifyImportTime != null">last_shopify_import_time,</if>
             <if test="sku != null">sku,</if>
             <if test="price != null">price,</if>
             <if test="compareAtPrice != null">compare_at_price,</if>
@@ -84,7 +91,10 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
          </trim>
         <trim prefix="values (" suffix=")" suffixOverrides=",">
             <if test="productId != null">#{productId},</if>
+            <if test="storeId != null">#{storeId},</if>
             <if test="shopifyVariantId != null">#{shopifyVariantId},</if>
+            <if test="shopifyInventoryItemId != null">#{shopifyInventoryItemId},</if>
+            <if test="lastShopifyImportTime != null">#{lastShopifyImportTime},</if>
             <if test="sku != null">#{sku},</if>
             <if test="price != null">#{price},</if>
             <if test="compareAtPrice != null">#{compareAtPrice},</if>
@@ -114,7 +124,10 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         update erp_product_variant
         <trim prefix="SET" suffixOverrides=",">
             <if test="productId != null">product_id = #{productId},</if>
+            <if test="storeId != null">store_id = #{storeId},</if>
             <if test="shopifyVariantId != null">shopify_variant_id = #{shopifyVariantId},</if>
+            <if test="shopifyInventoryItemId != null">shopify_inventory_item_id = #{shopifyInventoryItemId},</if>
+            <if test="lastShopifyImportTime != null">last_shopify_import_time = #{lastShopifyImportTime},</if>
             <if test="sku != null">sku = #{sku},</if>
             <if test="price != null">price = #{price},</if>
             <if test="compareAtPrice != null">compare_at_price = #{compareAtPrice},</if>

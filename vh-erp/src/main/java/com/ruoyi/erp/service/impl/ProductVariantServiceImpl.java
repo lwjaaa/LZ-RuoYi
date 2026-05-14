@@ -134,6 +134,9 @@ public class ProductVariantServiceImpl extends ServiceImpl<ProductVariantMapper,
         Long productId = productVariantQuery.getProductId();
         queryWrapper.eq( StringUtils.isNotNull(productId),"product_id",productId);
 
+        Long storeId = productVariantQuery.getStoreId();
+        queryWrapper.eq(StringUtils.isNotNull(storeId), "store_id", storeId);
+
         String shopifyVariantId = productVariantQuery.getShopifyVariantId();
         queryWrapper.eq(StringUtils.isNotEmpty(shopifyVariantId) ,"shopify_variant_id",shopifyVariantId);
 

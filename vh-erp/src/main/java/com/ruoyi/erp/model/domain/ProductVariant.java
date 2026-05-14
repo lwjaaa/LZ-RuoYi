@@ -34,9 +34,19 @@ public class ProductVariant implements Serializable
     @Excel(name = "关联商品主表ID")
     private Long productId;
 
+    /** 所属 Shopify 店铺 ID */
+    @Excel(name = "所属店铺ID")
+    private Long storeId;
+
     /** Shopify平台变体ID */
     @Excel(name = "Shopify平台变体ID")
     private String shopifyVariantId;
+
+    /** Shopify InventoryItem ID */
+    private String shopifyInventoryItemId;
+
+    /** 最近一次 Shopify 反向导入成功时间 */
+    private Date lastShopifyImportTime;
 
     /** SKU */
     @Excel(name = "SKU")

@@ -103,6 +103,10 @@ public class ProductWizardServiceImpl implements IProductWizardService {
         } else {
             // 第一步的校验
             if (WIZARD_STEP_FIRST.equals(step)) {
+                if(product.getStoreId()==null){
+                    // 只有编辑商品的第一步的时候需要选择店铺，插件导入不需要传入店铺ID
+                    throw new ServiceException("请选择商品所属店铺");
+                }
                 if (CollectionUtils.isEmpty(product.getTagIds())) {
                     throw new ServiceException("请选择标签");
                 }
@@ -539,6 +543,9 @@ public class ProductWizardServiceImpl implements IProductWizardService {
         if (!isInsert && oldProduct == null) {
             throw new ServiceException("商品不存在");
         }
+        if (!isInsert) {
+            product.setStoreId(oldProduct.getStoreId());
+        }
         String oldKeyword = isInsert ? null : oldProduct.getKeyWord();
         boolean keywordChanged = false;
 
@@ -728,6 +735,7 @@ public class ProductWizardServiceImpl implements IProductWizardService {
             if (variantId != null) {
                 // 更新操作
                 existList.add(variantId);
+                variant.setStoreId(product.getStoreId());
                 variant.setUpdateBy(currentUsername);
                 variant.setUpdateTime(now);
             } else {
@@ -742,6 +750,7 @@ public class ProductWizardServiceImpl implements IProductWizardService {
                     log.debug("为变体生成 SKU: {}, 变体索引: {}", sku, i);
                 }
                 variant.setProductId(productId);
+                variant.setStoreId(product.getStoreId());
                 variant.setCreateBy(currentUsername);
                 variant.setCreateTime(now);
             }

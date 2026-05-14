@@ -179,24 +179,14 @@
               <div class="subline">
                 <span class="spu-inline">
                   SPU：{{ row.spu || "-" }}
-                  <el-tooltip v-if="row.spu" content="复制 SPU" placement="top">
-                    <el-button
-                      class="copy-icon-btn"
-                      link
-                      type="primary"
-                      icon="CopyDocument"
-                      aria-label="复制 SPU"
-                      @click.stop="copyText(row.spu)"
-                    />
-                  </el-tooltip>
                 </span>
                 <span>{{ row.category || "未分类" }}</span>
                 <span>{{ row.productType || "未设类型" }}</span>
                 <span class="muted">{{ row.mediaCount || 0 }} 张图</span>
               </div>
               <div v-if="row.tagCodeList?.length" class="tag-row">
-                <el-tag v-for="tag in (row.tagCodeList || []).slice(0, 2)" :key="tag" size="small" effect="plain">{{ tag }}</el-tag>
-                <span v-if="(row.tagCodeList || []).length > 2" class="muted">+{{ (row.tagCodeList || []).length - 2 }} 标签</span>
+                <el-tag v-for="tag in (row.tagCodeList || []).slice(0, 3)" :key="tag" size="small" effect="plain">{{ tag }}</el-tag>
+                <span v-if="(row.tagCodeList || []).length > 3" class="muted">+{{ (row.tagCodeList || []).length - 3 }} 标签</span>
               </div>
             </div>
           </div>
@@ -779,7 +769,7 @@ function getSyncAlertType(row: Product): "success" | "warning" | "error" | "info
   const key = getSyncState(row).key;
   if (key === "failed") return "error";
   if (key === "synced") return "success";
-  if (key === "need_resync" || key === "running") return "warning";
+  if (key === "need_resync" || key === "running" || key === "partial") return "warning";
   return "info";
 }
 
@@ -1502,6 +1492,10 @@ defineExpose({
 
 :deep(.el-table__row.is-failed) {
   --el-table-tr-bg-color: #fff8f7;
+}
+
+:deep(.el-table__row.is-partial) {
+  --el-table-tr-bg-color: #fffaf0;
 }
 
 :deep(.el-table__row.is-resync) {

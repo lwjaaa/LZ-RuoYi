@@ -7,6 +7,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     <resultMap type="com.ruoyi.erp.model.domain.Media" id="MediaResult">
         <result property="mediaId"    column="media_id"    />
         <result property="productId"    column="product_id"    />
+        <result property="storeId"    column="store_id"    />
         <result property="shopifyMediaId"    column="shopify_media_id"    />
         <result property="shopifyMediaUrl"    column="shopify_media_url"    />
         <result property="stagedUploadUrl"    column="staged_upload_url"    />
@@ -19,15 +20,16 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="alt"    column="alt"    />
         <result property="position"    column="position"    />
         <result property="mediaContentType"    column="media_content_type"    />
+        <result property="lastShopifyImportTime"    column="last_shopify_import_time"    />
         <result property="createTime"    column="create_time"    />
         <result property="updateTime"    column="update_time"    />
         <result property="delFlag"    column="del_flag"    />
     </resultMap>
 
     <sql id="selectMediaVo">
-        select media_id, product_id, shopify_media_id, shopify_media_url, staged_upload_url, nas_media_url,
+        select media_id, product_id, store_id, shopify_media_id, shopify_media_url, staged_upload_url, nas_media_url,
                transcoded_media_url, transcode_source_hash, transcode_profile, transcode_time,
-               filename, media_content_type, alt, position, create_time, update_time, del_flag
+               filename, media_content_type, alt, position, last_shopify_import_time, create_time, update_time, del_flag
         from erp_media
     </sql>
 
@@ -35,6 +37,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <include refid="selectMediaVo"/>
         <where>  
             <if test="productId != null "> and product_id = #{productId}</if>
+            <if test="storeId != null "> and store_id = #{storeId}</if>
             <if test="shopifyMediaId != null  and shopifyMediaId != ''"> and shopify_media_id = #{shopifyMediaId}</if>
             <if test="filename != null  and filename != ''"> and filename like concat('%', #{filename}, '%')</if>
             <if test="alt != null  and alt != ''"> and alt like concat('%', #{alt}, '%')</if>
@@ -50,6 +53,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         insert into erp_media
         <trim prefix="(" suffix=")" suffixOverrides=",">
             <if test="productId != null">product_id,</if>
+            <if test="storeId != null">store_id,</if>
             <if test="shopifyMediaId != null">shopify_media_id,</if>
             <if test="shopifyMediaUrl != null">shopify_media_url,</if>
             <if test="stagedUploadUrl != null">staged_upload_url,</if>
@@ -62,12 +66,14 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="mediaContentType != null">media_content_type,</if>
             <if test="alt != null">alt,</if>
             <if test="position != null">position,</if>
+            <if test="lastShopifyImportTime != null">last_shopify_import_time,</if>
             <if test="createTime != null">create_time,</if>
             <if test="updateTime != null">update_time,</if>
             <if test="delFlag != null">del_flag,</if>
          </trim>
         <trim prefix="values (" suffix=")" suffixOverrides=",">
             <if test="productId != null">#{productId},</if>
+            <if test="storeId != null">#{storeId},</if>
             <if test="shopifyMediaId != null">#{shopifyMediaId},</if>
             <if test="shopifyMediaUrl != null">#{shopifyMediaUrl},</if>
             <if test="stagedUploadUrl != null">#{stagedUploadUrl},</if>
@@ -80,6 +86,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="mediaContentType != null">#{mediaContentType},</if>
             <if test="alt != null">#{alt},</if>
             <if test="position != null">#{position},</if>
+            <if test="lastShopifyImportTime != null">#{lastShopifyImportTime},</if>
             <if test="createTime != null">#{createTime},</if>
             <if test="updateTime != null">#{updateTime},</if>
             <if test="delFlag != null">#{delFlag},</if>
@@ -90,6 +97,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         update erp_media
         <trim prefix="SET" suffixOverrides=",">
             <if test="productId != null">product_id = #{productId},</if>
+            <if test="storeId != null">store_id = #{storeId},</if>
             <if test="shopifyMediaId != null">shopify_media_id = #{shopifyMediaId},</if>
             <if test="shopifyMediaUrl != null">shopify_media_url = #{shopifyMediaUrl},</if>
             <if test="stagedUploadUrl != null">staged_upload_url = #{stagedUploadUrl},</if>
@@ -102,6 +110,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="mediaContentType != null">media_content_type = #{mediaContentType},</if>
             <if test="alt != null">alt = #{alt},</if>
             <if test="position != null">position = #{position},</if>
+            <if test="lastShopifyImportTime != null">last_shopify_import_time = #{lastShopifyImportTime},</if>
             <if test="createTime != null">create_time = #{createTime},</if>
             <if test="updateTime != null">update_time = #{updateTime},</if>
             <if test="delFlag != null">del_flag = #{delFlag},</if>

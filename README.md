@@ -121,7 +121,6 @@ LZ-RuoYi/
 │ ├── 20240629_init1.sql # 初始化脚本 1
 │ ├── 20240629_init2.sql # 初始化脚本 2
 │ ├── 20260324_erp.sql # ERP 模块表结构
-│ └── 20260324_erp_menu.sql # ERP 模块菜单数据
 ├── doc/ # 项目文档
 └── pom.xml # Maven 父 POM
 ```
@@ -138,21 +137,6 @@ LZ-RuoYi/
 - **Redis**: 5.0+
 - **Node.js**: 18+
 - **npm/yarn**: 最新稳定版
-
-### 数据库初始化
-
-1. 创建数据库 `ry-vue`（或自定义名称）
-2. 按顺序执行 SQL 脚本：
-
-```text
-bash
-进入 sql 目录
-cd sql
-执行初始化脚本
-mysql -u root -p ry-vue < 20240629_init1.sql mysql -u root -p ry-vue < 20240629_init2.sql
-执行 ERP 模块脚本
-mysql -u root -p ry-vue < 20260324_erp.sql mysql -u root -p ry-vue < 20260324_erp_menu.sql
-```
 
 ### 后端启动
 

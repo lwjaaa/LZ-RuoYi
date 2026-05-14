@@ -2,7 +2,9 @@ package com.ruoyi.erp.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.ruoyi.erp.model.domain.ShopifyStore;
+import com.ruoyi.erp.model.dto.shopifyStore.ShopifyApiCallRequest;
 import com.ruoyi.erp.model.dto.shopifyStore.ShopifyStoreQuery;
+import com.ruoyi.erp.model.vo.shopifyStore.ShopifyApiCallResponseVo;
 import com.ruoyi.erp.model.vo.shopifyStore.ShopifyResourceOptionVo;
 import com.ruoyi.erp.model.vo.shopifyStore.ShopifyStoreVo;
 
@@ -98,4 +100,9 @@ public interface IShopifyStoreService extends IService<ShopifyStore> {
      * 拉取店铺发布渠道
      */
     List<ShopifyResourceOptionVo> fetchPublications(Long storeId);
+
+    /**
+     * 调用当前店铺 Shopify Admin API
+     */
+    ShopifyApiCallResponseVo callAdminApi(Long storeId, ShopifyApiCallRequest request);
 }

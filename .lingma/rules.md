@@ -385,7 +385,6 @@ const { product_status, product_type } = useDict('product_status', 'product_type
 ### 4. SQL 文件管理
 - 初始化脚本放在 `sql/` 目录
 - 按日期命名: `20260324_erp.sql`
-- 菜单数据单独文件: `20260324_erp_menu.sql`
 
 ## 代码生成器使用
 
@@ -479,7 +478,6 @@ console.table(list) // 表格形式展示数组
 mysql -u root -p < sql/20240629_init1.sql
 mysql -u root -p < sql/20240629_init2.sql
 mysql -u root -p < sql/20260324_erp.sql
-mysql -u root -p < sql/20260324_erp_menu.sql
 
 # 2. 修改配置文件
 # ruoyi-admin/src/main/resources/application.yml

@@ -1,605 +1,716 @@
 <template>
-  <div class="app-container">
-    <el-form :model="queryParams" ref="queryForm" size="small" :inline="true" v-show="showSearch" label-width="68px">
-      <el-form-item label="任务名称" prop="taskName">
-        <el-input
-          v-model="queryParams.taskName"
-          placeholder="请输入任务名称"
-          clearable
-          @keyup.enter.native="handleQuery"
-        />
-      </el-form-item>
-      <el-form-item label="任务分组" prop="taskGroup">
-        <el-input
-          v-model="queryParams.taskGroup"
-          placeholder="请输入任务分组"
-          clearable
-          @keyup.enter.native="handleQuery"
-        />
-      </el-form-item>
-      <el-form-item label="任务类型" prop="taskType">
-        <el-select v-model="queryParams.taskType" placeholder="请选择任务类型" clearable>
-          <el-option
-            v-for="dict in dict.type.erp_task_type"
-            :key="dict.value"
-            :label="dict.label"
-            :value="dict.value"
-          />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="关联业务类型" prop="businessType">
-        <el-select v-model="queryParams.businessType" placeholder="请选择关联业务类型" clearable>
-          <el-option
-            v-for="dict in dict.type.erp_task_business_type"
-            :key="dict.value"
-            :label="dict.label"
-            :value="dict.value"
-          />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="任务状态" prop="taskStatus">
-        <el-select v-model="queryParams.taskStatus" placeholder="请选择任务状态" clearable>
-          <el-option
-            v-for="dict in dict.type.erp_task_status"
-            :key="dict.value"
-            :label="dict.label"
-            :value="dict.value"
-          />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="开始执行时间">
-        <el-date-picker
-          v-model="daterangeStartTime"
-          style="width: 240px"
-          value-format="yyyy-MM-dd"
-          type="daterange"
-          range-separator="-"
-          start-placeholder="开始日期"
-          end-placeholder="结束日期"
-        ></el-date-picker>
-      </el-form-item>
-      <el-form-item label="父任务 ID" prop="parentTaskId">
-        <el-input
-          v-model="queryParams.parentTaskId"
-          placeholder="请输入父任务 ID"
-          clearable
-          @keyup.enter.native="handleQuery"
-        />
-      </el-form-item>
-      <el-form-item label="根任务 ID" prop="rootTaskId">
-        <el-input
-          v-model="queryParams.rootTaskId"
-          placeholder="请输入根任务 ID"
-          clearable
-          @keyup.enter.native="handleQuery"
-        />
-      </el-form-item>
-      <el-form-item>
-        <el-button type="primary" icon="el-icon-search" size="mini" @click="handleQuery">搜索</el-button>
-        <el-button icon="el-icon-refresh" size="mini" @click="resetQuery">重置</el-button>
-      </el-form-item>
-    </el-form>
-
-    <el-row :gutter="10" class="mb8">
-      <el-col :span="1.5">
-        <el-button
-          type="primary"
-          plain
-          icon="el-icon-plus"
-          size="mini"
-          @click="handleAdd"
-          v-hasPermi="['erp:task:add']"
-        >新增</el-button>
-      </el-col>
-      <el-col :span="1.5">
-        <el-button
-          type="success"
-          plain
-          icon="el-icon-edit"
-          size="mini"
-          :disabled="single"
-          @click="handleUpdate"
-          v-hasPermi="['erp:task:edit']"
-        >修改</el-button>
-      </el-col>
-      <el-col :span="1.5">
-        <el-button
-          type="danger"
-          plain
-          icon="el-icon-delete"
-          size="mini"
-          :disabled="multiple"
-          @click="handleDelete"
-          v-hasPermi="['erp:task:remove']"
-        >删除</el-button>
-      </el-col>
-      <el-col :span="1.5">
-        <el-button
-          type="info"
-          plain
-          icon="el-icon-upload2"
-          size="mini"
-          @click="handleImport"
-          v-hasPermi="['erp:task:import']"
-        >导入</el-button>
-      </el-col>
-      <el-col :span="1.5">
-        <el-button
-          type="warning"
-          plain
-          icon="el-icon-download"
-          size="mini"
-          @click="handleExport"
-          v-hasPermi="['erp:task:export']"
-        >导出</el-button>
-      </el-col>
-      <right-toolbar :showSearch.sync="showSearch" @queryTable="getList" :columns="columns"></right-toolbar>
-    </el-row>
-
-    <el-table v-loading="loading" :data="taskList" @selection-change="handleSelectionChange">
-      <el-table-column type="selection" width="55" align="center" />
-      <el-table-column label="任务主键" align="center" v-if="columns[0].visible" prop="taskId" />
-        <el-table-column label="任务名称" :show-overflow-tooltip="true" align="center" v-if="columns[1].visible" prop="taskName" />
-        <el-table-column label="任务分组" align="center" v-if="columns[2].visible" prop="taskGroup">
-        <template slot-scope="scope">
-          <dict-tag :options="dict.type.erp_task_group" :value="scope.row.taskGroup"/>
-        </template>
-      </el-table-column>
-        <el-table-column label="任务类型" align="center" v-if="columns[3].visible" prop="taskType">
-        <template slot-scope="scope">
-          <dict-tag :options="dict.type.erp_task_type" :value="scope.row.taskType"/>
-        </template>
-      </el-table-column>
-        <el-table-column label="关联业务类型" align="center" v-if="columns[4].visible" prop="businessType">
-        <template slot-scope="scope">
-          <dict-tag :options="dict.type.erp_task_business_type" :value="scope.row.businessType"/>
-        </template>
-      </el-table-column>
-        <el-table-column label="关联业务 ID 集合" :show-overflow-tooltip="true" align="center" v-if="columns[5].visible" prop="businessIds" />
-        <el-table-column label="请求地址" :show-overflow-tooltip="true" align="center" v-if="columns[6].visible" prop="requestPath" />
-        <el-table-column label="请求参数" :show-overflow-tooltip="true" align="center" v-if="columns[7].visible" prop="requestParams" />
-        <el-table-column label="任务状态" align="center" v-if="columns[8].visible" prop="taskStatus">
-        <template slot-scope="scope">
-          <dict-tag :options="dict.type.erp_task_status" :value="scope.row.taskStatus"/>
-        </template>
-      </el-table-column>
-        <el-table-column label="执行进度" :show-overflow-tooltip="true" align="center" v-if="columns[9].visible" prop="progress">
-        <template slot-scope="scope">
-          <el-progress :percentage="scope.row.progress || 0" :color="getProgressColor(scope.row.taskStatus)" />
-        </template>
-      </el-table-column>
-        <el-table-column label="统计" align="center" width="120" v-if="columns[18].visible">
-        <template slot-scope="scope">
-          <span class="task-stats">
-            <span class="success">{{ scope.row.successCount || 0 }}</span> /
-            <span class="total">{{ scope.row.totalCount || 0 }}</span> /
-            <span class="failed">{{ scope.row.failedCount || 0 }}</span>
-          </span>
-        </template>
-      </el-table-column>
-        <el-table-column label="错误信息" :show-overflow-tooltip="true" align="center" v-if="columns[10].visible" prop="errorMessage" />
-        <el-table-column label="执行结果数据" :show-overflow-tooltip="true" align="center" v-if="columns[11].visible" prop="resultData" />
-        <el-table-column label="执行耗时" :show-overflow-tooltip="true" align="center" v-if="columns[12].visible" prop="executionTime" />
-        <el-table-column label="开始执行时间" align="center" v-if="columns[13].visible" prop="startTime" width="180">
-        <template slot-scope="scope">
-          <span>{{ parseTime(scope.row.startTime, '{y}-{m}-{d}') }}</span>
-        </template>
-      </el-table-column>
-        <el-table-column label="结束时间" align="center" v-if="columns[14].visible" prop="endTime" width="180">
-        <template slot-scope="scope">
-          <span>{{ parseTime(scope.row.endTime, '{y}-{m}-{d}') }}</span>
-        </template>
-      </el-table-column>
-        <el-table-column label="父任务 ID" :show-overflow-tooltip="true" align="center" v-if="columns[15].visible" prop="parentTaskId" />
-        <el-table-column label="根任务 ID" :show-overflow-tooltip="true" align="center" v-if="columns[16].visible" prop="rootTaskId" />
-        <el-table-column label="备注" :show-overflow-tooltip="true" align="center" v-if="columns[17].visible" prop="remark" />
-        <el-table-column label="操作" align="center" class-name="small-padding fixed-width">
-        <template slot-scope="scope">
-          <el-button
-            size="mini"
-            type="text"
-            icon="el-icon-edit"
-            @click="handleUpdate(scope.row)"
-            v-hasPermi="['erp:task:edit']"
-          >修改</el-button>
-          <el-button
-            size="mini"
-            type="text"
-            icon="el-icon-delete"
-            @click="handleDelete(scope.row)"
-            v-hasPermi="['erp:task:remove']"
-          >删除</el-button>
-        </template>
-      </el-table-column>
-    </el-table>
-
-    <pagination
-      v-show="total>0"
-      :total="total"
-      :page.sync="queryParams.pageNum"
-      :limit.sync="queryParams.pageSize"
-      @pagination="getList"
-    />
-
-    <!-- 添加或修改Shopify 任务配置对话框 -->
-    <el-dialog :title="title" :visible.sync="open" width="500px" append-to-body>
-      <el-form ref="form" :model="form" :rules="rules" label-width="80px">
+  <div class="app-container task-console">
+    <header class="task-console-header">
+      <el-form
+        ref="queryRef"
+        :model="queryParams"
+        :inline="true"
+        v-show="showSearch"
+        label-width="76px"
+        class="console-filter"
+      >
         <el-form-item label="任务名称" prop="taskName">
-          <el-input v-model="form.taskName" placeholder="请输入任务名称" />
+          <el-input v-model="queryParams.taskName" placeholder="任务名称" clearable class="w-180" @keyup.enter="handleQuery" />
         </el-form-item>
-        <el-form-item label="任务分组" prop="taskGroup">
-          <el-input v-model="form.taskGroup" placeholder="请输入任务分组" />
+        <el-form-item label="店铺" prop="shopName">
+          <el-input v-model="queryParams.shopName" placeholder="Shop Name" clearable class="w-160" @keyup.enter="handleQuery" />
         </el-form-item>
-        <el-form-item label="任务类型" prop="taskType">
-          <el-select v-model="form.taskType" placeholder="请选择任务类型">
-            <el-option
-              v-for="dict in dict.type.erp_task_type"
-              :key="dict.value"
-              :label="dict.label"
-              :value="dict.value"
-            ></el-option>
+        <el-form-item label="类型" prop="taskType">
+          <el-select v-model="queryParams.taskType" placeholder="全部类型" clearable class="w-170" @change="handleQuery">
+            <el-option v-for="item in taskTypeOptions" :key="item.value" :label="item.label" :value="item.value" />
           </el-select>
         </el-form-item>
-        <el-form-item label="关联业务类型" prop="businessType">
-          <el-select v-model="form.businessType" placeholder="请选择关联业务类型">
-            <el-option
-              v-for="dict in dict.type.erp_task_business_type"
-              :key="dict.value"
-              :label="dict.label"
-              :value="dict.value"
-            ></el-option>
+        <el-form-item label="状态" prop="taskStatus">
+          <el-select v-model="queryParams.taskStatus" placeholder="全部状态" clearable class="w-140" @change="handleQuery">
+            <el-option v-for="item in statusOptions" :key="item.value" :label="item.label" :value="item.value" />
           </el-select>
         </el-form-item>
-        <el-form-item label="关联业务 ID 集合" prop="businessIds">
-          <el-input v-model="form.businessIds" type="textarea" placeholder="请输入内容" />
+        <el-form-item label="开始时间">
+          <el-date-picker
+            v-model="daterangeStartTime"
+            type="daterange"
+            value-format="YYYY-MM-DD"
+            range-separator="-"
+            start-placeholder="开始日期"
+            end-placeholder="结束日期"
+            class="w-240"
+          />
         </el-form-item>
-        <el-form-item label="请求地址" prop="requestPath">
-          <el-input v-model="form.requestPath" placeholder="请输入请求地址" />
-        </el-form-item>
-        <el-form-item label="任务状态" prop="taskStatus">
-          <el-radio-group v-model="form.taskStatus">
-            <el-radio
-              v-for="dict in dict.type.erp_task_status"
-              :key="dict.value"
-              :label="dict.value"
-            >{{dict.label}}</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="执行进度" prop="progress">
-          <el-input v-model="form.progress" placeholder="请输入执行进度" />
-        </el-form-item>
-        <el-form-item label="错误信息" prop="errorMessage">
-          <el-input v-model="form.errorMessage" type="textarea" placeholder="请输入内容" />
-        </el-form-item>
-        <el-form-item label="执行耗时" prop="executionTime">
-          <el-input v-model="form.executionTime" placeholder="请输入执行耗时" />
-        </el-form-item>
-        <el-form-item label="开始执行时间" prop="startTime">
-          <el-date-picker clearable
-            v-model="form.startTime"
-            type="date"
-            value-format="yyyy-MM-dd"
-            placeholder="请选择开始执行时间">
-          </el-date-picker>
-        </el-form-item>
-        <el-form-item label="结束时间" prop="endTime">
-          <el-date-picker clearable
-            v-model="form.endTime"
-            type="date"
-            value-format="yyyy-MM-dd"
-            placeholder="请选择结束时间">
-          </el-date-picker>
-        </el-form-item>
-        <el-form-item label="父任务 ID" prop="parentTaskId">
-          <el-input v-model="form.parentTaskId" placeholder="请输入父任务 ID" />
-        </el-form-item>
-        <el-form-item label="根任务 ID" prop="rootTaskId">
-          <el-input v-model="form.rootTaskId" placeholder="请输入根任务 ID" />
-        </el-form-item>
-        <el-form-item label="备注" prop="remark">
-          <el-input v-model="form.remark" type="textarea" placeholder="请输入内容" />
-        </el-form-item>
-        <el-form-item label="删除标志" prop="delFlag">
-          <el-input v-model="form.delFlag" placeholder="请输入删除标志" />
+        <el-form-item class="filter-actions">
+          <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
+          <el-button icon="Refresh" @click="resetQuery">重置</el-button>
         </el-form-item>
       </el-form>
-      <div slot="footer" class="dialog-footer">
-        <el-button type="primary" @click="submitForm">确 定</el-button>
-        <el-button @click="cancel">取 消</el-button>
-      </div>
-    </el-dialog>
 
-    <!-- Shopify 任务配置导入对话框 -->
-    <el-dialog :title="upload.title" :visible.sync="upload.open" width="400px" append-to-body>
-      <el-upload ref="upload" :limit="1" accept=".xlsx, .xls" :headers="upload.headers" :action="upload.url + '?updateSupport=' + upload.updateSupport" :disabled="upload.isUploading" :on-progress="handleFileUploadProgress" :on-success="handleFileSuccess" :auto-upload="false" drag>
-        <i class="el-icon-upload"></i>
-        <div class="el-upload__text">将文件拖到此处，或<em>点击上传</em></div>
-        <div class="el-upload__tip text-center" slot="tip">
-          <div class="el-upload__tip" slot="tip">
-            <el-checkbox v-model="upload.updateSupport" />是否更新已经存在的Shopify 任务配置数据
-          </div>
-          <span>仅允许导入xls、xlsx格式文件。</span>
-          <el-link type="primary" :underline="false" style="font-size: 12px; vertical-align: baseline" @click="importTemplate">下载模板</el-link>
+      <div class="toolbar-status-row">
+        <div class="toolbar-row">
+          <el-button type="warning" plain icon="Download" @click="handleExport" v-hasPermi="['erp:task:export']">导出</el-button>
+          <el-button type="danger" plain icon="Delete" :disabled="multiple" @click="handleDelete()" v-hasPermi="['erp:task:remove']">删除</el-button>
+          <el-button icon="Refresh" @click="refreshAll">刷新</el-button>
+          <right-toolbar v-model:showSearch="showSearch" @queryTable="getList" />
         </div>
-      </el-upload>
-      <div slot="footer" class="dialog-footer">
-        <el-button type="primary" @click="submitFileForm">确 定</el-button>
-        <el-button @click="upload.open = false">取 消</el-button>
+
+        <div class="status-segments" aria-label="任务状态快捷筛选">
+          <button
+            v-for="item in statusSegments"
+            :key="item.key"
+            type="button"
+            class="status-segment"
+            :class="{ active: item.active, danger: item.value === 'FAILED', warning: item.value === 'PART_SUCCESS' }"
+            :aria-pressed="item.active"
+            @click="applyStatusFilter(item.value)"
+          >
+            <span>{{ item.label }}</span>
+            <strong>{{ item.count }}</strong>
+          </button>
+        </div>
       </div>
-    </el-dialog>
+    </header>
+
+    <main class="console-body">
+      <section class="task-list-shell">
+        <div class="task-list-head">
+          <div>
+            <h3>同步任务</h3>
+            <span>当前筛选 {{ total }} 条，当前页 {{ taskList.length }} 条</span>
+          </div>
+          <el-tag v-if="selectedTask" :type="taskStatusTag(selectedTask.taskStatus)" effect="light">
+            已选：{{ selectedTask.taskId }}
+          </el-tag>
+        </div>
+
+        <div class="table-zone">
+          <el-table
+            v-loading="loading"
+            :data="taskList"
+            row-key="taskId"
+            border
+            highlight-current-row
+            height="100%"
+            class="task-table"
+            :current-row-key="selectedTask?.taskId"
+            :row-class-name="getTaskRowClassName"
+            :header-cell-style="{ background: '#f7f8fb', color: '#303133' }"
+            @row-click="selectTask"
+            @selection-change="handleSelectionChange"
+          >
+            <el-table-column type="selection" width="44" align="center" fixed />
+            <el-table-column label="任务" min-width="260" fixed>
+              <template #default="{ row }">
+                <div class="task-cell">
+                  <div class="task-title-row">
+                    <button type="button" class="task-title" @click.stop="selectTask(row)">
+                      {{ row.taskName || `任务 ${row.taskId}` }}
+                    </button>
+                    <el-tag :type="taskStatusTag(row.taskStatus)" effect="light" size="small">{{ taskStatusLabel(row.taskStatus) }}</el-tag>
+                  </div>
+                  <div class="task-subline">
+                    <span>ID：{{ row.taskId }}</span>
+                    <span>{{ row.shopName || '-' }}</span>
+                    <span>{{ taskTypeLabel(row.taskType) }}</span>
+                  </div>
+                </div>
+              </template>
+            </el-table-column>
+            <el-table-column label="进度" width="170">
+              <template #default="{ row }">
+                <div class="progress-cell">
+                  <el-progress :percentage="safeProgress(row.progress)" :color="progressColor(row.taskStatus)" />
+                  <span>{{ formatDuration(row.executionTime) }}</span>
+                </div>
+              </template>
+            </el-table-column>
+            <el-table-column label="结果" width="180">
+              <template #default="{ row }">
+                <div class="result-grid">
+                  <span>总 {{ row.totalCount || 0 }}</span>
+                  <span class="success">成 {{ row.successCount || 0 }}</span>
+                  <span class="warning">部 {{ row.partialCount || 0 }}</span>
+                  <span class="danger">败 {{ row.failedCount || 0 }}</span>
+                </div>
+              </template>
+            </el-table-column>
+            <el-table-column label="错误摘要" prop="errorMessage" min-width="240" show-overflow-tooltip>
+              <template #default="{ row }">
+                <span :class="{ 'error-text': row.errorMessage }">{{ row.errorMessage || '-' }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="开始时间" prop="startTime" width="150" align="center">
+              <template #default="{ row }">{{ formatDate(row.startTime) }}</template>
+            </el-table-column>
+            <el-table-column label="结束时间" prop="endTime" width="150" align="center">
+              <template #default="{ row }">{{ formatDate(row.endTime) }}</template>
+            </el-table-column>
+            <el-table-column label="操作" width="128" align="center" fixed="right">
+              <template #default="{ row }">
+                <el-button link type="primary" icon="Tickets" @click.stop="selectTask(row)" v-hasPermi="['erp:task:query']">诊断</el-button>
+                <el-button link type="danger" icon="Delete" @click.stop="handleDelete(row)" v-hasPermi="['erp:task:remove']">删除</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
+
+        <div class="pagination-wrapper">
+          <pagination
+            v-show="total > 0"
+            :total="total"
+            v-model:page="queryParams.pageNum"
+            v-model:limit="queryParams.pageSize"
+            @pagination="getList"
+          />
+        </div>
+      </section>
+
+      <TaskDiagnosticsPanel ref="diagnosticsRef" :task="selectedTask" />
+    </main>
   </div>
 </template>
 
-<script>
-import { listTask, getTask, delTask, addTask, updateTask, importTask, importTemplateTask } from "@/api/erp/task";
-import { getToken } from "@/utils/auth";
+<script setup lang="ts">
+import { computed, getCurrentInstance, nextTick, onMounted, reactive, ref, toRefs, watch } from 'vue'
+import { useRoute } from 'vue-router'
+import { delTask, getTask, listTask, type TaskQuery } from '@/api/erp/task'
+import { parseTime } from '@/utils/ruoyi'
+import type { Task } from '@/types/erp'
+import TaskDiagnosticsPanel from './components/TaskDiagnosticsPanel.vue'
 
-export default {
-  name: "Task",
-  dicts: ['erp_task_business_type', 'erp_task_type', 'erp_task_status'],
-  data() {
-    return {
-      //表格展示列
-      columns: [
-        { key: 0, label: '任务主键', visible: true },
-          { key: 1, label: '任务名称', visible: true },
-          { key: 2, label: '任务分组', visible: true },
-          { key: 3, label: '任务类型', visible: true },
-          { key: 4, label: '关联业务类型', visible: true },
-          { key: 5, label: '关联业务 ID 集合', visible: false },
-          { key: 6, label: '请求地址', visible: false },
-          { key: 7, label: '请求参数', visible: false },
-          { key: 8, label: '任务状态', visible: true },
-          { key: 9, label: '执行进度', visible: true },
-          { key: 18, label: '统计', visible: true },
-          { key: 10, label: '错误信息', visible: true },
-          { key: 11, label: '执行结果数据', visible: false },
-          { key: 12, label: '执行耗时', visible: false },
-          { key: 13, label: '开始执行时间', visible: false },
-          { key: 14, label: '结束时间', visible: false },
-          { key: 15, label: '父任务 ID', visible: false },
-          { key: 16, label: '根任务 ID', visible: false },
-          { key: 17, label: '备注', visible: false },
-        ],
-      // 遮罩层
-      loading: true,
-      // 选中数组
-      ids: [],
-      // 非单个禁用
-      single: true,
-      // 非多个禁用
-      multiple: true,
-      // 显示搜索条件
-      showSearch: true,
-      // 总条数
-      total: 0,
-      // Shopify 任务配置表格数据
-      taskList: [],
-      // 弹出层标题
-      title: "",
-      // 是否显示弹出层
-      open: false,
-      // 删除标志时间范围
-      daterangeStartTime: [],
-      // 查询参数
-      queryParams: {
-        pageNum: 1,
-        pageSize: 10,
-        taskName: null,
-        taskGroup: null,
-        taskType: null,
-        businessType: null,
-        businessIds: null,
-        taskStatus: null,
-        startTime: null,
-        parentTaskId: null,
-        rootTaskId: null,
-      },
-      // 表单参数
-      form: {},
-      // 导出地址
-      exportUrl: 'erp/task/export',
-      // Shopify 任务配置导入参数upload
-      upload: {
-        // 是否显示弹出层（Shopify 任务配置导入）
-        open: false,
-        // 弹出层标题（Shopify 任务配置导入）
-        title: "",
-        // 是否禁用上传
-        isUploading: false,
-        // 是否更新已经存在的Shopify 任务配置数据
-        updateSupport: 0,
-        // 设置上传的请求头部
-        headers: { Authorization: "Bearer " + getToken() },
-        // 上传的地址
-        url: import.meta.env.VITE_APP_BASE_API + "/erp/task/importData",
-        // 下载模板的地址
-        templateUrl: 'erp/task/importTemplate'
-      },
-      // 表单校验
-      rules: {
-        taskName: [
-          { required: true, message: "任务名称不能为空", trigger: "blur" }
-        ],
-        taskType: [
-          { required: true, message: "任务类型不能为空", trigger: "change" }
-        ],
+const { proxy } = getCurrentInstance() as any
+const route = useRoute()
+
+const loading = ref(false)
+const showSearch = ref(true)
+const taskList = ref<Task[]>([])
+const total = ref(0)
+const ids = ref<number[]>([])
+const multiple = ref(true)
+const selectedTask = ref<Task | null>(null)
+const daterangeStartTime = ref<string[]>([])
+const diagnosticsRef = ref<{ refresh: () => void } | null>(null)
+const pendingRouteTaskId = ref<number | null>(Number(route.query.taskId) || null)
+
+const data = reactive({
+  queryParams: {
+    pageNum: 1,
+    pageSize: 10,
+    taskName: undefined,
+    shopName: undefined,
+    taskType: undefined,
+    taskStatus: undefined
+  } as TaskQuery
+})
+
+const { queryParams } = toRefs(data)
+
+const taskTypeOptions = [
+  { label: '商品批量同步', value: 'PRODUCT_SYNC_BATCH' },
+  { label: '商品同步', value: 'PRODUCT_SYNC' },
+  { label: '媒体批量同步', value: 'MEDIA_SYNC_BATCH' },
+  { label: '媒体同步', value: 'MEDIA_SYNC' }
+]
+
+const statusOptions = [
+  { label: '待执行', value: 'PENDING' },
+  { label: '执行中', value: 'RUNNING' },
+  { label: '成功', value: 'SUCCESS' },
+  { label: '部分成功', value: 'PART_SUCCESS' },
+  { label: '失败', value: 'FAILED' },
+  { label: '已取消', value: 'CANCELLED' }
+]
+
+const quickStatusOptions = [
+  { key: 'all', label: '全部', value: undefined },
+  { key: 'running', label: '执行中', value: 'RUNNING' },
+  { key: 'partial', label: '部分成功', value: 'PART_SUCCESS' },
+  { key: 'failed', label: '失败', value: 'FAILED' },
+  { key: 'success', label: '成功', value: 'SUCCESS' }
+]
+
+const statusSegments = computed(() => quickStatusOptions.map((item) => ({
+  ...item,
+  count: item.value ? taskList.value.filter((task) => task.taskStatus === item.value).length : taskList.value.length,
+  active: item.value ? queryParams.value.taskStatus === item.value : !queryParams.value.taskStatus
+})))
+
+function getList(): void {
+  loading.value = true
+  const params: any = { ...queryParams.value, params: {} }
+  if (daterangeStartTime.value?.length === 2) {
+    params.params.beginStartTime = daterangeStartTime.value[0]
+    params.params.endStartTime = daterangeStartTime.value[1]
+  }
+  listTask(params)
+    .then((res: any) => {
+      taskList.value = res.rows || []
+      total.value = res.total || 0
+      syncSelectionAfterList()
+    })
+    .finally(() => {
+      loading.value = false
+    })
+}
+
+function syncSelectionAfterList(): void {
+  const routeTaskId = pendingRouteTaskId.value
+  if (routeTaskId) {
+    const routeTask = taskList.value.find((task) => task.taskId === routeTaskId)
+    if (routeTask) {
+      selectedTask.value = routeTask
+    } else if (!selectedTask.value || selectedTask.value.taskId !== routeTaskId) {
+      openTaskById(routeTaskId)
+    }
+    pendingRouteTaskId.value = null
+    return
+  }
+
+  if (!taskList.value.length) {
+    selectedTask.value = null
+    return
+  }
+
+  const current = selectedTask.value
+  const refreshed = current ? taskList.value.find((task) => task.taskId === current.taskId) : null
+  selectedTask.value = refreshed || taskList.value[0]
+}
+
+function handleQuery(): void {
+  queryParams.value.pageNum = 1
+  getList()
+}
+
+function resetQuery(): void {
+  daterangeStartTime.value = []
+  proxy.resetForm('queryRef')
+  handleQuery()
+}
+
+function refreshAll(): void {
+  getList()
+  diagnosticsRef.value?.refresh()
+}
+
+function applyStatusFilter(value?: string): void {
+  queryParams.value.taskStatus = queryParams.value.taskStatus === value ? undefined : value
+  handleQuery()
+}
+
+function selectTask(row: Task): void {
+  pendingRouteTaskId.value = null
+  const sameTask = selectedTask.value?.taskId === row.taskId
+  selectedTask.value = row
+  if (sameTask) {
+    nextTick(() => diagnosticsRef.value?.refresh())
+  }
+}
+
+function openTaskById(taskId: number): void {
+  getTask(taskId).then((res: any) => {
+    selectedTask.value = res.data || { taskId }
+  })
+}
+
+function handleSelectionChange(selection: Task[]): void {
+  ids.value = selection.map((item) => item.taskId)
+  multiple.value = selection.length === 0
+}
+
+function handleDelete(row?: Task): void {
+  const taskIds = row?.taskId || ids.value.join(',')
+  proxy.$modal.confirm(`是否确认删除 Shopify 同步任务 ${taskIds}？`)
+    .then(() => delTask(taskIds))
+    .then(() => {
+      const deleteIds = String(taskIds).split(',').map((item) => Number(item))
+      if (selectedTask.value && deleteIds.includes(selectedTask.value.taskId)) {
+        selectedTask.value = null
       }
-    };
-  },
-  created() {
-    this.getList();
-  },
-  methods: {
-    /** 查询Shopify 任务配置列表 */
-    getList() {
-      this.loading = true;
-      this.queryParams.params = {};
-      if (null != this.daterangeStartTime && '' != this.daterangeStartTime) {
-        this.queryParams.params["beginStartTime"] = this.daterangeStartTime[0];
-        this.queryParams.params["endStartTime"] = this.daterangeStartTime[1];
+      getList()
+      proxy.$modal.msgSuccess('删除成功')
+    })
+    .catch(() => {})
+}
+
+function handleExport(): void {
+  const params: any = { ...queryParams.value, params: {} }
+  if (daterangeStartTime.value?.length === 2) {
+    params.params.beginStartTime = daterangeStartTime.value[0]
+    params.params.endStartTime = daterangeStartTime.value[1]
+  }
+  proxy.download('erp/task/export', params, `task_${new Date().getTime()}.xlsx`)
+}
+
+function taskTypeLabel(value?: string): string {
+  return taskTypeOptions.find((item) => item.value === value)?.label || value || '-'
+}
+
+function taskStatusLabel(value?: string): string {
+  return statusOptions.find((item) => item.value === value)?.label || value || '-'
+}
+
+function taskStatusTag(value?: string): '' | 'success' | 'warning' | 'info' | 'danger' | 'primary' {
+  if (value === 'SUCCESS') return 'success'
+  if (value === 'FAILED') return 'danger'
+  if (value === 'PART_SUCCESS') return 'warning'
+  if (value === 'RUNNING') return 'primary'
+  return 'info'
+}
+
+function progressColor(value?: string): string {
+  const map: Record<string, string> = {
+    SUCCESS: '#67C23A',
+    FAILED: '#F56C6C',
+    PART_SUCCESS: '#E6A23C',
+    RUNNING: '#409EFF',
+    PENDING: '#909399'
+  }
+  return map[value || ''] || '#909399'
+}
+
+function safeProgress(value?: number | null): number {
+  const progress = Number(value || 0)
+  if (progress < 0) return 0
+  if (progress > 100) return 100
+  return progress
+}
+
+function formatDate(value?: string | Date | null): string {
+  return value ? parseTime(value, '{y}-{m}-{d} {h}:{i}') || '-' : '-'
+}
+
+function formatDuration(value?: number | null): string {
+  if (value === undefined || value === null) {
+    return '-'
+  }
+  if (value < 1000) {
+    return `${value}ms`
+  }
+  const seconds = value / 1000
+  if (seconds < 60) {
+    return `${seconds.toFixed(1)}s`
+  }
+  return `${Math.floor(seconds / 60)}m ${Math.round(seconds % 60)}s`
+}
+
+function getTaskRowClassName({ row }: { row: Task }): string {
+  if (row.taskStatus === 'FAILED') return 'is-failed'
+  if (row.taskStatus === 'PART_SUCCESS') return 'is-partial'
+  if (row.taskStatus === 'RUNNING') return 'is-running'
+  return ''
+}
+
+watch(
+  () => route.query.taskId,
+  (taskId) => {
+    const nextTaskId = Number(taskId)
+    if (nextTaskId) {
+      pendingRouteTaskId.value = nextTaskId
+      const task = taskList.value.find((item) => item.taskId === nextTaskId)
+      if (task) {
+        selectedTask.value = task
+        pendingRouteTaskId.value = null
+      } else {
+        openTaskById(nextTaskId)
+        pendingRouteTaskId.value = null
       }
-      listTask(this.queryParams).then(response => {
-        this.taskList = response.rows;
-        this.total = response.total;
-        this.loading = false;
-      });
-    },
-    // 取消按钮
-    cancel() {
-      this.open = false;
-      this.reset();
-    },
-    // 表单重置
-    reset() {
-      this.form = {
-        taskId: null,
-        taskName: null,
-        taskGroup: null,
-        taskType: null,
-        businessType: null,
-        businessIds: null,
-        requestPath: null,
-        requestParams: null,
-        taskStatus: null,
-        progress: null,
-        errorMessage: null,
-        resultData: null,
-        executionTime: null,
-        startTime: null,
-        endTime: null,
-        parentTaskId: null,
-        rootTaskId: null,
-        remark: null,
-        createBy: null,
-        createTime: null,
-        updateBy: null,
-        updateTime: null,
-        delFlag: null
-      };
-      this.resetForm("form");
-    },
-    /** 搜索按钮操作 */
-    handleQuery() {
-      this.queryParams.pageNum = 1;
-      this.getList();
-    },
-    /** 重置按钮操作 */
-    resetQuery() {
-      this.daterangeStartTime = [];
-      this.resetForm("queryForm");
-      this.handleQuery();
-    },
-    // 多选框选中数据
-    handleSelectionChange(selection) {
-      this.ids = selection.map(item => item.taskId)
-      this.single = selection.length!==1
-      this.multiple = !selection.length
-    },
-    /** 新增按钮操作 */
-    handleAdd() {
-      this.reset();
-      this.open = true;
-      this.title = "添加Shopify 任务配置";
-    },
-    /** 修改按钮操作 */
-    handleUpdate(row) {
-      this.reset();
-      const taskId = row.taskId || this.ids
-      getTask(taskId).then(response => {
-        this.form = response.data;
-        this.open = true;
-        this.title = "修改Shopify 任务配置";
-      });
-    },
-    /** 提交按钮 */
-    submitForm() {
-      this.$refs["form"].validate(valid => {
-        if (valid) {
-          if (this.form.taskId != null) {
-            updateTask(this.form).then(response => {
-              this.$modal.msgSuccess("修改成功");
-              this.open = false;
-              this.getList();
-            });
-          } else {
-            addTask(this.form).then(response => {
-              this.$modal.msgSuccess("新增成功");
-              this.open = false;
-              this.getList();
-            });
-          }
-        }
-      });
-    },
-    /** 删除按钮操作 */
-    handleDelete(row) {
-      const taskIds = row.taskId || this.ids;
-      this.$modal.confirm('是否确认删除Shopify 任务配置编号为"' + taskIds + '"的数据项？').then(function() {
-        return delTask(taskIds);
-      }).then(() => {
-        this.getList();
-        this.$modal.msgSuccess("删除成功");
-      }).catch(() => {});
-    },
-    /** 导出按钮操作 */
-    handleExport() {
-      this.download(this.exportUrl, {
-        ...this.queryParams
-      }, `task_${new Date().getTime()}.xlsx`)
-    },
-    /** 导入按钮操作 */
-    handleImport() {
-      this.upload.title = "Shopify 任务配置导入";
-      this.upload.open = true;
-    },
-    /** 下载模板操作 */
-    importTemplate() {
-      this.download(this.upload.templateUrl, {
-      }, `task_template_${new Date().getTime()}.xlsx`)
-    },
-    // 文件上传中处理
-    handleFileUploadProgress(event, file, fileList) {
-      this.upload.isUploading = true;
-    },
-    // 文件上传成功处理
-    handleFileSuccess(response, file, fileList) {
-      this.upload.open = false;
-      this.upload.isUploading = false;
-      this.$refs.upload.clearFiles();
-      this.$alert("<div style='overflow: auto;overflow-x: hidden;max-height: 70vh;padding: 10px 20px 0;'>" + response.msg + "</div>", "导入结果", { dangerouslyUseHTMLString: true });
-      this.getList();
-    },
-    // 提交上传文件
-    submitFileForm() {
-      this.$refs.upload.submit();
-    },
-    /** 获取进度条颜色 */
-    getProgressColor(status) {
-      const colorMap = {
-        'SUCCESS': '#67C23A',
-        'FAILED': '#F56C6C',
-        'PARTIAL_SUCCESS': '#E6A23C',
-        'RUNNING': '#409EFF',
-        'PENDING': '#909399'
-      };
-      return colorMap[status] || '#909399';
+    } else {
+      pendingRouteTaskId.value = null
     }
   }
-};
+)
+
+onMounted(() => {
+  getList()
+})
 </script>
 
-<style scoped>
-.task-stats {
+<style scoped lang="scss">
+.task-console {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 84px);
+  min-height: 560px;
+  padding: 0;
+  overflow: hidden;
+  background: #fff;
+}
+
+.task-console-header {
+  flex: 0 0 auto;
+  padding: 10px 12px 8px;
+  border-bottom: 1px solid #e6eaf0;
+}
+
+.console-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 0;
+  align-items: center;
+}
+
+.console-filter :deep(.el-form-item) {
+  margin-right: 6px;
+  margin-bottom: 0;
+}
+
+.console-filter :deep(.el-form-item__label),
+.console-filter :deep(.el-form-item__content) {
+  line-height: 30px;
+}
+
+.console-filter :deep(.el-input__wrapper),
+.console-filter :deep(.el-select__wrapper) {
+  min-height: 30px;
+}
+
+.toolbar-status-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 8px;
+  margin-top: 8px;
+  border-top: 1px solid #eef1f5;
+}
+
+.toolbar-row,
+.status-segments {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+
+.status-segments {
+  justify-content: flex-end;
+}
+
+.status-segment {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 0 10px;
+  color: #334155;
+  cursor: pointer;
+  background: #fff;
+  border: 1px solid #d9e0ea;
+  border-radius: 6px;
+  transition: background 0.18s ease, border-color 0.18s ease;
+
+  strong {
+    min-width: 16px;
+    color: #1d4ed8;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.status-segment:hover,
+.status-segment.active {
+  background: #eef6ff;
+  border-color: #409eff;
+}
+
+.status-segment.danger.active {
+  background: #fff8f7;
+  border-color: #f56c6c;
+}
+
+.status-segment.warning.active {
+  background: #fffaf0;
+  border-color: #e6a23c;
+}
+
+.console-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(420px, 44%);
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.task-list-shell {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: #fff;
+}
+
+.task-list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-bottom: 1px solid #eef1f5;
+
+  h3 {
+    margin: 0;
+    font-size: 15px;
+    color: #172033;
+  }
+
+  span {
+    font-size: 12px;
+    color: #667085;
+  }
+}
+
+.table-zone {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.task-table {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  border: 0;
+}
+
+.task-table :deep(.el-table__cell) {
+  padding: 5px 0;
+}
+
+.task-table :deep(.el-table__row.is-failed) {
+  --el-table-tr-bg-color: #fff8f7;
+}
+
+.task-table :deep(.el-table__row.is-partial) {
+  --el-table-tr-bg-color: #fffaf0;
+}
+
+.task-table :deep(.el-table__row.is-running) {
+  --el-table-tr-bg-color: #f5f9ff;
+}
+
+.task-cell {
+  min-width: 0;
+}
+
+.task-title-row,
+.task-subline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.task-title {
+  max-width: 180px;
+  padding: 0;
+  overflow: hidden;
+  font-weight: 600;
+  line-height: 18px;
+  color: #172033;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+}
+
+.task-title:hover {
+  color: #2f6fed;
+}
+
+.task-subline {
+  flex-wrap: wrap;
+  margin-top: 4px;
   font-size: 12px;
+  color: #667085;
 }
-.task-stats .success {
-  color: #67C23A;
+
+.progress-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+
+  span {
+    font-size: 12px;
+    color: #667085;
+  }
 }
-.task-stats .failed {
-  color: #F56C6C;
+
+.result-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2px 8px;
+  font-size: 12px;
+  line-height: 18px;
 }
-.task-stats .total {
-  color: #909399;
+
+.success { color: #2f8f4e; }
+.warning { color: #b7791f; }
+.danger,
+.error-text { color: #c0362c; }
+
+.pagination-wrapper {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: flex-end;
+  padding: 6px 12px 0;
+  border-top: 1px solid #e6eaf0;
+}
+
+.pagination-wrapper :deep(.pagination-container) {
+  padding: 0;
+  margin: 0;
+  background: transparent;
+}
+
+.w-140 { width: 140px; }
+.w-160 { width: 160px; }
+.w-170 { width: 170px; }
+.w-180 { width: 180px; }
+.w-240 { width: 240px; }
+
+@media (max-width: 1180px) {
+  .task-console {
+    height: auto;
+    min-height: calc(100vh - 84px);
+    overflow: visible;
+  }
+
+  .toolbar-status-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .status-segments {
+    justify-content: flex-start;
+  }
+
+  .console-body {
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(420px, 58vh) minmax(560px, auto);
+    overflow: visible;
+  }
+}
+
+@media (max-width: 640px) {
+  .task-console-header,
+  .task-list-head {
+    padding-right: 8px;
+    padding-left: 8px;
+  }
+
+  .w-140,
+  .w-160,
+  .w-170,
+  .w-180,
+  .w-240 {
+    width: min(100%, 280px);
+  }
+
+  .status-segment {
+    flex: 1 1 120px;
+    justify-content: space-between;
+  }
 }
 </style>

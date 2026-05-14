@@ -2,21 +2,37 @@ package com.ruoyi.erp.executor;
 
 import com.alibaba.fastjson2.JSON;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.ruoyi.common.enums.ShopifyProductStatusEnum;
 import com.ruoyi.common.utils.DateUtils;
 import com.ruoyi.common.utils.StringUtils;
-import com.ruoyi.erp.config.ShopifyGraphQLClient;
+import com.ruoyi.erp.shopify.client.ShopifyGraphQLClient;
+import com.ruoyi.erp.shopify.enums.*;
 import com.ruoyi.erp.constant.ProductConstants;
-import com.ruoyi.erp.constant.ShopifyTaskContants;
 import com.ruoyi.erp.constant.StoreConstants;
-import com.ruoyi.erp.exception.ShopifyApiException;
+import com.ruoyi.erp.shopify.exception.ShopifyApiException;
+import com.ruoyi.erp.shopify.exception.ShopifyUserError;
+import com.ruoyi.erp.shopify.model.*;
+import com.ruoyi.erp.shopify.support.ShopifyTaskStatusResolver;
 import com.ruoyi.erp.mapper.ProductMapper;
 import com.ruoyi.erp.mapper.ShopifyStoreMapper;
-import com.ruoyi.erp.model.domain.*;
+import com.ruoyi.erp.model.domain.Media;
+import com.ruoyi.erp.model.domain.Product;
+import com.ruoyi.erp.model.domain.ProductOption;
+import com.ruoyi.erp.model.domain.ProductVariant;
+import com.ruoyi.erp.model.domain.ProductVariantOption;
+import com.ruoyi.erp.model.domain.ShopifyStore;
+import com.ruoyi.erp.model.domain.ShopifyTask;
+import com.ruoyi.erp.model.domain.ShopifyTaskDetail;
 import com.ruoyi.erp.model.vo.media.PreparedMediaUpload;
-import com.ruoyi.erp.service.*;
+import com.ruoyi.erp.service.IMediaService;
+import com.ruoyi.erp.service.IMediaTranscodeService;
+import com.ruoyi.erp.service.IProductTagRelService;
+import com.ruoyi.erp.service.IProductVariantService;
+import com.ruoyi.erp.service.IShopifyTaskDetailService;
+import com.ruoyi.erp.service.IShopifyTaskService;
+import com.ruoyi.erp.service.ITagDictService;
 import com.ruoyi.erp.utils.PriceUtil;
 import jakarta.annotation.Resource;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
@@ -26,11 +42,13 @@ import java.io.FileInputStream;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * Shopify 批量同步执行器
+ * Shopify 批量同步执行器。
  */
 @Slf4j
 @Component
@@ -49,6 +67,8 @@ public class ShopifySyncExecutor {
     @Resource
     private IShopifyTaskService shopifyTaskService;
     @Resource
+    private IShopifyTaskDetailService shopifyTaskDetailService;
+    @Resource
     private ITagDictService tagDictService;
     @Resource
     private IProductTagRelService productTagRelService;
@@ -58,240 +78,272 @@ public class ShopifySyncExecutor {
     private ProductMapper productMapper;
 
     /**
-     * 异步执行批量推送
+     * 异步执行批量推送。
      */
     @Async("threadPoolTaskExecutor")
     public void execute(Long taskId, List<Long> productIds) {
         long startTime = System.currentTimeMillis();
         ShopifyTask task = shopifyTaskService.selectShopifyTaskByTaskId(taskId);
         if (task == null) {
-            log.error("任务不存在: taskId={}", taskId);
+            log.error("任务不存在，taskId={}", taskId);
             return;
         }
 
-        // 获取店铺 ID: 优先从任务获取
         Long storeId = resolveStoreId(task);
         if (storeId == null) {
-            log.error("无法确定店铺ID，请检查任务或商品的店铺配置: taskId={}", taskId);
-            task.setTaskStatus(ProductConstants.SYNC_STATUS_FAILED);
-            task.setErrorMessage("无法确定店铺ID，请检查任务或商品的店铺配置");
-            task.setEndTime(new Date());
-            shopifyTaskService.updateShopifyTask(task);
+            failTaskForMissingStore(startTime, task);
             return;
         }
 
-        // 获取店铺名称用于日志
         ShopifyStore store = shopifyStoreMapper.selectById(storeId);
         String shopName = store != null ? store.getShopName() : "unknown";
-
-        int total = productIds.size();
+        int total = productIds == null ? 0 : productIds.size();
         int success = 0;
+        int partial = 0;
         int failed = 0;
         StringBuilder errorSummary = new StringBuilder();
 
-        task.setTaskStatus(ProductConstants.SYNC_STATUS_RUNNING);
+        task.setTaskStatus(ShopifyTaskStatus.RUNNING.getCode());
         task.setProgress(0);
         task.setStartTime(new Date());
+        task.setSuccessCount(0);
+        task.setPartialCount(0);
+        task.setFailedCount(0);
         shopifyTaskService.updateShopifyTask(task);
 
         log.info("开始同步商品到 Shopify 店铺: {}, storeId={}, 商品数量={}", shopName, storeId, total);
 
-        for (int i = 0; i < productIds.size(); i++) {
+        for (int i = 0; i < total; i++) {
             Long productId = productIds.get(i);
             int index = i + 1;
+            markProductRunning(productId);
 
             try {
-                String syncResult = syncProduct(storeId, productId, index, total);
+                ProductSyncResult syncResult = syncProduct(taskId, storeId, productId, index, total, shopName);
+                Product update = new Product();
+                update.setProductId(productId);
+                update.setSyncStatus(ShopifyTaskStatusResolver.resolveProductSyncStatus(
+                        syncResult.isProductCreatedOrUpdated(), syncResult.hasChildFailure()));
+                update.setSyncMessage(syncResult.getSummary());
+                update.setLastSyncTime(DateUtils.getNowDate());
+                productMapper.updateById(update);
 
-                Product p = new Product();
-                p.setProductId(productId);
-                p.setSyncStatus(ProductConstants.SYNC_STATUS_SUCCESS);
-                p.setSyncMessage(syncResult);
-                p.setLastSyncTime(DateUtils.getNowDate());
-                productMapper.updateById(p);
-
-                success++;
+                if (syncResult.hasChildFailure()) {
+                    partial++;
+                    errorSummary.append(String.format("[商品%d] %s%n", index, syncResult.getSummary()));
+                } else {
+                    success++;
+                }
             } catch (Exception e) {
-                log.error("推送商品失败: productId={}", productId, e);
-
-                Product p = new Product();
-                p.setProductId(productId);
-                p.setSyncStatus(ProductConstants.SYNC_STATUS_FAILED);
-                p.setSyncMessage(e.getMessage());
-                p.setLastSyncTime(DateUtils.getNowDate());
-                productMapper.updateById(p);
+                log.error("推送商品失败，productId={}", productId, e);
+                Product update = new Product();
+                update.setProductId(productId);
+                update.setSyncStatus(ProductConstants.SYNC_STATUS_FAILED);
+                update.setSyncMessage(e.getMessage());
+                update.setLastSyncTime(DateUtils.getNowDate());
+                productMapper.updateById(update);
 
                 failed++;
-                errorSummary.append(String.format("[商品%d] %s\n", index, e.getMessage()));
+                errorSummary.append(String.format("[商品%d] %s%n", index, e.getMessage()));
+                recordDetail(taskId, storeId, shopName, productId, ShopifyTaskDetailItemType.PRODUCT.getCode(),
+                        productId, null, null, ShopifyTaskStep.PRODUCT_SYNC.getCode(), ShopifyTaskDetailStatus.FAILED.getCode(),
+                        ShopifyTaskErrorCode.PRODUCT_SYNC_FAILED.getCode(), null, null, e.getMessage());
             }
 
-            // 更新进度
-            int progress = (int) ((i + 1) * 100.0 / total);
+            int progress = total == 0 ? 100 : (int) ((i + 1) * 100.0 / total);
             task.setProgress(progress);
             task.setSuccessCount(success);
+            task.setPartialCount(partial);
             task.setFailedCount(failed);
             shopifyTaskService.updateShopifyTask(task);
         }
 
-        // 更新店铺同步统计
         if (store != null) {
             store.setLastSyncTime(new Date());
             store.setSyncCount((store.getSyncCount() == null ? 0 : store.getSyncCount()) + 1);
             shopifyStoreMapper.updateById(store);
         }
 
-        // 最终状态
-        task.setTaskStatus(failed == 0 ? ShopifyTaskContants.TASK_STATUS_SUCCESS : (success == 0 ? ShopifyTaskContants.TASK_STATUS_FAILED : ShopifyTaskContants.TASK_STATUS_PART_SUCCESS));
+        task.setTaskStatus(ShopifyTaskStatusResolver.resolveTaskStatus(total, success, partial, failed));
         task.setProgress(100);
+        task.setSuccessCount(success);
+        task.setPartialCount(partial);
+        task.setFailedCount(failed);
         task.setEndTime(new Date());
         task.setExecutionTime(System.currentTimeMillis() - startTime);
         task.setErrorMessage(errorSummary.toString());
         shopifyTaskService.updateShopifyTask(task);
 
-        log.info("商品同步完成: shop={}, 成功={}, 失败={}, 耗时={}ms", shopName, success, failed, System.currentTimeMillis() - startTime);
+        log.info("商品同步完成: shop={}, 成功={}, 部分成功={}, 失败={}, 耗时={}ms",
+                shopName, success, partial, failed, System.currentTimeMillis() - startTime);
+    }
+
+    private void failTaskForMissingStore(long startTime, ShopifyTask task) {
+        String message = "无法确定店铺ID，请检查任务或商品的店铺配置";
+        log.error("{} taskId={}", message, task.getTaskId());
+        task.setTaskStatus(ShopifyTaskStatus.FAILED.getCode());
+        task.setErrorMessage(message);
+        task.setEndTime(new Date());
+        task.setExecutionTime(System.currentTimeMillis() - startTime);
+        shopifyTaskService.updateShopifyTask(task);
+    }
+
+    private void markProductRunning(Long productId) {
+        Product running = new Product();
+        running.setProductId(productId);
+        running.setSyncStatus(ProductConstants.SYNC_STATUS_RUNNING);
+        running.setSyncMessage("Shopify 同步任务执行中");
+        productMapper.updateById(running);
     }
 
     /**
      * 解析店铺 ID
-     * 优先从任务获取，否则从商品列表的第一个商品获取
      */
     private Long resolveStoreId(ShopifyTask task) {
-        // 优先从任务获取
         if (task.getStoreId() != null) {
             return task.getStoreId();
         }
-        // 最后尝试从任务关联的店铺名获取默认店铺
         if (task.getShopName() != null) {
             ShopifyStore store = shopifyStoreMapper.selectByShopName(task.getShopName());
             if (store != null) {
                 return store.getStoreId();
             }
         }
-
-        // 尝试获取默认店铺
         ShopifyStore defaultStore = shopifyStoreMapper.selectDefaultStore();
-        if (defaultStore != null) {
-            return defaultStore.getStoreId();
-        }
+        return defaultStore == null ? null : defaultStore.getStoreId();
+    }
 
-        return null;
+    public ProductSyncResult syncProduct(Long storeId, Long productId, int index, int total) {
+        return syncProduct(null, storeId, productId, index, total, null);
     }
 
     /**
-     * 同步单个商品到 Shopify
-     * @param storeId 店铺 ID
-     * @param productId 商品 ID
-     * @param index 当前索引
-     * @param total 总数
-     * @return 同步结果摘要
+     * 同步单个商品到 Shopify。
      */
-    public String syncProduct(Long storeId, Long productId, int index, int total) {
+    public ProductSyncResult syncProduct(Long taskId, Long storeId, Long productId, int index, int total, String shopName) {
         Product product = productMapper.selectById(productId);
         if (product == null) {
             throw new RuntimeException("商品不存在: " + productId);
         }
         ShopifyStore store = shopifyStoreMapper.selectById(storeId);
+        String currentShopName = StringUtils.isEmpty(shopName) && store != null ? store.getShopName() : shopName;
 
-        StringBuilder result = new StringBuilder();
-        result.append(String.format("[商品「%s」] 第 %d/%d 个\n", product.getProductTitle(), index, total));
+        ProductSyncResult result = new ProductSyncResult();
+        result.append(String.format("[商品《%s》] 第 %d/%d 个%n", product.getProductTitle(), index, total));
 
-        // 1. 上传媒体
-        log.info("[商品「{}」] 上传媒体", product.getProductTitle());
-        List<Media> uploadMediaList = uploadMedia(storeId, productId, result);
-        log.info("[商品「{}」] 上传媒体完成", product.getProductTitle());
-
-        // 2. 获取标签名称
+        MediaUploadResult mediaUploadResult = uploadMedia(taskId, storeId, currentShopName, product, result);
+        List<Media> uploadMediaList = mediaUploadResult.getMediaList();
         List<String> tagNames = productTagRelService.selectTagCodeListByProductId(productId);
 
-        // 3. 构建商品输入和媒体列表
-        ShopifyGraphQLClient.ProductInput productInput = buildProductInput(product, uploadMediaList, tagNames, resolveDefaultProductStatus(store));
+        ProductInput productInput = buildProductInput(product, uploadMediaList, tagNames, resolveDefaultProductStatus(store));
         List<Media> createMediaList = filterCreateMediaList(uploadMediaList);
-        List<ShopifyGraphQLClient.CreateMediaInput> mediaInputs = buildMediaInputs(createMediaList, product);
+        List<CreateMediaInput> mediaInputs = buildMediaInputs(createMediaList, product);
 
-        // 4. 创建/更新商品
         String shopifyProductId;
-        List<String> shopifyMediaIds = new ArrayList<>();
+        List<String> shopifyMediaIds;
         boolean isCreateShopifyProduct = StringUtils.isEmpty(product.getShopifyProductId());
-        log.info("[商品「{}」] 创建/更新商品", product.getProductTitle());
-        if (!isCreateShopifyProduct) {
-            ShopifyGraphQLClient.ProductCreateResult updateResult = shopifyGraphQLClient.updateProduct(storeId, product.getShopifyProductId(), productInput, mediaInputs);
-            shopifyProductId = updateResult.getProductId();
-            shopifyMediaIds = updateResult.getMediaIds();
-            result.append("✅ 商品更新成功 → PID: ").append(shopifyProductId).append("\n");
-        } else {
-            ShopifyGraphQLClient.ProductCreateResult createResult = shopifyGraphQLClient.createProduct(storeId, productInput, mediaInputs);
-            shopifyProductId = createResult.getProductId();
-            shopifyMediaIds = createResult.getMediaIds();
-            result.append("✅ 商品创建成功 → PID: ").append(shopifyProductId).append("\n");
+        try {
+            if (!isCreateShopifyProduct) {
+                ProductCreateResult updateResult = shopifyGraphQLClient.updateProduct(
+                        storeId, product.getShopifyProductId(), productInput, mediaInputs);
+                shopifyProductId = updateResult.getProductId();
+                shopifyMediaIds = updateResult.getMediaIds();
+                result.append("商品更新成功 -> PID: ").append(shopifyProductId).append("\n");
+            } else {
+                ProductCreateResult createResult = shopifyGraphQLClient.createProduct(storeId, productInput, mediaInputs);
+                shopifyProductId = createResult.getProductId();
+                shopifyMediaIds = createResult.getMediaIds();
+                result.append("商品创建成功 -> PID: ").append(shopifyProductId).append("\n");
+            }
+            result.setProductCreatedOrUpdated(true);
+        } catch (ShopifyApiException e) {
+            recordProductApiFailure(taskId, storeId, currentShopName, product, e);
+            throw e;
+        } catch (Exception e) {
+            recordDetail(taskId, storeId, currentShopName, productId, ShopifyTaskDetailItemType.PRODUCT.getCode(),
+                    productId, product.getProductTitle(), null, ShopifyTaskStep.PRODUCT_UPSERT.getCode(), ShopifyTaskDetailStatus.FAILED.getCode(),
+                    ShopifyTaskErrorCode.PRODUCT_UPSERT_FAILED.getCode(), null, null, e.getMessage());
+            throw e;
         }
-        log.info("[商品「{}」] 创建/更新商品完成", product.getProductTitle());
 
-        // 更新商品的 Shopify ID
-        if (!shopifyMediaIds.isEmpty() && !createMediaList.isEmpty()) {
-            saveMediaIdsToDatabase(createMediaList, shopifyMediaIds);
-            result.append("✅ 已保存 ").append(shopifyMediaIds.size()).append(" 个媒体 ID\n");
-        }
+        boolean mediaRegisterFailed = saveMediaIdsToDatabase(taskId, storeId, currentShopName, product, createMediaList, shopifyMediaIds, result);
 
         Product updateProduct = new Product();
         updateProduct.setProductId(productId);
         updateProduct.setShopifyProductId(shopifyProductId);
         productMapper.updateById(updateProduct);
 
-        // 5. 批量创建变体
         List<ProductVariant> variants = productVariantService.selectListByProductId(productId);
+        boolean variantFailed = false;
         if (!variants.isEmpty()) {
-            log.info("[商品「{}」] 批量创建变体", product.getProductTitle());
             String variantCreateStrategy = isCreateShopifyProduct ? VARIANT_CREATE_STRATEGY_REMOVE_STANDALONE : null;
-            syncVariants(storeId, shopifyProductId, variants, result, variantCreateStrategy);
-            log.info("[商品「{}」] 批量创建变体完成", product.getProductTitle());
+            variantFailed = syncVariants(taskId, storeId, currentShopName, productId, shopifyProductId, variants, result, variantCreateStrategy);
         }
 
-        return result.toString();
+        boolean childFailed = mediaUploadResult.hasFailure() || mediaRegisterFailed || variantFailed;
+        result.setChildFailure(childFailed);
+        recordDetail(taskId, storeId, currentShopName, productId, ShopifyTaskDetailItemType.PRODUCT.getCode(),
+                productId, product.getProductTitle(), shopifyProductId, ShopifyTaskStep.PRODUCT_SYNC.getCode(),
+                childFailed ? ShopifyTaskDetailStatus.PART_SUCCESS.getCode() : ShopifyTaskDetailStatus.SUCCESS.getCode(),
+                null, null, null, childFailed ? "商品已创建/更新，但部分媒体或变体同步失败" : null);
+        return result;
     }
 
     /**
-     * 上传媒体文件
+     * 上传媒体文件。单个媒体失败只记录明细，不中断商品创建。
      */
-    private List<Media> uploadMedia(Long storeId, Long productId, StringBuilder result) {
-        List<Media> uploadMediaList = new ArrayList<>();
-
-        List<Media> mediaList = mediaService.listByProductId(productId);
+    private MediaUploadResult uploadMedia(Long taskId, Long storeId, String shopName, Product product, ProductSyncResult result) {
+        MediaUploadResult uploadResult = new MediaUploadResult();
+        List<Media> mediaList = mediaService.listByProductId(product.getProductId());
         if (mediaList == null || mediaList.isEmpty()) {
-            return uploadMediaList;
+            return uploadResult;
         }
 
         for (Media media : mediaList) {
-            if (media == null) continue;
-
+            if (media == null) {
+                continue;
+            }
+            String filename = media.getFilename();
             try {
-                // 如果已经有 Shopify media ID，跳过上传
                 if (StringUtils.isNotEmpty(media.getShopifyMediaId())) {
-                    result.append("media ").append(media.getFilename()).append(" already has Shopify Media ID, skip\n");
+                    result.append("媒体 ").append(filename).append(" 已存在 Shopify Media ID，跳过上传\n");
+                    recordMediaDetail(taskId, storeId, shopName, product.getProductId(), media,
+                            ShopifyTaskStep.MEDIA_UPLOAD.getCode(), ShopifyTaskDetailStatus.SKIPPED.getCode(),
+                            media.getShopifyMediaId(), null, null, null, null);
                     continue;
                 }
 
                 if (StringUtils.isNotEmpty(media.getShopifyMediaUrl())) {
-                    uploadMediaList.add(media);
-                    result.append("⚠️ 图片「").append(media.getFilename()).append("」已存在，跳过\n");
+                    uploadResult.add(media);
+                    result.append("媒体 ").append(filename).append(" 已有 Shopify URL，进入注册\n");
+                    recordMediaDetail(taskId, storeId, shopName, product.getProductId(), media,
+                            ShopifyTaskStep.MEDIA_UPLOAD.getCode(), ShopifyTaskDetailStatus.SUCCESS.getCode(),
+                            media.getShopifyMediaId(), null, null, null, null);
                     continue;
                 }
 
-                // 获取本地文件路径并上传
                 String localPath = media.getNasMediaUrl();
                 if (StringUtils.isEmpty(localPath)) {
-                    result.append("⚠️ 图片「").append(media.getFilename()).append("」无本地路径，跳过\n");
+                    uploadResult.markFailure();
+                    recordMediaFailure(taskId, storeId, shopName, product.getProductId(), media,
+                            ShopifyTaskStep.MEDIA_UPLOAD.getCode(), ShopifyTaskErrorCode.MEDIA_PATH_EMPTY.getCode(), "媒体缺少本地 NAS 路径");
+                    result.append("媒体 ").append(filename).append(" 上传失败：缺少本地 NAS 路径\n");
                     continue;
                 }
 
                 PreparedMediaUpload preparedMedia = mediaTranscodeService.prepareForShopifyUpload(media);
                 File file = preparedMedia.getFile();
-                if (!file.exists()) {
-                    result.append("❌ 图片「").append(media.getFilename()).append("」文件不存在: ").append(localPath).append("\n");
+                if (file == null || !file.exists()) {
+                    uploadResult.markFailure();
+                    String message = "媒体文件不存在: " + localPath;
+                    recordMediaFailure(taskId, storeId, shopName, product.getProductId(), media,
+                            ShopifyTaskStep.MEDIA_UPLOAD.getCode(), ShopifyTaskErrorCode.MEDIA_FILE_MISSING.getCode(), message);
+                    result.append("媒体 ").append(filename).append(" 上传失败：").append(message).append("\n");
                     continue;
                 }
 
                 try (FileInputStream fis = new FileInputStream(file)) {
-                    ShopifyGraphQLClient.StagedUploadResult uploadResult = shopifyGraphQLClient.stagedUploadMedia(
+                    StagedUploadResult stagedUpload = shopifyGraphQLClient.stagedUploadMedia(
                             storeId,
                             preparedMedia.getFilename(),
                             preparedMedia.getMimeType(),
@@ -300,32 +352,49 @@ public class ShopifySyncExecutor {
                             file.length()
                     );
 
-
-                    // 更新 media 表的 shopify media ID
                     Media updateMedia = new Media();
                     updateMedia.setMediaId(media.getMediaId());
-                    updateMedia.setShopifyMediaUrl(uploadResult.resourceUrl());
-                    mediaService.updateMedia(updateMedia);
-                    media.setShopifyMediaUrl(uploadResult.resourceUrl());
+                    updateMedia.setShopifyMediaUrl(stagedUpload.resourceUrl());
+                    int updated = mediaService.updateMedia(updateMedia);
+                    if (updated <= 0) {
+                        uploadResult.markFailure();
+                        recordMediaFailure(taskId, storeId, shopName, product.getProductId(), media,
+                                ShopifyTaskStep.MEDIA_UPLOAD.getCode(), ShopifyTaskErrorCode.MEDIA_URL_SAVE_FAILED.getCode(), "保存 Shopify 媒体上传 URL 失败");
+                        result.append("媒体 ").append(filename).append(" 保存 Shopify 上传 URL 失败\n");
+                        continue;
+                    }
+                    media.setShopifyMediaUrl(stagedUpload.resourceUrl());
                     media.setMediaContentType(preparedMedia.getMediaContentType());
-                    uploadMediaList.add(media);
+                    uploadResult.add(media);
 
-                    result.append("✅ 图片「").append(media.getFilename()).append("」上传成功\n");
+                    result.append("媒体 ").append(filename).append(" 上传成功\n");
+                    recordMediaDetail(taskId, storeId, shopName, product.getProductId(), media,
+                            ShopifyTaskStep.MEDIA_UPLOAD.getCode(), ShopifyTaskDetailStatus.SUCCESS.getCode(),
+                            media.getShopifyMediaId(), null, null, null, null);
                 }
             } catch (Exception e) {
-                log.error("图片「" + media.getFilename() + "」上传失败", e);
-                result.append("❌ 图片「").append(media.getFilename()).append("」上传失败: ").append(e.getMessage()).append("\n");
-                throw new RuntimeException("媒体「" + media.getFilename() + "」上传失败: " + e.getMessage(), e);
+                log.error("媒体《{}》上传失败", filename, e);
+                uploadResult.markFailure();
+                recordMediaFailure(taskId, storeId, shopName, product.getProductId(), media,
+                        ShopifyTaskStep.MEDIA_UPLOAD.getCode(), ShopifyTaskErrorCode.MEDIA_UPLOAD_FAILED.getCode(), e.getMessage());
+                result.append("媒体 ").append(filename).append(" 上传失败：").append(e.getMessage()).append("\n");
             }
         }
-        return uploadMediaList;
+        return uploadResult;
     }
 
     /**
-     * 同步变体
+     * 同步变体。批量失败时按 Shopify userErrors 的 inputIndex 回写到本地变体明细。
      */
-    private void syncVariants(Long storeId, String shopifyProductId, List<ProductVariant> variants, StringBuilder result, String variantCreateStrategy) {
-        List<ShopifyGraphQLClient.VariantInput> variantInputs = new ArrayList<>();
+    private boolean syncVariants(Long storeId, String shopifyProductId, List<ProductVariant> variants,
+                                 StringBuilder result, String variantCreateStrategy) {
+        ProductSyncResult syncResult = new ProductSyncResult(result);
+        return syncVariants(null, storeId, null, null, shopifyProductId, variants, syncResult, variantCreateStrategy);
+    }
+
+    private boolean syncVariants(Long taskId, Long storeId, String shopName, Long productId, String shopifyProductId,
+                                 List<ProductVariant> variants, ProductSyncResult result, String variantCreateStrategy) {
+        List<VariantInput> variantInputs = new ArrayList<>();
         List<ProductVariant> createVariants = new ArrayList<>();
         ShopifyStore store = shopifyStoreMapper.selectById(storeId);
         if (store == null) {
@@ -334,24 +403,18 @@ public class ShopifySyncExecutor {
 
         for (ProductVariant variant : variants) {
             if (StringUtils.isNotEmpty(variant.getShopifyVariantId())) {
-                result.append("变体").append(variant.getVariantId()).append("已存在 Shopify ID，跳过创建\n");
+                result.append("变体 ").append(resolveVariantName(variant)).append(" 已存在 Shopify ID，跳过创建\n");
+                recordVariantDetail(taskId, storeId, shopName, productId, variant,
+                        ShopifyTaskStep.VARIANT_CREATE.getCode(), ShopifyTaskDetailStatus.SKIPPED.getCode(),
+                        variant.getShopifyVariantId(), null, null, null, null);
                 continue;
             }
 
             BigDecimal price = PriceUtil.fenToYuan(variant.getPrice());
             BigDecimal compareAtPrice = PriceUtil.fenToYuan(variant.getCompareAtPrice());
+            String shopifyMediaId = resolveVariantMediaId(variant);
 
-            Long mediaId = variant.getMediaId();
-            String shopifyMediaId = null;
-            if (mediaId != null) {
-                Media media = mediaService.getOne(new LambdaQueryWrapper<>(Media.class)
-                        .select(Media::getShopifyMediaId, Media::getShopifyMediaUrl).eq(Media::getMediaId, mediaId));
-                if (media != null) {
-                    shopifyMediaId = media.getShopifyMediaId();
-                }
-            }
-
-            ShopifyGraphQLClient.VariantInput input = ShopifyGraphQLClient.VariantInput.builder()
+            VariantInput input = VariantInput.builder()
                     .price(price)
                     .mediaId(shopifyMediaId)
                     .compareAtPrice(compareAtPrice)
@@ -367,31 +430,59 @@ public class ShopifySyncExecutor {
         }
 
         if (createVariants.isEmpty()) {
-            return;
+            return false;
         }
 
         try {
             List<String> variantIds = shopifyGraphQLClient.createVariantsBulk(storeId, shopifyProductId, variantInputs, variantCreateStrategy);
-            saveVariantIdsToDatabase(createVariants, variantIds, result);
+            return saveVariantIdsToDatabase(taskId, storeId, shopName, productId, createVariants, variantIds, result);
         } catch (ShopifyApiException e) {
-            result.append("❌ 变体批量创建失败: ").append(e.getMessage()).append("\n");
-            throw e;
+            result.append("变体批量创建失败: ").append(e.getMessage()).append("\n");
+            recordVariantApiFailures(taskId, storeId, shopName, productId, createVariants, e);
+            return true;
+        } catch (Exception e) {
+            result.append("变体批量创建失败: ").append(e.getMessage()).append("\n");
+            recordVariantFailures(taskId, storeId, shopName, productId, createVariants,
+                    ShopifyTaskErrorCode.VARIANT_CREATE_FAILED.getCode(), null, null, e.getMessage());
+            return true;
         }
     }
 
+    private String resolveVariantMediaId(ProductVariant variant) {
+        Long mediaId = variant.getMediaId();
+        if (mediaId == null) {
+            return null;
+        }
+        Media media = mediaService.getOne(new LambdaQueryWrapper<>(Media.class)
+                .select(Media::getShopifyMediaId, Media::getShopifyMediaUrl)
+                .eq(Media::getMediaId, mediaId));
+        return media == null ? null : media.getShopifyMediaId();
+    }
+
     /**
-     * 保存 Shopify 变体 ID 到数据库
+     * 保存 Shopify 变体 ID。返回 true 表示有部分变体保存失败。
      */
-    private void saveVariantIdsToDatabase(List<ProductVariant> variants, List<String> shopifyVariantIds, StringBuilder result) {
+    private boolean saveVariantIdsToDatabase(Long taskId, Long storeId, String shopName, Long productId,
+                                             List<ProductVariant> variants, List<String> shopifyVariantIds,
+                                             ProductSyncResult result) {
         if (shopifyVariantIds == null || shopifyVariantIds.size() != variants.size()) {
-            throw new ShopifyApiException("Shopify 返回的变体 ID 数量与本地待同步变体数量不一致");
+            String message = "Shopify 返回的变体 ID 数量与本地待同步变体数量不一致";
+            recordVariantFailures(taskId, storeId, shopName, productId, variants,
+                    ShopifyTaskErrorCode.VARIANT_ID_COUNT_MISMATCH.getCode(), null, null, message);
+            result.append(message).append("\n");
+            return true;
         }
 
+        boolean hasFailure = false;
         for (int i = 0; i < variants.size(); i++) {
             ProductVariant variant = variants.get(i);
             String shopifyVariantId = shopifyVariantIds.get(i);
             if (StringUtils.isEmpty(shopifyVariantId)) {
-                throw new ShopifyApiException("Shopify 返回了空的变体 ID");
+                hasFailure = true;
+                recordVariantDetail(taskId, storeId, shopName, productId, variant,
+                        ShopifyTaskStep.VARIANT_SAVE_ID.getCode(), ShopifyTaskDetailStatus.FAILED.getCode(),
+                        null, ShopifyTaskErrorCode.VARIANT_ID_EMPTY.getCode(), null, null, "Shopify 返回了空的变体 ID");
+                continue;
             }
 
             ProductVariant updateVariant = new ProductVariant();
@@ -399,28 +490,185 @@ public class ShopifySyncExecutor {
             updateVariant.setShopifyVariantId(shopifyVariantId);
             int updated = productVariantService.updateProductVariant(updateVariant);
             if (updated <= 0) {
-                throw new ShopifyApiException("保存 Shopify 变体 ID 失败，variantId=" + variant.getVariantId());
+                hasFailure = true;
+                recordVariantDetail(taskId, storeId, shopName, productId, variant,
+                        ShopifyTaskStep.VARIANT_SAVE_ID.getCode(), ShopifyTaskDetailStatus.FAILED.getCode(),
+                        shopifyVariantId, ShopifyTaskErrorCode.VARIANT_ID_SAVE_FAILED.getCode(), null, null,
+                        "保存 Shopify 变体 ID 失败，variantId=" + variant.getVariantId());
+                continue;
             }
 
-            result.append("✅ 变体").append(i + 1).append("创建成功 → VID: ").append(shopifyVariantId).append("\n");
+            result.append("变体 ").append(resolveVariantName(variant)).append(" 创建成功 -> VID: ")
+                    .append(shopifyVariantId).append("\n");
+            recordVariantDetail(taskId, storeId, shopName, productId, variant,
+                    ShopifyTaskStep.VARIANT_CREATE.getCode(), ShopifyTaskDetailStatus.SUCCESS.getCode(),
+                    shopifyVariantId, null, null, i, null);
+        }
+        return hasFailure;
+    }
+
+    /**
+     * 保存 Shopify 媒体 ID。返回 true 表示有部分媒体注册或保存失败。
+     */
+    private boolean saveMediaIdsToDatabase(Long taskId, Long storeId, String shopName, Product product,
+                                           List<Media> createMediaList, List<String> shopifyMediaIds,
+                                           ProductSyncResult result) {
+        if (createMediaList == null || createMediaList.isEmpty()) {
+            return false;
+        }
+
+        boolean hasFailure = false;
+        List<String> mediaIds = shopifyMediaIds == null ? List.of() : shopifyMediaIds;
+        for (int i = 0; i < createMediaList.size(); i++) {
+            Media media = createMediaList.get(i);
+            String shopifyMediaId = i < mediaIds.size() ? mediaIds.get(i) : null;
+            if (StringUtils.isEmpty(shopifyMediaId)) {
+                hasFailure = true;
+                recordMediaFailure(taskId, storeId, shopName, product.getProductId(), media,
+                        ShopifyTaskStep.MEDIA_REGISTER.getCode(), ShopifyTaskErrorCode.MEDIA_ID_MISSING.getCode(), "Shopify 未返回对应的媒体 ID");
+                result.append("媒体 ").append(media.getFilename()).append(" 注册失败：Shopify 未返回媒体 ID\n");
+                continue;
+            }
+
+            Media updateMedia = new Media();
+            updateMedia.setMediaId(media.getMediaId());
+            updateMedia.setShopifyMediaId(shopifyMediaId);
+            int updated = mediaService.updateMedia(updateMedia);
+            if (updated <= 0) {
+                hasFailure = true;
+                recordMediaFailure(taskId, storeId, shopName, product.getProductId(), media,
+                        ShopifyTaskStep.MEDIA_REGISTER.getCode(), ShopifyTaskErrorCode.MEDIA_ID_SAVE_FAILED.getCode(), "保存 Shopify 媒体 ID 失败");
+                result.append("媒体 ").append(media.getFilename()).append(" 保存 Shopify ID 失败\n");
+                continue;
+            }
+
+            recordMediaDetail(taskId, storeId, shopName, product.getProductId(), media,
+                    ShopifyTaskStep.MEDIA_REGISTER.getCode(), ShopifyTaskDetailStatus.SUCCESS.getCode(),
+                    shopifyMediaId, null, null, i, null);
+            result.append("已保存媒体 ").append(media.getFilename()).append(" 的 Shopify ID\n");
+        }
+        return hasFailure;
+    }
+
+    private void recordProductApiFailure(Long taskId, Long storeId, String shopName, Product product, ShopifyApiException e) {
+        if (e.getUserErrors().isEmpty()) {
+            recordDetail(taskId, storeId, shopName, product.getProductId(), ShopifyTaskDetailItemType.PRODUCT.getCode(),
+                    product.getProductId(), product.getProductTitle(), null, ShopifyTaskStep.PRODUCT_UPSERT.getCode(),
+                    ShopifyTaskDetailStatus.FAILED.getCode(), ShopifyTaskErrorCode.PRODUCT_UPSERT_FAILED.getCode(), null, null, e.getMessage());
+            return;
+        }
+        for (ShopifyUserError error : e.getUserErrors()) {
+            recordDetail(taskId, storeId, shopName, product.getProductId(), ShopifyTaskDetailItemType.PRODUCT.getCode(),
+                    product.getProductId(), product.getProductTitle(), null, ShopifyTaskStep.PRODUCT_UPSERT.getCode(),
+                    ShopifyTaskDetailStatus.FAILED.getCode(), error.getCode(), error.getField(),
+                    error.getInputIndex(), error.getMessage());
         }
     }
 
-    private ShopifyGraphQLClient.InventoryItemInput buildInventoryItem(ShopifyStore store, ProductVariant variant) {
-        return ShopifyGraphQLClient.InventoryItemInput.builder()
+    private void recordVariantApiFailures(Long taskId, Long storeId, String shopName, Long productId,
+                                          List<ProductVariant> variants, ShopifyApiException e) {
+        if (e.getUserErrors().isEmpty()) {
+            recordVariantFailures(taskId, storeId, shopName, productId, variants,
+                    ShopifyTaskErrorCode.VARIANT_CREATE_FAILED.getCode(), null, null, e.getMessage());
+            return;
+        }
+
+        Set<Integer> recordedIndexes = new HashSet<>();
+        for (ShopifyUserError error : e.getUserErrors()) {
+            Integer inputIndex = error.getInputIndex();
+            if (inputIndex != null && inputIndex >= 0 && inputIndex < variants.size()) {
+                ProductVariant variant = variants.get(inputIndex);
+                recordVariantDetail(taskId, storeId, shopName, productId, variant,
+                        ShopifyTaskStep.VARIANT_CREATE.getCode(), ShopifyTaskDetailStatus.FAILED.getCode(),
+                        null, error.getCode(), error.getField(), inputIndex, error.getMessage());
+                recordedIndexes.add(inputIndex);
+            }
+        }
+
+        for (int i = 0; i < variants.size(); i++) {
+            if (recordedIndexes.contains(i)) {
+                continue;
+            }
+            recordVariantDetail(taskId, storeId, shopName, productId, variants.get(i),
+                    ShopifyTaskStep.VARIANT_CREATE.getCode(), ShopifyTaskDetailStatus.FAILED.getCode(),
+                    null, ShopifyTaskErrorCode.VARIANT_CREATE_FAILED.getCode(), null, i,
+                    "同批次变体创建失败，Shopify 未返回该变体的单项错误");
+        }
+    }
+
+    private void recordVariantFailures(Long taskId, Long storeId, String shopName, Long productId,
+                                       List<ProductVariant> variants, String errorCode, String errorField,
+                                       Integer inputIndex, String errorMessage) {
+        for (int i = 0; i < variants.size(); i++) {
+            ProductVariant variant = variants.get(i);
+            recordVariantDetail(taskId, storeId, shopName, productId, variant,
+                    ShopifyTaskStep.VARIANT_CREATE.getCode(), ShopifyTaskDetailStatus.FAILED.getCode(),
+                    null, errorCode, errorField, inputIndex == null ? i : inputIndex, errorMessage);
+        }
+    }
+
+    private void recordVariantDetail(Long taskId, Long storeId, String shopName, Long productId, ProductVariant variant,
+                                     String step, String status, String shopifyId, String errorCode,
+                                     String errorField, Integer inputIndex, String errorMessage) {
+        recordDetail(taskId, storeId, shopName, productId, ShopifyTaskDetailItemType.VARIANT.getCode(),
+                variant.getVariantId(), resolveVariantName(variant), shopifyId, step, status,
+                errorCode, errorField, inputIndex, errorMessage);
+    }
+
+    private void recordMediaFailure(Long taskId, Long storeId, String shopName, Long productId, Media media,
+                                    String step, String errorCode, String errorMessage) {
+        recordMediaDetail(taskId, storeId, shopName, productId, media, step,
+                ShopifyTaskDetailStatus.FAILED.getCode(), null, errorCode, null, null, errorMessage);
+    }
+
+    private void recordMediaDetail(Long taskId, Long storeId, String shopName, Long productId, Media media,
+                                   String step, String status, String shopifyId, String errorCode,
+                                   String errorField, Integer inputIndex, String errorMessage) {
+        recordDetail(taskId, storeId, shopName, productId, ShopifyTaskDetailItemType.MEDIA.getCode(),
+                media.getMediaId(), media.getFilename(), shopifyId, step, status,
+                errorCode, errorField, inputIndex, errorMessage);
+    }
+
+    private void recordDetail(Long taskId, Long storeId, String shopName, Long productId, String itemType,
+                              Long itemId, String itemName, String shopifyId, String step, String status,
+                              String errorCode, String errorField, Integer inputIndex, String errorMessage) {
+        if (taskId == null || shopifyTaskDetailService == null) {
+            return;
+        }
+        ShopifyTaskDetail detail = new ShopifyTaskDetail();
+        detail.setTaskId(taskId);
+        detail.setStoreId(storeId);
+        detail.setShopName(shopName);
+        detail.setProductId(productId);
+        detail.setItemType(itemType);
+        detail.setItemId(itemId);
+        detail.setItemName(itemName);
+        detail.setShopifyId(shopifyId);
+        detail.setStep(step);
+        detail.setStatus(status);
+        detail.setErrorCode(errorCode);
+        detail.setErrorField(errorField);
+        detail.setInputIndex(inputIndex);
+        detail.setErrorMessage(errorMessage);
+        detail.setCreateTime(DateUtils.getNowDate());
+        shopifyTaskDetailService.save(detail);
+    }
+
+    private InventoryItemInput buildInventoryItem(ShopifyStore store, ProductVariant variant) {
+        return InventoryItemInput.builder()
                 .sku(variant.getSku())
                 .tracked("1".equals(store.getInventoryTracked()))
                 .build();
     }
 
-    private List<ShopifyGraphQLClient.InventoryQuantity> buildInventoryQuantities(ShopifyStore store) {
+    private List<InventoryQuantity> buildInventoryQuantities(ShopifyStore store) {
         if (!"1".equals(store.getInventoryTracked())) {
             return null;
         }
         if (StringUtils.isEmpty(store.getInventoryLocationId())) {
             throw new RuntimeException("店铺启用库存跟踪但未配置库存仓库 Location ID");
         }
-        return List.of(ShopifyGraphQLClient.InventoryQuantity.builder()
+        return List.of(InventoryQuantity.builder()
                 .locationId(store.getInventoryLocationId())
                 .availableQuantity(store.getDefaultInventoryQuantity() == null ? 100 : store.getDefaultInventoryQuantity())
                 .build());
@@ -441,40 +689,12 @@ public class ShopifySyncExecutor {
                 .toList();
     }
 
-    private void saveMediaIdsToDatabase(List<Media> uploadMediaList, List<String> shopifyMediaIds) {
-        if (uploadMediaList == null || uploadMediaList.isEmpty() || shopifyMediaIds.isEmpty()) {
-            return;
-        }
-
-        // 按顺序匹配 media 和 mediaId
-        for (int i = 0; i < Math.min(uploadMediaList.size(), shopifyMediaIds.size()); i++) {
-            Media media = uploadMediaList.get(i);
-            String shopifyMediaId = shopifyMediaIds.get(i);
-
-            if (media != null && StringUtils.isNotEmpty(shopifyMediaId)) {
-                try {
-                    Media updateMedia = new Media();
-                    updateMedia.setMediaId(media.getMediaId());
-                    updateMedia.setShopifyMediaId(shopifyMediaId);
-                    mediaService.updateMedia(updateMedia);
-                    log.info("已保存 media ID: mediaId={}, shopifyMediaId={}", media.getMediaId(), shopifyMediaId);
-                } catch (Exception e) {
-                    log.error("保存 media ID 失败: mediaId={}", media.getMediaId(), e);
-                }
-            }
-        }
-    }
-
-    /**
-     * 构建媒体输入列表
-     */
-    private List<ShopifyGraphQLClient.CreateMediaInput> buildMediaInputs(List<Media> uploadMediaList, Product product) {
-        List<ShopifyGraphQLClient.CreateMediaInput> mediaInputs = new ArrayList<>();
-        
+    private List<CreateMediaInput> buildMediaInputs(List<Media> uploadMediaList, Product product) {
+        List<CreateMediaInput> mediaInputs = new ArrayList<>();
         if (uploadMediaList != null && !uploadMediaList.isEmpty()) {
             for (Media media : uploadMediaList) {
                 if (media != null && StringUtils.isNotEmpty(media.getShopifyMediaUrl())) {
-                    mediaInputs.add(ShopifyGraphQLClient.CreateMediaInput.builder()
+                    mediaInputs.add(CreateMediaInput.builder()
                             .originalSource(media.getShopifyMediaUrl())
                             .alt(product.getProductTitle() + ProductConstants.PRODUCT_MEDIA_SUFFIX)
                             .mediaContentType(media.getMediaContentType())
@@ -482,24 +702,19 @@ public class ShopifySyncExecutor {
                 }
             }
         }
-        
         return mediaInputs;
     }
 
-    /**
-     * 解析 optionValues JSON 为 List<OptionValueInput>
-     */
-    private List<ShopifyGraphQLClient.OptionValueInput> parseOptionValuesAsList(String optionValuesJson) {
-        List<ShopifyGraphQLClient.OptionValueInput> options = new ArrayList<>();
+    private List<OptionValueInput> parseOptionValuesAsList(String optionValuesJson) {
+        List<OptionValueInput> options = new ArrayList<>();
         if (StringUtils.isEmpty(optionValuesJson)) {
             return options;
         }
-        List<ProductVariantOption> optionValueList = JSON.parseArray(
-                optionValuesJson, ProductVariantOption.class);
+        List<ProductVariantOption> optionValueList = JSON.parseArray(optionValuesJson, ProductVariantOption.class);
 
         try {
             for (ProductVariantOption opt : optionValueList) {
-                options.add(ShopifyGraphQLClient.OptionValueInput.builder()
+                options.add(OptionValueInput.builder()
                         .name(opt.getEnglishValue())
                         .optionName(opt.getEnglishName())
                         .build());
@@ -510,17 +725,15 @@ public class ShopifySyncExecutor {
         return options;
     }
 
-    /**
-     * 构建商品 GraphQL 输入
-     */
-    private ShopifyGraphQLClient.ProductInput buildProductInput(Product product, List<Media> uploadMediaList, List<String> tagNames, String defaultProductStatus) {
-        ShopifyGraphQLClient.ProductInput input = ShopifyGraphQLClient.ProductInput.builder()
+    private ProductInput buildProductInput(Product product, List<Media> uploadMediaList,
+                                                                List<String> tagNames, String defaultProductStatus) {
+        ProductInput input = ProductInput.builder()
                 .title(product.getProductTitle())
                 .descriptionHtml(product.getBodyHtml())
                 .productType(product.getProductType())
                 .vendor(ProductConstants.DEFAULT_PRODUCT_VENDER)
                 .category(product.getCategory())
-                .seo(ShopifyGraphQLClient.SeoInput.builder()
+                .seo(SeoInput.builder()
                         .title(product.getProductTitle() + ProductConstants.SEO_TITTLE_SUFFIX)
                         .description(product.getDescription())
                         .build())
@@ -528,21 +741,19 @@ public class ShopifySyncExecutor {
                 .status(defaultProductStatus)
                 .build();
 
-        // 处理选项 - 根据 Shopify 2026-04 API，values 需要是 OptionValueInput 对象数组
         if (StringUtils.isNotEmpty(product.getOptionJson())) {
             try {
                 List<ProductOption> optionList = JSON.parseArray(product.getOptionJson(), ProductOption.class);
-                List<ShopifyGraphQLClient.ProductOptionInput> options = new ArrayList<>();
+                List<ProductOptionInput> options = new ArrayList<>();
                 for (int i = 0; i < optionList.size(); i++) {
                     ProductOption opt = optionList.get(i);
-                    // 将字符串值转换为 OptionValueInput 对象
-                    List<ShopifyGraphQLClient.OptionValueInput> valueInputs = opt.getValues().stream()
-                            .map(value -> ShopifyGraphQLClient.OptionValueInput.builder()
+                    List<OptionValueInput> valueInputs = opt.getValues().stream()
+                            .map(value -> OptionValueInput.builder()
                                     .name(value.getEnglishValue())
                                     .build())
                             .collect(Collectors.toList());
-                    
-                    options.add(ShopifyGraphQLClient.ProductOptionInput.builder()
+
+                    options.add(ProductOptionInput.builder()
                             .name(opt.getEnglishName())
                             .position(i + 1)
                             .values(valueInputs)
@@ -553,10 +764,10 @@ public class ShopifySyncExecutor {
                 log.warn("解析 optionJson 失败: {}", product.getOptionJson(), e);
             }
         }
-        
-        if(StringUtils.isNotBlank(product.getSpu())){
-            List<ShopifyGraphQLClient.ProductMetafield> metafieldInput = new ArrayList<>();
-            metafieldInput.add(ShopifyGraphQLClient.ProductMetafield.builder()
+
+        if (StringUtils.isNotBlank(product.getSpu())) {
+            List<ProductMetafield> metafieldInput = new ArrayList<>();
+            metafieldInput.add(ProductMetafield.builder()
                     .key("SPU")
                     .namespace("custom")
                     .value(product.getSpu())
@@ -568,15 +779,79 @@ public class ShopifySyncExecutor {
 
     private String resolveDefaultProductStatus(ShopifyStore store) {
         if (store == null || StringUtils.isEmpty(store.getDefaultProductStatus())) {
-            return ShopifyProductStatusEnum.DRAFT.name();
+            return ShopifyProductStatus.DRAFT.name();
         }
         String status = store.getDefaultProductStatus().trim().toUpperCase();
         if (StoreConstants.PRODUCT_STATUS_ACTIVE.equals(status)) {
-            return ShopifyProductStatusEnum.ACTIVE.name();
+            return ShopifyProductStatus.ACTIVE.name();
         }
         if (StoreConstants.PRODUCT_STATUS_DRAFT.equals(status)) {
-            return ShopifyProductStatusEnum.DRAFT.name();
+            return ShopifyProductStatus.DRAFT.name();
         }
-        return ShopifyProductStatusEnum.DRAFT.name();
+        return ShopifyProductStatus.DRAFT.name();
+    }
+
+    private String resolveVariantName(ProductVariant variant) {
+        if (variant == null) {
+            return "";
+        }
+        if (StringUtils.isNotEmpty(variant.getSku())) {
+            return variant.getSku();
+        }
+        return String.valueOf(variant.getVariantId());
+    }
+
+    @Getter
+    public static class ProductSyncResult {
+        private final StringBuilder summary;
+        private boolean productCreatedOrUpdated;
+        private boolean childFailure;
+
+        public ProductSyncResult() {
+            this(new StringBuilder());
+        }
+
+        private ProductSyncResult(StringBuilder summary) {
+            this.summary = summary;
+        }
+
+        public ProductSyncResult append(Object value) {
+            summary.append(value);
+            return this;
+        }
+
+        public String getSummary() {
+            return summary.toString();
+        }
+
+        public boolean hasChildFailure() {
+            return childFailure;
+        }
+
+        public void setProductCreatedOrUpdated(boolean productCreatedOrUpdated) {
+            this.productCreatedOrUpdated = productCreatedOrUpdated;
+        }
+
+        public void setChildFailure(boolean childFailure) {
+            this.childFailure = childFailure;
+        }
+    }
+
+    @Getter
+    private static class MediaUploadResult {
+        private final List<Media> mediaList = new ArrayList<>();
+        private boolean failure;
+
+        void add(Media media) {
+            mediaList.add(media);
+        }
+
+        void markFailure() {
+            failure = true;
+        }
+
+        boolean hasFailure() {
+            return failure;
+        }
     }
 }

@@ -31,6 +31,10 @@ public class Media implements Serializable
     @Excel(name = "关联商品ID")
     private Long productId;
 
+    /** 所属 Shopify 店铺 ID */
+    @Excel(name = "所属店铺ID")
+    private Long storeId;
+
     /** Shopify媒体ID */
     @Excel(name = "Shopify媒体ID")
     private String shopifyMediaId;
@@ -82,6 +86,9 @@ public class Media implements Serializable
     /** 媒体类型:VIDEO/IMAGE/MODEL_3D/EXTERNAL_VIDEO */
     @Excel(name = "媒体类型")
     private String mediaContentType;
+
+    /** 最近一次 Shopify 反向导入成功时间 */
+    private Date lastShopifyImportTime;
 
     /** $column.columnComment */
     private Date createTime;

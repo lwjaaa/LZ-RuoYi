@@ -8,12 +8,14 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.ruoyi.common.exception.ServiceException;
 import com.ruoyi.common.utils.DateUtils;
 import com.ruoyi.common.utils.StringUtils;
-import com.ruoyi.erp.config.ShopifyGraphQLClient;
+import com.ruoyi.erp.shopify.client.ShopifyGraphQLClient;
 import com.ruoyi.erp.constant.StoreConstants;
-import com.ruoyi.erp.exception.ShopifyApiException;
+import com.ruoyi.erp.shopify.exception.ShopifyApiException;
 import com.ruoyi.erp.mapper.ShopifyStoreMapper;
 import com.ruoyi.erp.model.domain.ShopifyStore;
+import com.ruoyi.erp.model.dto.shopifyStore.ShopifyApiCallRequest;
 import com.ruoyi.erp.model.dto.shopifyStore.ShopifyStoreQuery;
+import com.ruoyi.erp.model.vo.shopifyStore.ShopifyApiCallResponseVo;
 import com.ruoyi.erp.model.vo.shopifyStore.ShopifyResourceOptionVo;
 import com.ruoyi.erp.model.vo.shopifyStore.ShopifyStoreVo;
 import com.ruoyi.erp.service.IShopifyStoreService;
@@ -33,6 +35,7 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -52,6 +55,9 @@ public class ShopifyStoreServiceImpl extends ServiceImpl<ShopifyStoreMapper, Sho
     private static final long RETRY_MAX_ATTEMPTS = 3;
     private static final long RETRY_BACKOFF_SECONDS = 2;
     private static final String DEFAULT_API_VERSION = "2026-04";
+    private static final String API_CALL_MODE_GRAPHQL = "GRAPHQL";
+    private static final String API_CALL_MODE_JSON = "JSON";
+    private static final Set<String> API_CALL_METHODS = Set.of("GET", "POST", "PUT", "DELETE");
 
     @Lazy
     @Resource
@@ -158,7 +164,7 @@ public class ShopifyStoreServiceImpl extends ServiceImpl<ShopifyStoreMapper, Sho
     public boolean refreshToken(Long storeId) {
         ShopifyStore store = baseMapper.selectById(storeId);
         if (store == null) {
-            log.error("店铺不存在: storeId={}", storeId);
+            log.error("店铺不存在，storeId={}", storeId);
             return false;
         }
 
@@ -169,12 +175,12 @@ public class ShopifyStoreServiceImpl extends ServiceImpl<ShopifyStoreMapper, Sho
 
         // Private App 模式：token 是永久的，不需要刷新
         if (StoreConstants.AUTH_MODE_PRIVATE.equals(store.getAuthMode())) {
-            log.debug("Private App 模式，token 不需要刷新: storeId={}", storeId);
+            log.debug("Private App 模式，token 不需要刷新，storeId={}", storeId);
             return true;
         }
 
 
-        log.warn("未知的认证模式: authMode={}, storeId={}", store.getAuthMode(), storeId);
+        log.warn("未知的认证模式，authMode={}, storeId={}", store.getAuthMode(), storeId);
         return false;
     }
 
@@ -186,7 +192,7 @@ public class ShopifyStoreServiceImpl extends ServiceImpl<ShopifyStoreMapper, Sho
                 || StringUtils.isEmpty(store.getApiKey())
                 || StringUtils.isEmpty(store.getApiSecret())
                 || StringUtils.isEmpty(store.getApiVersion())) {
-            log.error("OAuth 刷新 token 失败：缺少必要配置, storeId={}", store.getStoreId());
+            log.error("OAuth 刷新 token 失败：缺少必要配置，storeId={}", store.getStoreId());
             updateStatus(store.getStoreId(), STATUS_DISCONNECTED);
             return false;
         }
@@ -213,7 +219,7 @@ public class ShopifyStoreServiceImpl extends ServiceImpl<ShopifyStoreMapper, Sho
                     .block();
 
             if (StringUtils.isEmpty(response)) {
-                log.error("OAuth token 刷新失败：响应为空, storeId={}", store.getStoreId());
+                log.error("OAuth token 刷新失败：响应为空，storeId={}", store.getStoreId());
                 updateStatus(store.getStoreId(), STATUS_EXPIRED);
                 return false;
             }
@@ -223,7 +229,7 @@ public class ShopifyStoreServiceImpl extends ServiceImpl<ShopifyStoreMapper, Sho
             Integer expiresIn = jsonResponse.getInteger("expires_in");
 
             if (StringUtils.isEmpty(newAccessToken)) {
-                log.error("OAuth token 刷新失败：响应中未包含 access_token, storeId={}", store.getStoreId());
+                log.error("OAuth token 刷新失败：响应中未包含 access_token，storeId={}", store.getStoreId());
                 updateStatus(store.getStoreId(), STATUS_EXPIRED);
                 return false;
             }
@@ -262,7 +268,7 @@ public class ShopifyStoreServiceImpl extends ServiceImpl<ShopifyStoreMapper, Sho
         store.setStatus(status);
         store.setUpdateTime(DateUtils.getNowDate());
         baseMapper.updateById(store);
-        log.info("更新店铺状态: storeId={}, status={}", storeId, status);
+        log.info("更新店铺状态，storeId={}, status={}", storeId, status);
     }
 
     @Override
@@ -302,6 +308,94 @@ public class ShopifyStoreServiceImpl extends ServiceImpl<ShopifyStoreMapper, Sho
         return shopifyGraphQLClient.getPublications(storeId).stream()
                 .map(publication -> new ShopifyResourceOptionVo(publication.getId(), publication.getName()))
                 .toList();
+    }
+
+    @Override
+    public ShopifyApiCallResponseVo callAdminApi(Long storeId, ShopifyApiCallRequest request) {
+        ShopifyStore store = selectByStoreId(storeId);
+        if (store == null || StoreConstants.DEL_FLAG_DELETED.equals(store.getDelFlag())) {
+            throw new ServiceException("店铺不存在");
+        }
+        if (request == null) {
+            throw new ServiceException("请求参数不能为空");
+        }
+        String method = normalizeApiCallMethod(request.getMethod());
+        String mode = normalizeApiCallMode(request.getMode());
+        String url = normalizeApiCallUrl(store, request.getUrl());
+        Object body = buildApiCallBody(mode, request);
+        return shopifyGraphQLClient.callAdminApi(storeId, method, url, body);
+    }
+
+    private String normalizeApiCallMethod(String method) {
+        String normalized = StringUtils.isEmpty(method) ? "POST" : method.trim().toUpperCase(Locale.ROOT);
+        if (!API_CALL_METHODS.contains(normalized)) {
+            throw new ServiceException("请求方法只允许 GET、POST、PUT、DELETE");
+        }
+        return normalized;
+    }
+
+    private String normalizeApiCallMode(String mode) {
+        String normalized = StringUtils.isEmpty(mode) ? API_CALL_MODE_GRAPHQL : mode.trim().toUpperCase(Locale.ROOT);
+        if (!API_CALL_MODE_GRAPHQL.equals(normalized) && !API_CALL_MODE_JSON.equals(normalized)) {
+            throw new ServiceException("请求模式只允许 GRAPHQL 或 JSON");
+        }
+        return normalized;
+    }
+
+    private String normalizeApiCallUrl(ShopifyStore store, String url) {
+        String normalizedUrl = StringUtils.isEmpty(url) ? store.getFullGraphQLUrl() : url.trim();
+        if (StringUtils.isNotEmpty(store.getBaseUrl()) && store.getBaseUrl().trim().equals(normalizedUrl)) {
+            return normalizedUrl;
+        }
+        try {
+            URI uri = URI.create(normalizedUrl);
+            String expectedHost = store.getShopName() + ".myshopify.com";
+            String expectedPathPrefix = "/admin/api/" + store.getApiVersion() + "/";
+            if ("https".equalsIgnoreCase(uri.getScheme())
+                    && expectedHost.equalsIgnoreCase(uri.getHost())
+                    && uri.getPath() != null
+                    && uri.getPath().startsWith(expectedPathPrefix)) {
+                return normalizedUrl;
+            }
+        } catch (IllegalArgumentException e) {
+            throw new ServiceException("接口地址格式不正确");
+        }
+        throw new ServiceException("只能调用当前店铺的 Shopify Admin API");
+    }
+
+    private Object buildApiCallBody(String mode, ShopifyApiCallRequest request) {
+        if (API_CALL_MODE_GRAPHQL.equals(mode)) {
+            if (StringUtils.isEmpty(request.getQuery())) {
+                throw new ServiceException("GraphQL 查询不能为空");
+            }
+            return Map.of(
+                    "query", request.getQuery(),
+                    "variables", parseJsonObjectOrEmpty(request.getVariables(), "variables")
+            );
+        }
+        if (StringUtils.isEmpty(request.getBody())) {
+            return null;
+        }
+        try {
+            return JSON.parse(request.getBody());
+        } catch (Exception e) {
+            throw new ServiceException("JSON格式不正确");
+        }
+    }
+
+    private Object parseJsonObjectOrEmpty(String value, String fieldName) {
+        if (StringUtils.isEmpty(value)) {
+            return Map.of();
+        }
+        try {
+            Object parsed = JSON.parse(value);
+            if (parsed instanceof Map<?, ?>) {
+                return parsed;
+            }
+        } catch (Exception e) {
+            throw new ServiceException(fieldName + " JSON格式不正确");
+        }
+        throw new ServiceException(fieldName + " 必须是 JSON 对象");
     }
 
     private void normalizeAndValidate(ShopifyStore store, boolean edit) {

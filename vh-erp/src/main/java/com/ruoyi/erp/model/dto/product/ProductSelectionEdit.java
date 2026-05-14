@@ -32,6 +32,9 @@ public class ProductSelectionEdit implements Serializable
     /** Shopify平台商品ID (唯一映射) */
     private String shopifyProductId;
 
+    /** 所属 Shopify 店铺 ID */
+    private Long storeId;
+
     /** SPU */
     private String spu;
 

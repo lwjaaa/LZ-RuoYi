@@ -44,4 +44,8 @@ public interface ProductConstants {
      * 商品同步状态-同步中
      */
     String SYNC_STATUS_RUNNING = "3";
+    /**
+     * 商品同步状态-部分成功
+     */
+    String SYNC_STATUS_PART_SUCCESS = "4";
 }

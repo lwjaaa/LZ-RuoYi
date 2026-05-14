@@ -30,6 +30,17 @@ public class ProductVo implements Serializable
     /** Shopify平台商品ID (唯一映射) */
     private String shopifyProductId;
 
+    /** 所属 Shopify 店铺 ID */
+    private Long storeId;
+
+    /** Shopify 远端商品更新时间 */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private Date shopifyUpdatedAt;
+
+    /** 最近一次 Shopify 反向导入成功时间 */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private Date lastShopifyImportTime;
+
     /** 商品标题 */
     private String productTitle;
 

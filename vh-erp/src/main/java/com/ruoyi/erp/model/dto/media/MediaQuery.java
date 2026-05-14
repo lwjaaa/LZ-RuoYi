@@ -25,6 +25,9 @@ public class MediaQuery implements Serializable
     /** 关联商品ID */
     private Long productId;
 
+    /** 所属 Shopify 店铺 ID */
+    private Long storeId;
+
     /** Shopify媒体ID */
     private String shopifyMediaId;
 

@@ -7,10 +7,12 @@ import com.ruoyi.common.core.page.TableDataInfo;
 import com.ruoyi.common.enums.BusinessType;
 import com.ruoyi.common.utils.poi.ExcelUtil;
 import com.ruoyi.erp.model.domain.ShopifyStore;
+import com.ruoyi.erp.model.dto.shopifyStore.ShopifyApiCallRequest;
 import com.ruoyi.erp.model.dto.shopifyStore.ShopifyStoreEdit;
 import com.ruoyi.erp.model.dto.shopifyStore.ShopifyStoreInsert;
 import com.ruoyi.erp.model.dto.shopifyStore.ShopifyStoreQuery;
 import com.ruoyi.erp.model.vo.shopifyStore.ShopifyStoreVo;
+import com.ruoyi.erp.service.IShopifyProductImportService;
 import com.ruoyi.erp.service.IShopifyStoreService;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletResponse;
@@ -35,6 +37,8 @@ public class ShopifyStoreController extends BaseController {
 
     @Resource
     private IShopifyStoreService shopifyStoreService;
+    @Resource
+    private IShopifyProductImportService shopifyProductImportService;
 
     /**
      * 查询 Shopify 店铺列表
@@ -135,5 +139,41 @@ public class ShopifyStoreController extends BaseController {
     @GetMapping("/{storeId}/publications")
     public AjaxResult publications(@PathVariable("storeId") Long storeId) {
         return success(shopifyStoreService.fetchPublications(storeId));
+    }
+
+    /**
+     * 调用当前店铺 Shopify Admin API
+     */
+    @PreAuthorize("@ss.hasPermi('erp:store:edit')")
+    @PostMapping("/{storeId}/api-call")
+    public AjaxResult callAdminApi(@PathVariable("storeId") Long storeId, @RequestBody ShopifyApiCallRequest request) {
+        return success(shopifyStoreService.callAdminApi(storeId, request));
+    }
+
+    /**
+     * 手动触发 Shopify 商品全量导入
+     */
+    @PreAuthorize("@ss.hasPermi('erp:store:edit')")
+    @PostMapping("/{storeId}/shopify-products/import-full")
+    public AjaxResult importShopifyProductsFull(@PathVariable("storeId") Long storeId) {
+        return success(shopifyProductImportService.startFullImport(storeId));
+    }
+
+    /**
+     * 手动触发 Shopify 商品增量导入
+     */
+    @PreAuthorize("@ss.hasPermi('erp:store:edit')")
+    @PostMapping("/{storeId}/shopify-products/import-incremental")
+    public AjaxResult importShopifyProductsIncremental(@PathVariable("storeId") Long storeId) {
+        return success(shopifyProductImportService.startIncrementalImport(storeId));
+    }
+
+    /**
+     * 查询 Shopify 商品导入游标
+     */
+    @PreAuthorize("@ss.hasPermi('erp:store:query')")
+    @GetMapping("/{storeId}/shopify-products/import-cursor")
+    public AjaxResult shopifyProductImportCursor(@PathVariable("storeId") Long storeId) {
+        return success(shopifyProductImportService.getCursor(storeId));
     }
 }

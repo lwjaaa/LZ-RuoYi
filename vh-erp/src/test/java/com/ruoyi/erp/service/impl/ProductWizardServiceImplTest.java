@@ -7,6 +7,7 @@ import com.ruoyi.erp.model.domain.ProductVariant;
 import com.ruoyi.erp.service.IFormSuggestionService;
 import com.ruoyi.erp.service.IMediaService;
 import com.ruoyi.erp.service.IProductService;
+import com.ruoyi.erp.service.IProductQualityService;
 import com.ruoyi.erp.service.IProductTagRelService;
 import com.ruoyi.erp.service.IProductVariantService;
 import com.ruoyi.erp.service.ITagDictService;
@@ -32,6 +33,7 @@ class ProductWizardServiceImplTest {
     private ITagDictService tagDictService;
     private IMediaService mediaService;
     private IFormSuggestionService formSuggestionService;
+    private IProductQualityService productQualityService;
     private ProductWizardServiceImpl productWizardService;
 
     @BeforeEach
@@ -42,6 +44,7 @@ class ProductWizardServiceImplTest {
         tagDictService = mock(ITagDictService.class);
         mediaService = mock(IMediaService.class);
         formSuggestionService = mock(IFormSuggestionService.class);
+        productQualityService = mock(IProductQualityService.class);
 
         productWizardService = new ProductWizardServiceImpl();
         ReflectionTestUtils.setField(productWizardService, "productService", productService);
@@ -50,6 +53,7 @@ class ProductWizardServiceImplTest {
         ReflectionTestUtils.setField(productWizardService, "tagDictService", tagDictService);
         ReflectionTestUtils.setField(productWizardService, "mediaService", mediaService);
         ReflectionTestUtils.setField(productWizardService, "formSuggestionService", formSuggestionService);
+        ReflectionTestUtils.setField(productWizardService, "productQualityService", productQualityService);
 
         when(productService.updateById(any(Product.class))).thenReturn(true);
         when(productService.getOne(any())).thenReturn(null);
@@ -179,9 +183,36 @@ class ProductWizardServiceImplTest {
         verify(mediaService, never()).syncProductMediaKeyword(any(), any(), any());
     }
 
+    @Test
+    void saveProductCommonRejectsNewProductWithoutStoreId() {
+        Product product = buildProduct(null, "ABC001");
+        product.setStoreId(null);
+        product.setProductVariantList(List.of(buildVariant(null, null, "ABC001-001")));
+
+        assertThrows(ServiceException.class, () -> productWizardService.saveProductCommon(product, 1));
+        verify(productService, never()).save(any(Product.class));
+        verify(productVariantService, never()).saveOrUpdateBatch(anyCollection());
+    }
+
+    @Test
+    void saveProductCommonCopiesProductStoreIdToNewVariants() {
+        Product product = buildProduct(null, "ABC001");
+        product.setProductVariantList(List.of(buildVariant(null, null, "ABC001-001")));
+        doAnswer(invocation -> {
+            invocation.getArgument(0, Product.class).setProductId(100L);
+            return true;
+        }).when(productService).save(any(Product.class));
+
+        productWizardService.saveProductCommon(product, 1);
+
+        List<ProductVariant> savedVariants = captureSavedVariants();
+        assertEquals(1L, savedVariants.get(0).getStoreId());
+    }
+
     private Product buildProduct(Long productId, String spu) {
         Product product = new Product();
         product.setProductId(productId);
+        product.setStoreId(1L);
         product.setSpu(spu);
         return product;
     }
