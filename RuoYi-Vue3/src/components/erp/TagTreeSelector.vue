@@ -19,16 +19,76 @@
       <template v-slot="{ data }">
         <span
           class="custom-tree-node"
-          :class="{ 'selected-node': selectedTagIds.includes(data.tagId) }"
+          :class="{
+            'selected-node': selectedTagIds.includes(data.tagId),
+            'action-visible': hoveredNode === data.tagId,
+          }"
           @mouseenter="hoveredNode = data.tagId"
           @mouseleave="hoveredNode = null"
         >
-          <el-icon class="node-icon" v-if="data.tagType === 'MENU'">
-            <FolderOpened />
-          </el-icon>
-          <el-icon class="node-icon" v-else>
-            <Ticket />
-          </el-icon>
+          <span
+            class="node-icon"
+            :class="getTagIconClass(data.tagType)"
+            aria-hidden="true"
+          >
+            <svg
+              v-if="data.tagType === 'MENU'"
+              class="node-icon-svg"
+              viewBox="0 0 20 20"
+              fill="none"
+            >
+              <path
+                d="M5.2 4.8h3.1l1.2 1.5h5.3c.8 0 1.4.6 1.4 1.4v6.1c0 .8-.6 1.4-1.4 1.4H5.2c-.8 0-1.4-.6-1.4-1.4V6.2c0-.8.6-1.4 1.4-1.4Z"
+                stroke="currentColor"
+                stroke-width="1.6"
+                stroke-linejoin="round"
+              />
+              <path
+                d="M6.8 9.2h6.4M6.8 12h4.2"
+                stroke="currentColor"
+                stroke-width="1.6"
+                stroke-linecap="round"
+              />
+            </svg>
+            <svg
+              v-else-if="data.tagType === 'ACTIVITY'"
+              class="node-icon-svg"
+              viewBox="0 0 20 20"
+              fill="none"
+            >
+              <path
+                d="M4.8 5.2h5.4l5 5c.5.5.5 1.3 0 1.8l-3.2 3.2c-.5.5-1.3.5-1.8 0l-5-5V5.2Z"
+                stroke="currentColor"
+                stroke-width="1.6"
+                stroke-linejoin="round"
+              />
+              <path
+                d="M7.3 7.3h.1M13.8 4.4v2.2M12.7 5.5h2.2"
+                stroke="currentColor"
+                stroke-width="1.6"
+                stroke-linecap="round"
+              />
+            </svg>
+            <svg
+              v-else
+              class="node-icon-svg"
+              viewBox="0 0 20 20"
+              fill="none"
+            >
+              <path
+                d="M4.5 6.1c0-.9.7-1.6 1.6-1.6h5.1l4.3 4.3c.6.6.6 1.5 0 2.1l-4.6 4.6c-.6.6-1.5.6-2.1 0L4.5 11.2V6.1Z"
+                stroke="currentColor"
+                stroke-width="1.6"
+                stroke-linejoin="round"
+              />
+              <path
+                d="M7.4 7.4h.1"
+                stroke="currentColor"
+                stroke-width="1.9"
+                stroke-linecap="round"
+              />
+            </svg>
+          </span>
           <span class="node-label"
             >{{ data.tagName }} ({{ data.tagCode }})</span
           >
@@ -76,8 +136,6 @@ import { ref, onMounted, nextTick, watch, getCurrentInstance } from "vue";
 import { ElIcon, ElMessage, ElMessageBox } from "element-plus";
 import type { FormInstance, FormRules } from "element-plus";
 import {
-  FolderOpened,
-  Ticket,
   Plus,
   Edit,
   Delete,
@@ -124,6 +182,16 @@ const selectedTagIds = ref<number[]>([]);
 const treeProps = {
   children: "children",
   label: "tagName",
+};
+
+const getTagIconClass = (tagType?: string): string => {
+  if (tagType === "MENU") {
+    return "is-menu";
+  }
+  if (tagType === "ACTIVITY") {
+    return "is-activity";
+  }
+  return "is-other";
 };
 
 const loadTags = async (): Promise<void> => {
@@ -418,5 +486,74 @@ watch(
 .drag-handle {
   margin-right: 10px;
   cursor: move;
+}
+
+.custom-tree-node {
+  position: relative;
+  justify-content: flex-start;
+  gap: 6px;
+  transition: background-color 0.2s ease, padding-right 0.2s ease;
+  overflow: hidden;
+}
+
+.custom-tree-node.action-visible {
+  padding-right: 76px;
+}
+
+.node-icon {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  margin-right: 0;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
+}
+
+.node-icon-svg {
+  width: 15px;
+  height: 15px;
+  display: block;
+}
+
+.node-icon.is-menu {
+  color: #2563eb;
+  background: linear-gradient(135deg, #f0f7ff 0%, #dbeafe 100%);
+  border-color: #bfdbfe;
+}
+
+.node-icon.is-activity {
+  color: #b45309;
+  background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+  border-color: #fed7aa;
+}
+
+.node-icon.is-other {
+  color: #047857;
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+  border-color: #a7f3d0;
+}
+
+.hover-buttons {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  z-index: 2;
+  flex-grow: 0;
+  transform: translateY(-50%);
+}
+
+:deep(.el-tree-node__content) {
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+
+:deep(.el-tree-node__content > .custom-tree-node) {
+  flex: 1;
+  min-width: 0;
 }
 </style>

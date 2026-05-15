@@ -37,7 +37,7 @@
       <el-collapse-transition>
         <el-form v-show="advancedVisible" :model="queryParams" :inline="true" label-width="90px" class="filter-form advanced-form">
           <el-form-item label="店铺" prop="storeId">
-            <el-select v-model="queryParams.storeId" placeholder="请选择店铺" filterable class="w-170" :loading="storeAction.loading">
+            <el-select v-model="queryParams.storeId" placeholder="请选择店铺" filterable class="w-218" :loading="storeAction.loading">
               <el-option
                 v-for="store in activeStores"
                 :key="store.storeId"
@@ -47,22 +47,22 @@
             </el-select>
           </el-form-item>
           <el-form-item label="更新人" prop="updatedBy">
-            <el-input v-model="queryParams.updatedBy" placeholder="更新人" clearable class="w-120" @keyup.enter="handleQuery" />
+            <el-input v-model="queryParams.updatedBy" placeholder="更新人" clearable class="w-218" @keyup.enter="handleQuery" />
           </el-form-item>
           <el-form-item label="分类" prop="category">
-            <el-input v-model="queryParams.category" placeholder="分类" clearable class="w-160" @keyup.enter="handleQuery" />
+            <el-input v-model="queryParams.category" placeholder="分类" clearable class="w-218" @keyup.enter="handleQuery" />
           </el-form-item>
           <el-form-item label="商品类型" prop="productType">
-            <el-input v-model="queryParams.productType" placeholder="商品类型" clearable class="w-160" @keyup.enter="handleQuery" />
+            <el-input v-model="queryParams.productType" placeholder="商品类型" clearable class="w-218" @keyup.enter="handleQuery" />
           </el-form-item>
           <el-form-item label="来源链接" prop="sourceUrl">
-            <el-input v-model="queryParams.sourceUrl" placeholder="来源链接关键词" clearable class="w-220" @keyup.enter="handleQuery" />
+            <el-input v-model="queryParams.sourceUrl" placeholder="来源链接关键词" clearable class="w-218" @keyup.enter="handleQuery" />
           </el-form-item>
           <el-form-item label="采购链接" prop="purchaseUrl">
-            <el-input v-model="queryParams.purchaseUrl" placeholder="采购链接关键词" clearable class="w-220" @keyup.enter="handleQuery" />
+            <el-input v-model="queryParams.purchaseUrl" placeholder="采购链接关键词" clearable class="w-218" @keyup.enter="handleQuery" />
           </el-form-item>
           <el-form-item label="资料完整度" prop="qualityState">
-            <el-select v-model="queryParams.qualityState" placeholder="全部" clearable class="w-150">
+            <el-select v-model="queryParams.qualityState" placeholder="全部" clearable class="w-218">
               <el-option label="资料完整" value="complete" />
               <el-option label="资料不完整" value="incomplete" />
             </el-select>
@@ -1209,6 +1209,7 @@ defineExpose({
 .w-160 { width: 160px; }
 .w-170 { width: 170px; }
 .w-180 { width: 180px; }
+.w-218 { width: 218px; }
 .w-220 { width: 220px; }
 .w-240 { width: 240px; }
 .w-260 { width: 260px; }
