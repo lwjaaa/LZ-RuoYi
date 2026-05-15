@@ -3,12 +3,12 @@
     <div class="workbench-header">
       <div class="toolbar-primary">
         <el-form :model="queryParams" ref="queryRef" :inline="true" label-width="90px" class="filter-form toolbar-filter-form">
-          <el-form-item label="关键词" prop="searchKeyword">
+          <el-form-item label="关键词" prop="searchKeyword" class="keyword-filter-item">
             <el-input
               v-model="queryParams.searchKeyword"
               placeholder="标题 / SPU / SKU / Shopify ID"
               clearable
-              class="w-240"
+              class="w-218"
               @keyup.enter="handleQuery"
             />
           </el-form-item>
@@ -1182,6 +1182,15 @@ defineExpose({
   min-width: 0;
 }
 
+.keyword-filter-item :deep(.el-form-item__content) {
+  width: 218px;
+  flex: 0 0 218px;
+}
+
+.keyword-filter-item :deep(.el-input) {
+  width: 218px !important;
+}
+
 .filter-form :deep(.el-form-item) {
   margin-right: 4px;
   margin-bottom: 0;
@@ -1196,6 +1205,16 @@ defineExpose({
   padding: 8px 0 2px;
   margin-top: 0;
   border-top: 1px dashed #d9e0ea;
+}
+
+.advanced-form :deep(.el-form-item__content) {
+  width: 218px;
+  flex: 0 0 218px;
+}
+
+.advanced-form :deep(.el-input),
+.advanced-form :deep(.el-select) {
+  width: 218px !important;
 }
 
 .filter-actions {

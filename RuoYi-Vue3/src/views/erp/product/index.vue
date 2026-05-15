@@ -256,7 +256,6 @@ onBeforeUnmount(() => {
 .panel-content {
   height: calc(100% - 48px);
   overflow: auto;
-  padding: 8px 0;
 }
 
 /* 语雀风格调节器 */
