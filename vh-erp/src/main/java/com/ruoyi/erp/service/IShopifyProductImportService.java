@@ -11,4 +11,6 @@ public interface IShopifyProductImportService {
     void syncIncrementalAllActiveStores();
 
     ShopifySyncCursor getCursor(Long storeId);
+
+    void executeLocalFile(String filePath);
 }

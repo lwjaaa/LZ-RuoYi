@@ -200,6 +200,15 @@ public enum ShopifyGraphQLQueries {
                 metafield(namespace: "custom", key: "SPU") {
                   value
                 }
+                options {
+                  id
+                  name
+                  position
+                  optionValues {
+                    id
+                    name
+                  }
+                }
                 variants(first: 250) {
                   edges {
                     node {
@@ -310,6 +319,15 @@ public enum ShopifyGraphQLQueries {
                 }
                 metafield(namespace: "custom", key: "SPU") {
                   value
+                }
+                options {
+                  id
+                  name
+                  position
+                  optionValues {
+                    id
+                    name
+                  }
                 }
                 variants {
                   edges {

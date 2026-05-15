@@ -161,16 +161,46 @@ token:
 springdoc:
     api-docs:
         path: /v3/api-docs
-        enabled: false
+        enabled: true
     swagger-ui:
-        enabled: false
+        enabled: true
         path: /swagger-ui.html
         tags-sorter: alpha
+        operations-sorter: alpha
     group-configs:
-        - group: 'default'
+        - group: 'all'
+          display-name: 'All APIs'
+          paths-to-match:
+              - '/**'
+          packages-to-scan:
+              - com.ruoyi.web.controller
+              - com.ruoyi.erp.controller
+              - com.ruoyi.quartz.controller
+              - com.ruoyi.generator.controller
+        - group: 'erp'
+          display-name: 'ERP Shopify模块'
+          paths-to-match:
+              - '/erp/**'
+              - '/api/erp/**'
+              - '/api/test/**'
+          packages-to-scan:
+              - com.ruoyi.erp.controller
+        - group: 'system'
           display-name: '测试模块'
-          paths-to-match: '/**'
-          packages-to-scan: com.ruoyi.web.controller.tool
+          paths-to-match:
+              - '/system/**'
+              - '/monitor/**'
+              - '/tool/**'
+              - '/common/**'
+              - '/test/**'
+              - '/login'
+              - '/logout'
+              - '/register'
+              - '/captchaImage'
+          packages-to-scan:
+              - com.ruoyi.web.controller
+              - com.ruoyi.quartz.controller
+              - com.ruoyi.generator.controller
 
 # 防盗链配置
 referer:

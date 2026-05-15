@@ -35,6 +35,12 @@
             <version>${mybatis-plus.version}</version>
         </dependency>
 
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-api</artifactId>
+            <optional>true</optional>
+        </dependency>
+
         <!-- Spring Boot GraphQL Client -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

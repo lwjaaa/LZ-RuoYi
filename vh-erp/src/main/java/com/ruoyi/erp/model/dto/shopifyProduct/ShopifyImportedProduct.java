@@ -23,6 +23,7 @@ public class ShopifyImportedProduct implements Serializable {
     private Date updatedAt;
     private String spu;
     private Map<String, String> seo;
+    private List<ShopifyImportedOption> options = new ArrayList<>();
     private List<ShopifyImportedVariant> variants = new ArrayList<>();
     private List<ShopifyImportedMedia> media = new ArrayList<>();
 }

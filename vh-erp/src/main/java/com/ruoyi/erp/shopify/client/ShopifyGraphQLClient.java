@@ -123,4 +123,10 @@ public class ShopifyGraphQLClient {
     public List<ShopifyImportedProduct> downloadBulkJsonlProducts(String url) {
         return productImportClient.downloadBulkJsonlProducts(url);
     }
+    public List<ShopifyImportedProduct> downloadBulkJsonlProductsWithAgent(String url) {
+        return productImportClient.downloadBulkJsonlProductsWithAgent(url);
+    }
+    public List<ShopifyImportedProduct> parseLocalJsonlProducts(String filePath) {
+        return productImportClient.parseLocalJsonlProducts(filePath);
+    }
 }

@@ -860,16 +860,13 @@
                 >
                   <template v-if="isImage(media)">
                     <el-image
-                      :src="
-                        baseUrl + (media.nasMediaUrl || media.shopifyMediaUrl)
-                      "
+                      :src="getMediaDisplayUrl(media)"
                       :alt="media.filename"
                       class="image-thumb"
                       :preview-src-list="imagePreviewList"
                       :initial-index="
                         imagePreviewList.indexOf(
-                          baseUrl +
-                            (media.nasMediaUrl || media.shopifyMediaUrl),
+                          getMediaDisplayUrl(media),
                         )
                       "
                       lazy
@@ -1108,16 +1105,10 @@
                   <!-- 图片展示 -->
                   <template v-if="row.media">
                     <el-image
-                      :src="
-                        baseUrl +
-                        (row.media.nasMediaUrl || row.media.shopifyMediaUrl)
-                      "
+                      :src="getMediaDisplayUrl(row.media)"
                       class="variant-thumb"
                       :alt="'Variant Image'"
-                      :preview-src-list="[
-                        baseUrl +
-                          (row.media.nasMediaUrl || row.media.shopifyMediaUrl),
-                      ]"
+                      :preview-src-list="[getMediaDisplayUrl(row.media)]"
                       preview-teleported
                       fit="cover"
                     />
@@ -1569,6 +1560,20 @@ const exchangeRateStore = useExchangeRateStore();
 const { product_config } = useDict("product_config");
 
 const baseUrl = import.meta.env.VITE_APP_BASE_API;
+
+/**
+ * 获取媒体可访问地址，NAS 为空时回退到 Shopify 地址。
+ */
+function getMediaDisplayUrl(media?: Media | null): string {
+  const url = media?.nasMediaUrl || media?.shopifyMediaUrl || media?.transcodedMediaUrl || "";
+  if (!url) {
+    return "";
+  }
+  if (/^(https?:)?\/\//i.test(url) || /^(data|blob):/i.test(url)) {
+    return url;
+  }
+  return baseUrl + url;
+}
 
 // 金额转换工具函数
 /**
@@ -2026,7 +2031,8 @@ function handleExtractFields(): void {
 const imagePreviewList = computed<string[]>(() => {
   return step2FormData.mediaList
     .filter((item) => isImage(item))
-    .map((item) => baseUrl + (item.nasMediaUrl || item.shopifyMediaUrl));
+    .map((item) => getMediaDisplayUrl(item))
+    .filter(Boolean);
 });
 
 const readinessResult = computed(() =>

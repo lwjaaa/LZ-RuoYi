@@ -12,6 +12,9 @@ import com.ruoyi.erp.model.dto.product.ProductQuery;
 import com.ruoyi.erp.model.vo.product.ProductVo;
 import com.ruoyi.erp.service.IProductService;
 import com.ruoyi.erp.service.IProductWizardService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -121,7 +124,9 @@ public class ProductController extends BaseController {
     @PreAuthorize("@ss.hasPermi('erp:product:push')")
     @Log(title = "批量推送", businessType = BusinessType.OTHER)
     @PostMapping("/push-batch")
-    public AjaxResult pushBatch(@RequestBody ProductPushRequest request) {
+    @Operation(summary = "批量推送商品到 Shopify", description = "按商品ID列表或查询条件创建 Shopify 商品批量推送任务", tags = {"Shopify商品同步"})
+    @ApiResponse(responseCode = "200", description = "返回任务ID；未匹配到商品时返回普通成功结果")
+    public AjaxResult pushBatch(@io.swagger.v3.oas.annotations.parameters.RequestBody(description = "商品批量推送请求", required = true) @RequestBody ProductPushRequest request) {
         Long taskId = productService.pushBatchByCondition(
                 request.getProductQuery(),
                 request.getProductIds(),
@@ -136,7 +141,9 @@ public class ProductController extends BaseController {
     @PreAuthorize("@ss.hasPermi('erp:product:push')")
     @Log(title = "批量发布渠道", businessType = BusinessType.OTHER)
     @PostMapping("/publish-channels")
-    public AjaxResult publishChannels(@RequestBody ProductPushRequest request) {
+    @Operation(summary = "批量发布已同步商品到 Shopify 渠道", description = "按商品ID列表将已同步商品发布到店铺配置的发布渠道", tags = {"Shopify商品同步"})
+    @ApiResponse(responseCode = "200", description = "返回发布统计和明细")
+    public AjaxResult publishChannels(@io.swagger.v3.oas.annotations.parameters.RequestBody(description = "商品发布渠道请求", required = true) @RequestBody ProductPushRequest request) {
         return success(productService.publishToChannels(request.getProductIds(), request.getStoreId()));
     }
 
@@ -146,7 +153,9 @@ public class ProductController extends BaseController {
      */
     @PreAuthorize("@ss.hasPermi('erp:product:push')")
     @GetMapping("/push-result/{taskId}")
-    public AjaxResult pushResult(@PathVariable Long taskId) {
+    @Operation(summary = "查询 Shopify 商品推送结果", description = "按任务ID查询 Shopify 商品推送任务结果", tags = {"Shopify商品同步"})
+    @ApiResponse(responseCode = "200", description = "返回任务结果")
+    public AjaxResult pushResult(@Parameter(description = "任务ID", required = true) @PathVariable Long taskId) {
         return success(productService.getPushResult(taskId));
     }
 

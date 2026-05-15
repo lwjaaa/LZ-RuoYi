@@ -1,6 +1,4 @@
 package com.ruoyi.erp.service.impl;
-
-import com.alibaba.fastjson2.JSON;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.ruoyi.common.exception.ServiceException;
 import com.ruoyi.common.utils.StringUtils;
@@ -22,14 +20,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
-
 /**
  * Shopify 商品反向导入服务。
  * 负责按店铺维度导入远端商品，并维护增量游标。
@@ -37,7 +33,6 @@ import java.util.*;
 @Slf4j
 @Service
 public class ShopifyProductImportServiceImpl implements IShopifyProductImportService {
-
     private static final String CURSOR_MODE_PRODUCT_IMPORT = ShopifySyncCursorMode.PRODUCT_IMPORT.getCode();
     private static final String CURSOR_STATUS_RUNNING = ShopifySyncCursorStatus.RUNNING.getCode();
     private static final String CURSOR_STATUS_SUCCESS = ShopifySyncCursorStatus.SUCCESS.getCode();
@@ -45,7 +40,6 @@ public class ShopifyProductImportServiceImpl implements IShopifyProductImportSer
     private static final String CURSOR_STATUS_PART_SUCCESS = ShopifySyncCursorStatus.PART_SUCCESS.getCode();
     private static final int PAGE_SIZE = ShopifySyncConstants.PRODUCT_IMPORT_PAGE_SIZE;
     private static final long SAFETY_WINDOW_MINUTES = ShopifySyncConstants.PRODUCT_IMPORT_SAFETY_WINDOW_MINUTES;
-
     @Resource
     private ShopifyGraphQLClient shopifyGraphQLClient;
     @Resource
@@ -63,20 +57,21 @@ public class ShopifyProductImportServiceImpl implements IShopifyProductImportSer
     @Resource
     private MediaMapper mediaMapper;
     @Resource
+    private ShopifyProductImportTagService productImportTagService;
+    @Resource
+    private ShopifyProductImportOptionService productImportOptionService;
+    @Resource
     private IProductQualityService productQualityService;
     @Resource(name = "shopifySyncThreadPool")
     private ThreadPoolTaskExecutor taskExecutor;
-
     @Override
     public Long startFullImport(Long storeId) {
         return createTaskAndSubmit(storeId, ShopifyTaskType.PRODUCT_IMPORT_FULL.getCode());
     }
-
     @Override
     public Long startIncrementalImport(Long storeId) {
         return createTaskAndSubmit(storeId, ShopifyTaskType.PRODUCT_IMPORT_INCREMENTAL.getCode());
     }
-
     @Override
     public void syncIncrementalAllActiveStores() {
         List<ShopifyStore> stores = shopifyStoreService.selectActiveStores();
@@ -96,16 +91,13 @@ public class ShopifyProductImportServiceImpl implements IShopifyProductImportSer
             }
         }
     }
-
     @Override
     public ShopifySyncCursor getCursor(Long storeId) {
         return getOrCreateCursor(storeId);
     }
-
     private Long createTaskAndSubmit(Long storeId, String taskType) {
         ShopifyStore store = resolveActiveStore(storeId);
         ensureNoRunningTask(store.getStoreId(), taskType);
-
         // 先落任务摘要，再异步执行；前端可通过 taskId 进入诊断页追踪结果。
         ShopifyTask task = new ShopifyTask();
         task.setStoreId(store.getStoreId());
@@ -120,13 +112,11 @@ public class ShopifyProductImportServiceImpl implements IShopifyProductImportSer
         task.setFailedCount(0);
         task.setCreateTime(new Date());
         shopifyTaskService.insertShopifyTask(task);
-
         taskExecutor.execute(() -> executeImportTask(task.getTaskId(), taskType));
         log.info("Shopify 商品导入任务已创建，taskId={}, storeId={}, shopName={}, taskType={}",
                 task.getTaskId(), store.getStoreId(), store.getShopName(), taskType);
         return task.getTaskId();
     }
-
     private ShopifyStore resolveActiveStore(Long storeId) {
         ShopifyStore store = storeId == null ? shopifyStoreService.selectDefaultStore() : shopifyStoreService.selectByStoreId(storeId);
         if (store == null) {
@@ -137,7 +127,6 @@ public class ShopifyProductImportServiceImpl implements IShopifyProductImportSer
         }
         return store;
     }
-
     private void ensureNoRunningTask(Long storeId, String taskType) {
         long running = shopifyTaskService.count(new LambdaQueryWrapper<ShopifyTask>()
                 .eq(ShopifyTask::getStoreId, storeId)
@@ -149,12 +138,10 @@ public class ShopifyProductImportServiceImpl implements IShopifyProductImportSer
             throw new ServiceException("当前店铺已有同类型 Shopify 商品导入任务正在执行");
         }
     }
-
     private String buildTaskName(String taskType) {
         String label = ShopifyTaskType.PRODUCT_IMPORT_FULL.getCode().equals(taskType) ? "全量导入" : "增量导入";
         return "Shopify 商品" + label + " " + new Date();
     }
-
     public void executeImportTask(Long taskId, String taskType) {
         long startTime = System.currentTimeMillis();
         ShopifyTask task = shopifyTaskService.selectShopifyTaskByTaskId(taskId);
@@ -167,11 +154,9 @@ public class ShopifyProductImportServiceImpl implements IShopifyProductImportSer
             failTask(task, startTime, "Shopify 店铺不存在");
             return;
         }
-
         ShopifySyncCursor cursor = getOrCreateCursor(store.getStoreId());
         markTaskRunning(task);
         markCursorRunning(cursor, taskId);
-
         log.info("开始执行 Shopify 商品导入任务，taskId={}, storeId={}, shopName={}, taskType={}, cursorUpdatedAt={}",
                 taskId, store.getStoreId(), store.getShopName(), taskType, cursor.getLastSuccessUpdatedAt());
         try {
@@ -185,7 +170,6 @@ public class ShopifyProductImportServiceImpl implements IShopifyProductImportSer
             failCursor(cursor, taskId, e.getMessage());
         }
     }
-
     private ImportSummary runFullImport(ShopifyTask task, ShopifyStore store, ShopifySyncCursor cursor) {
         // 大店铺首次导入走 Bulk Operation，避免普通分页长时间占用 GraphQL cost。
         log.info("开始 Shopify 商品全量导入 Bulk Operation，taskId={}, storeId={}", task.getTaskId(), store.getStoreId());
@@ -194,7 +178,6 @@ public class ShopifyProductImportServiceImpl implements IShopifyProductImportSer
         cursor.setUpdateTime(new Date());
         syncCursorMapper.updateById(cursor);
         log.info("Shopify 商品全量导入 Bulk Operation 已创建，taskId={}, operationId={}", task.getTaskId(), operation.getId());
-
         BulkOperationInfo completed = shopifyGraphQLClient.waitForBulkOperation(
                 store.getStoreId(),
                 operation.getId(),
@@ -206,12 +189,11 @@ public class ShopifyProductImportServiceImpl implements IShopifyProductImportSer
         if (StringUtils.isEmpty(completed.getUrl())) {
             throw new ServiceException("Shopify Bulk Operation 未返回下载地址");
         }
-        List<ShopifyImportedProduct> products = shopifyGraphQLClient.downloadBulkJsonlProducts(completed.getUrl());
+        List<ShopifyImportedProduct> products = shopifyGraphQLClient.downloadBulkJsonlProductsWithAgent(completed.getUrl());
         log.info("Shopify 商品全量导入 Bulk Operation 下载完成，taskId={}, operationId={}, productCount={}",
                 task.getTaskId(), completed.getId(), products.size());
         return processProducts(task, store, products);
     }
-
     private ImportSummary runIncrementalImport(ShopifyTask task, ShopifyStore store, ShopifySyncCursor cursor) {
         Date since = calculateQuerySince(cursor);
         String pageCursor = null;
@@ -235,7 +217,6 @@ public class ShopifyProductImportServiceImpl implements IShopifyProductImportSer
         } while (StringUtils.isNotEmpty(pageCursor));
         return total;
     }
-
     /**
      * 计算从 Shopify 的哪个更新时间开始同步。
      *
@@ -251,7 +232,6 @@ public class ShopifyProductImportServiceImpl implements IShopifyProductImportSer
         Instant since = cursor.getLastSuccessUpdatedAt().toInstant().minus(SAFETY_WINDOW_MINUTES, ChronoUnit.MINUTES);
         return Date.from(since);
     }
-
     private ImportSummary processProducts(ShopifyTask task, ShopifyStore store, List<ShopifyImportedProduct> products) {
         ImportSummary summary = new ImportSummary();
         if (products == null || products.isEmpty()) {
@@ -261,10 +241,8 @@ public class ShopifyProductImportServiceImpl implements IShopifyProductImportSer
             shopifyTaskService.updateShopifyTask(task);
             return summary;
         }
-
         task.setTotalCount((task.getTotalCount() == null ? 0 : task.getTotalCount()) + products.size());
         shopifyTaskService.updateShopifyTask(task);
-
         ImportContext context = new ImportContext(task.getTaskId(), store.getStoreId(), store.getShopName(), task.getTaskType());
         int processed = 0;
         int baseSuccess = task.getSuccessCount() == null ? 0 : task.getSuccessCount();
@@ -301,7 +279,6 @@ public class ShopifyProductImportServiceImpl implements IShopifyProductImportSer
         }
         return summary;
     }
-
     @Transactional(rollbackFor = Exception.class)
     ProductImportItemResult upsertProduct(ShopifyImportedProduct remote, ImportContext context) {
         if (remote == null || StringUtils.isEmpty(remote.getId())) {
@@ -310,29 +287,28 @@ public class ShopifyProductImportServiceImpl implements IShopifyProductImportSer
         // 单商品一个事务，保证商品、变体、媒体要么一起成功，要么回滚后写失败明细。
         Date now = new Date();
         Product product = selectProduct(context.storeId(), remote.getId());
+        ShopifyProductImportOptionService.OptionContext optionContext = productImportOptionService.buildOptionContext(remote);
         boolean created = false;
         boolean conflict = shouldKeepLocalCoreFields(product);
-
         // 新增商品
         if (product == null) {
-            product = buildNewProduct(remote, context, now);
+            product = buildNewProduct(remote, context, optionContext, now);
             productMapper.insert(product);
             created = true;
             log.info("Shopify 商品导入创建本地商品，taskId={}, storeId={}, productId={}, shopifyProductId={}",
                     context.taskId(), context.storeId(), product.getProductId(), remote.getId());
         } else {
             // 更新商品
-            Product update = buildProductUpdate(product, remote, context, conflict, now);
+            Product update = buildProductUpdate(product, remote, context, optionContext, conflict, now);
             productMapper.updateById(update);
             log.info("Shopify 商品导入更新本地商品，taskId={}, storeId={}, productId={}, shopifyProductId={}, conflict={}",
                     context.taskId(), context.storeId(), product.getProductId(), remote.getId(), conflict);
         }
-
         Long productId = product.getProductId();
         if (productId == null) {
             throw new ServiceException("本地商品 ID 生成失败");
         }
-        // 保存媒体
+        productImportTagService.syncProductTags(remote, productId, now);
         Map<String, Long> mediaIdMap = upsertMedia(remote, context, productId, now);
         if (!mediaIdMap.isEmpty() && !conflict) {
             Product mainMediaUpdate = new Product();
@@ -340,8 +316,7 @@ public class ShopifyProductImportServiceImpl implements IShopifyProductImportSer
             mainMediaUpdate.setMainMediaId(mediaIdMap.values().iterator().next());
             productMapper.updateById(mainMediaUpdate);
         }
-        upsertVariants(remote, context, productId, mediaIdMap, conflict, now);
-
+        upsertVariants(remote, context, productId, mediaIdMap, optionContext, conflict, now);
         if (productQualityService != null) {
             productQualityService.refreshProductMissingFields(productId);
         }
@@ -352,10 +327,10 @@ public class ShopifyProductImportServiceImpl implements IShopifyProductImportSer
         }
         return new ProductImportItemResult(true, conflict, productId);
     }
-
-    private Product buildNewProduct(ShopifyImportedProduct remote, ImportContext context, Date now) {
+    private Product buildNewProduct(ShopifyImportedProduct remote, ImportContext context,
+                                    ShopifyProductImportOptionService.OptionContext optionContext, Date now) {
         Product product = new Product();
-        fillCoreProductFields(product, remote, context);
+        fillCoreProductFields(product, remote, context, optionContext);
         product.setLastShopifyImportTime(now);
         product.setCreateTime(now);
         product.setUpdateTime(now);
@@ -365,8 +340,8 @@ public class ShopifyProductImportServiceImpl implements IShopifyProductImportSer
         product.setDelFlag("0");
         return product;
     }
-
-    private Product buildProductUpdate(Product existing, ShopifyImportedProduct remote, ImportContext context, boolean conflict, Date now) {
+    private Product buildProductUpdate(Product existing, ShopifyImportedProduct remote, ImportContext context,
+                                       ShopifyProductImportOptionService.OptionContext optionContext, boolean conflict, Date now) {
         Product update = new Product();
         update.setProductId(existing.getProductId());
         update.setStoreId(context.storeId());
@@ -378,14 +353,14 @@ public class ShopifyProductImportServiceImpl implements IShopifyProductImportSer
         update.setSyncStatus(ProductConstants.SYNC_STATUS_SUCCESS);
         update.setSyncMessage(conflict ? "Shopify 商品导入存在 ERP 优先冲突，核心字段未覆盖" : "Shopify 商品导入成功");
         if (!conflict) {
-            fillCoreProductFields(update, remote, context);
+            fillCoreProductFields(update, remote, context, optionContext);
             update.setLastShopifyImportTime(now);
             update.setUpdateTime(now);
         }
         return update;
     }
-
-    private void fillCoreProductFields(Product product, ShopifyImportedProduct remote, ImportContext context) {
+    private void fillCoreProductFields(Product product, ShopifyImportedProduct remote, ImportContext context,
+                                       ShopifyProductImportOptionService.OptionContext optionContext) {
         product.setStoreId(context.storeId());
         product.setShopifyProductId(remote.getId());
         product.setShopifyUpdatedAt(remote.getUpdatedAt());
@@ -394,8 +369,8 @@ public class ShopifyProductImportServiceImpl implements IShopifyProductImportSer
         product.setProductType(remote.getProductType());
         product.setStatus(ShopifyProductStatus.fromName(remote.getStatus()).getCode());
         product.setBodyHtml(remote.getDescriptionHtml());
+        product.setOptionJson(optionContext.optionJson());
     }
-
     private Map<String, Long> upsertMedia(ShopifyImportedProduct remote, ImportContext context, Long productId, Date now) {
         Map<String, Long> mediaIdMap = new LinkedHashMap<>();
         List<ShopifyImportedMedia> mediaList = remote.getMedia() == null ? List.of() : remote.getMedia();
@@ -427,7 +402,6 @@ public class ShopifyProductImportServiceImpl implements IShopifyProductImportSer
             media.setPosition(remoteMedia.getPosition());
             media.setLastShopifyImportTime(now);
             media.setDelFlag("0");
-
             if (created) {
                 mediaMapper.insert(media);
                 createdCount++;
@@ -435,7 +409,6 @@ public class ShopifyProductImportServiceImpl implements IShopifyProductImportSer
                 mediaMapper.updateById(media);
                 updatedCount++;
             }
-
             Long mediaId = media.getMediaId();
             if (mediaId != null) {
                 mediaIdMap.put(remoteMedia.getId(), mediaId);
@@ -447,9 +420,9 @@ public class ShopifyProductImportServiceImpl implements IShopifyProductImportSer
         }
         return mediaIdMap;
     }
-
     private void upsertVariants(ShopifyImportedProduct remote, ImportContext context, Long productId,
-                                Map<String, Long> mediaIdMap, boolean conflict, Date now) {
+                                Map<String, Long> mediaIdMap, ShopifyProductImportOptionService.OptionContext optionContext,
+                                boolean conflict, Date now) {
         List<ShopifyImportedVariant> variants = remote.getVariants() == null ? List.of() : remote.getVariants();
         int createdCount = 0;
         int updatedCount = 0;
@@ -472,9 +445,8 @@ public class ShopifyProductImportServiceImpl implements IShopifyProductImportSer
                 variant.setStoreId(context.storeId());
                 variant.setUpdateTime(now);
             }
-
             if (created || !conflict) {
-                fillVariantFields(variant, remoteVariant, mediaIdMap, now);
+                fillVariantFields(variant, remoteVariant, mediaIdMap, optionContext, now);
                 if (created) {
                     productVariantMapper.insert(variant);
                     createdCount++;
@@ -489,21 +461,20 @@ public class ShopifyProductImportServiceImpl implements IShopifyProductImportSer
                     context.taskId(), productId, createdCount, updatedCount, conflict);
         }
     }
-
-    private void fillVariantFields(ProductVariant variant, ShopifyImportedVariant remoteVariant, Map<String, Long> mediaIdMap, Date now) {
+    private void fillVariantFields(ProductVariant variant, ShopifyImportedVariant remoteVariant, Map<String, Long> mediaIdMap,
+                                   ShopifyProductImportOptionService.OptionContext optionContext, Date now) {
         variant.setShopifyVariantId(remoteVariant.getId());
         variant.setShopifyInventoryItemId(remoteVariant.getInventoryItemId());
         variant.setSku(remoteVariant.getSku());
         variant.setPrice(parseMoneyToCents(remoteVariant.getPrice()));
         variant.setCompareAtPrice(parseMoneyToCents(remoteVariant.getCompareAtPrice()));
         variant.setPosition(remoteVariant.getPosition());
-        variant.setOptionValues(buildOptionValuesJson(remoteVariant.getSelectedOptions()));
+        variant.setOptionValues(productImportOptionService.buildVariantOptionValues(optionContext, remoteVariant));
         variant.setMediaId(resolveVariantMediaId(remoteVariant, mediaIdMap));
         variant.setLastShopifyImportTime(now);
         variant.setIsActiveAvailable(ProductConstants.IS_ACTIVE_AVAILABLE_YES);
         variant.setDelFlag("0");
     }
-
     private ShopifySyncCursor getOrCreateCursor(Long storeId) {
         ShopifySyncCursor cursor = syncCursorMapper.selectOne(new LambdaQueryWrapper<ShopifySyncCursor>()
                 .eq(ShopifySyncCursor::getStoreId, storeId)
@@ -521,21 +492,18 @@ public class ShopifyProductImportServiceImpl implements IShopifyProductImportSer
         syncCursorMapper.insert(cursor);
         return cursor;
     }
-
     private Product selectProduct(Long storeId, String shopifyProductId) {
         return productMapper.selectOne(new LambdaQueryWrapper<Product>()
                 .eq(Product::getStoreId, storeId)
                 .eq(Product::getShopifyProductId, shopifyProductId)
                 .last("limit 1"));
     }
-
     private Media selectMedia(Long storeId, String shopifyMediaId) {
         return mediaMapper.selectOne(new LambdaQueryWrapper<Media>()
                 .eq(Media::getStoreId, storeId)
                 .eq(Media::getShopifyMediaId, shopifyMediaId)
                 .last("limit 1"));
     }
-
     private ProductVariant selectVariant(Long storeId, Long productId, String shopifyVariantId, String sku) {
         ProductVariant byShopifyId = null;
         if (StringUtils.isNotEmpty(shopifyVariantId)) {
@@ -553,7 +521,6 @@ public class ShopifyProductImportServiceImpl implements IShopifyProductImportSer
                 .eq(ProductVariant::getSku, sku)
                 .last("limit 1"));
     }
-
     boolean shouldKeepLocalCoreFields(Product product) {
         if (product == null || product.getUpdateTime() == null || product.getLastShopifyImportTime() == null) {
             return false;
@@ -561,7 +528,6 @@ public class ShopifyProductImportServiceImpl implements IShopifyProductImportSer
         // ERP 后台编辑晚于上次 Shopify 导入时，本地核心字段优先，避免覆盖运营刚修改的资料。
         return product.getUpdateTime().after(product.getLastShopifyImportTime());
     }
-
     private String resolveSpu(ShopifyImportedProduct remote, Long storeId) {
         if (StringUtils.isNotEmpty(remote.getSpu())) {
             return remote.getSpu();
@@ -570,7 +536,6 @@ public class ShopifyProductImportServiceImpl implements IShopifyProductImportSer
         String numericId = extractNumericId(remote.getId());
         return "SHOP" + storeId + "-P" + (StringUtils.isEmpty(numericId) ? remote.getId().hashCode() : numericId);
     }
-
     private String buildShopifyAdminUrl(String shopName, String productId) {
         String numericId = extractNumericId(productId);
         if (StringUtils.isEmpty(shopName) || StringUtils.isEmpty(numericId)) {
@@ -578,7 +543,6 @@ public class ShopifyProductImportServiceImpl implements IShopifyProductImportSer
         }
         return "https://" + shopName + ".myshopify.com/admin/products/" + numericId;
     }
-
     private String extractNumericId(String gid) {
         if (StringUtils.isEmpty(gid)) {
             return null;
@@ -586,23 +550,12 @@ public class ShopifyProductImportServiceImpl implements IShopifyProductImportSer
         int slash = gid.lastIndexOf('/');
         return slash >= 0 ? gid.substring(slash + 1) : gid;
     }
-
     private Integer parseMoneyToCents(String money) {
         if (StringUtils.isEmpty(money)) {
             return null;
         }
         return new BigDecimal(money).movePointRight(2).setScale(0, RoundingMode.HALF_UP).intValue();
     }
-
-    private String buildOptionValuesJson(Map<String, String> selectedOptions) {
-        if (selectedOptions == null || selectedOptions.isEmpty()) {
-            return null;
-        }
-        List<Map<String, String>> values = new ArrayList<>();
-        selectedOptions.forEach((name, value) -> values.add(Map.of("name", name, "value", value)));
-        return JSON.toJSONString(values);
-    }
-
     private Long resolveVariantMediaId(ShopifyImportedVariant remoteVariant, Map<String, Long> mediaIdMap) {
         if (remoteVariant.getMediaIds() == null || remoteVariant.getMediaIds().isEmpty()) {
             return null;
@@ -615,11 +568,9 @@ public class ShopifyProductImportServiceImpl implements IShopifyProductImportSer
         }
         return null;
     }
-
     private String resolveMediaUrl(ShopifyImportedMedia media) {
         return StringUtils.isNotEmpty(media.getOriginalUrl()) ? media.getOriginalUrl() : media.getPreviewUrl();
     }
-
     private Date maxDate(Date first, Date second) {
         if (first == null) {
             return second;
@@ -629,7 +580,6 @@ public class ShopifyProductImportServiceImpl implements IShopifyProductImportSer
         }
         return first.after(second) ? first : second;
     }
-
     private void markTaskRunning(ShopifyTask task) {
         task.setTaskStatus(ShopifyTaskStatus.RUNNING.getCode());
         task.setStartTime(new Date());
@@ -639,7 +589,6 @@ public class ShopifyProductImportServiceImpl implements IShopifyProductImportSer
         task.setFailedCount(0);
         shopifyTaskService.updateShopifyTask(task);
     }
-
     private void markCursorRunning(ShopifySyncCursor cursor, Long taskId) {
         cursor.setStatus(CURSOR_STATUS_RUNNING);
         cursor.setLastTaskId(taskId);
@@ -648,7 +597,6 @@ public class ShopifyProductImportServiceImpl implements IShopifyProductImportSer
         log.info("Shopify 商品导入游标标记为运行中，taskId={}, storeId={}, cursorId={}",
                 taskId, cursor.getStoreId(), cursor.getCursorId());
     }
-
     private void finishTask(ShopifyTask task, ShopifySyncCursor cursor, ImportSummary summary, long startTime) {
         task.setTaskStatus(resolveTaskStatus(summary.success, summary.failed));
         task.setProgress(100);
@@ -659,7 +607,6 @@ public class ShopifyProductImportServiceImpl implements IShopifyProductImportSer
         task.setExecutionTime(System.currentTimeMillis() - startTime);
         task.setErrorMessage(summary.errorSummary.toString());
         shopifyTaskService.updateShopifyTask(task);
-
         cursor.setStatus(summary.failed == 0 ? CURSOR_STATUS_SUCCESS : CURSOR_STATUS_PART_SUCCESS);
         cursor.setLastTaskId(task.getTaskId());
         cursor.setLastErrorSummary(summary.errorSummary.toString());
@@ -674,7 +621,6 @@ public class ShopifyProductImportServiceImpl implements IShopifyProductImportSer
                 task.getTaskId(), task.getTaskStatus(), summary.success, summary.failed, summary.failed == 0,
                 summary.maxUpdatedAt, task.getExecutionTime());
     }
-
     private String resolveTaskStatus(int success, int failed) {
         if (failed == 0) {
             return ShopifyTaskStatus.SUCCESS.getCode();
@@ -684,7 +630,6 @@ public class ShopifyProductImportServiceImpl implements IShopifyProductImportSer
         }
         return ShopifyTaskStatus.PART_SUCCESS.getCode();
     }
-
     private void failTask(ShopifyTask task, long startTime, String message) {
         task.setTaskStatus(ShopifyTaskStatus.FAILED.getCode());
         task.setErrorMessage(message);
@@ -694,7 +639,6 @@ public class ShopifyProductImportServiceImpl implements IShopifyProductImportSer
         shopifyTaskService.updateShopifyTask(task);
         log.warn("Shopify 商品导入任务已标记失败，taskId={}, message={}", task.getTaskId(), message);
     }
-
     private void failCursor(ShopifySyncCursor cursor, Long taskId, String message) {
         cursor.setStatus(CURSOR_STATUS_FAILED);
         cursor.setLastTaskId(taskId);
@@ -704,23 +648,19 @@ public class ShopifyProductImportServiceImpl implements IShopifyProductImportSer
         log.warn("Shopify 商品导入游标已标记失败，taskId={}, storeId={}, cursorId={}, message={}",
                 taskId, cursor.getStoreId(), cursor.getCursorId(), message);
     }
-
     private void recordProductSuccess(ImportContext context, Long productId, ShopifyImportedProduct remote, boolean created) {
         recordProductDetail(context, productId, remote, created ? ShopifyTaskStep.PRODUCT_IMPORT_CREATE.getCode() : ShopifyTaskStep.PRODUCT_IMPORT_UPDATE.getCode(),
                 ShopifyTaskDetailStatus.SUCCESS.getCode(), null, null);
     }
-
     private void recordProductConflict(ImportContext context, Long productId, ShopifyImportedProduct remote) {
         recordProductDetail(context, productId, remote, ShopifyTaskStep.PRODUCT_IMPORT_CONFLICT.getCode(),
                 ShopifyTaskDetailStatus.SKIPPED.getCode(), ShopifyTaskErrorCode.ERP_PRIORITY_CONFLICT.getCode(),
                 "ERP 本地更新时间晚于上次 Shopify 导入，核心字段未覆盖");
     }
-
     private void recordProductFailure(ImportContext context, ShopifyImportedProduct remote, String message) {
         recordProductDetail(context, null, remote, ShopifyTaskStep.PRODUCT_IMPORT.getCode(),
                 ShopifyTaskDetailStatus.FAILED.getCode(), ShopifyTaskErrorCode.PRODUCT_IMPORT_FAILED.getCode(), message);
     }
-
     private void recordProductDetail(ImportContext context, Long productId, ShopifyImportedProduct remote, String step,
                                      String status, String errorCode, String errorMessage) {
         if (shopifyTaskDetailService == null || context.taskId() == null) {
@@ -741,23 +681,19 @@ public class ShopifyProductImportServiceImpl implements IShopifyProductImportSer
         detail.setErrorMessage(errorMessage);
         shopifyTaskDetailService.insertShopifyTaskDetail(detail);
     }
-
     public record ImportContext(Long taskId, Long storeId, String shopName, String taskType) {
     }
-
     @Data
     public static class ProductImportItemResult {
         private final boolean success;
         private final boolean conflict;
         private final Long productId;
     }
-
     private static class ImportSummary {
         private int success;
         private int failed;
         private Date maxUpdatedAt;
         private final StringBuilder errorSummary = new StringBuilder();
-
         private void merge(ImportSummary other) {
             if (other == null) {
                 return;
@@ -768,6 +704,50 @@ public class ShopifyProductImportServiceImpl implements IShopifyProductImportSer
                 this.maxUpdatedAt = other.maxUpdatedAt;
             }
             this.errorSummary.append(other.errorSummary);
+        }
+    }
+    /**
+     * 从本地 JSONL 文件导入 Shopify 商品。
+     *
+     * @param filePath 本地 JSONL 文件路径
+     */
+    @Override
+    public void executeLocalFile(String filePath) {
+        ShopifyStore store = shopifyStoreService.selectDefaultStore();
+        String taskType = ShopifyTaskType.PRODUCT_IMPORT_FULL.getCode();
+        ensureNoRunningTask(store.getStoreId(), taskType);
+        // 本地文件导入复用任务和游标记录，便于在诊断页查看导入结果。
+        ShopifyTask task = new ShopifyTask();
+        task.setStoreId(store.getStoreId());
+        task.setShopName(store.getShopName());
+        task.setTaskType(taskType);
+        task.setTaskName(buildTaskName(taskType));
+        task.setTaskStatus(ShopifyTaskStatus.PENDING.getCode());
+        task.setProgress(0);
+        task.setTotalCount(0);
+        task.setSuccessCount(0);
+        task.setPartialCount(0);
+        task.setFailedCount(0);
+        task.setCreateTime(new Date());
+        shopifyTaskService.insertShopifyTask(task);
+        Long taskId = task.getTaskId();
+        long startTime = System.currentTimeMillis();
+        ShopifySyncCursor cursor = getOrCreateCursor(store.getStoreId());
+        markTaskRunning(task);
+        markCursorRunning(cursor, taskId);
+        try {
+            log.info("开始 Shopify 商品全量导入 Bulk Operation，taskId={}, storeId={}", task.getTaskId(), store.getStoreId());
+            BulkOperationInfo operation = shopifyGraphQLClient.startProductBulkImport(store.getStoreId());
+            cursor.setLastBulkOperationId(operation.getId());
+            cursor.setUpdateTime(new Date());
+            syncCursorMapper.updateById(cursor);
+            List<ShopifyImportedProduct> products = shopifyGraphQLClient.parseLocalJsonlProducts(filePath);
+            ImportSummary summary = processProducts(task, store, products);
+            finishTask(task, cursor, summary, startTime);
+        } catch (Exception e) {
+            log.error("Shopify 商品导入任务失败，taskId={}", taskId, e);
+            failTask(task, startTime, e.getMessage());
+            failCursor(cursor, taskId, e.getMessage());
         }
     }
 }

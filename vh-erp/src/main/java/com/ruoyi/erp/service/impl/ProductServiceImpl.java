@@ -1,6 +1,7 @@
 package com.ruoyi.erp.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.github.pagehelper.Page;
 import com.ruoyi.common.exception.ServiceException;
 import com.ruoyi.common.utils.DateUtils;
 import com.ruoyi.common.utils.StringUtils;
@@ -112,9 +113,31 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
     public List<ProductVo> selectProductList(Product product) {
         Product query = product == null ? new Product() : product;
         List<Product> list = baseMapper.selectProductList(query);
-        return list.stream()
+        List<ProductVo> voList = list.stream()
                 .map(item -> enrichProductVo(item, query))
                 .collect(Collectors.toList());
+        return preservePageInfo(list, voList);
+    }
+
+    /**
+     * 保留 PageHelper 分页元数据，避免实体转 VO 后总条数退化为当前页条数。
+     *
+     * @param sourceList 原始分页查询结果
+     * @param voList     转换后的商品 VO 列表
+     * @return 带分页元数据的商品 VO 列表
+     */
+    private List<ProductVo> preservePageInfo(List<Product> sourceList, List<ProductVo> voList) {
+        if (!(sourceList instanceof Page<?> sourcePage)) {
+            return voList;
+        }
+        Page<ProductVo> voPage = new Page<>(sourcePage.getPageNum(), sourcePage.getPageSize(), sourcePage.isCount());
+        voPage.setTotal(sourcePage.getTotal());
+        voPage.setPages(sourcePage.getPages());
+        voPage.setReasonable(sourcePage.getReasonable());
+        voPage.setPageSizeZero(sourcePage.getPageSizeZero());
+        voPage.setOrderBy(sourcePage.getOrderBy());
+        voPage.addAll(voList);
+        return voPage;
     }
 
     @Override

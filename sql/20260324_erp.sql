@@ -2,7 +2,7 @@ DROP TABLE IF EXISTS `erp_product`;
 CREATE TABLE `erp_product`
 (
     `product_id`               bigint(20)  NOT NULL AUTO_INCREMENT COMMENT '本地主键',
-    `store_id`                 bigint(20)  NOT NULL COMMENT '所属 Shopify 店铺ID',
+    `store_id`                 bigint(20)    DEFAULT NULL COMMENT '所属 Shopify 店铺ID',
     `shopify_product_id`       varchar(100)  DEFAULT NULL COMMENT 'Shopify平台商品ID (唯一映射)',
     `shopify_updated_at`       datetime      DEFAULT NULL COMMENT 'Shopify 远端商品更新时间',
     `last_shopify_import_time` datetime      DEFAULT NULL COMMENT '最近一次 Shopify 反向导入成功时间',
@@ -51,7 +51,7 @@ CREATE TABLE `erp_product_variant`
 (
     `variant_id`                bigint(20) NOT NULL AUTO_INCREMENT COMMENT '本地主键',
     `product_id`                bigint(20) NOT NULL COMMENT '关联商品主表ID',
-    `store_id`                  bigint(20) NOT NULL COMMENT '所属 Shopify 店铺ID',
+    `store_id`                  bigint(20)     DEFAULT NULL COMMENT '所属 Shopify 店铺ID',
     `shopify_variant_id`        varchar(100)   DEFAULT NULL COMMENT 'Shopify平台变体ID',
     `shopify_inventory_item_id` varchar(100)   DEFAULT NULL COMMENT 'Shopify InventoryItem ID',
     `last_shopify_import_time`  datetime       DEFAULT NULL COMMENT '最近一次 Shopify 反向导入成功时间',

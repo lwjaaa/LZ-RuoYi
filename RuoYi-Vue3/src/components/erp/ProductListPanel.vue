@@ -294,7 +294,7 @@
             <el-image
               v-for="(url, index) in getMediaUrls(selectedProduct).slice(0, 8)"
               :key="`${url}-${index}`"
-              :src="baseUrl + url"
+              :src="url"
               fit="cover"
               lazy
             />
@@ -650,7 +650,7 @@ function getList(): void {
   listProduct(buildQuery())
     .then((response: any) => {
       productList.value = response.rows || response.data || [];
-      total.value = response.total || productList.value.length;
+      total.value = normalizeTotal(response.total, productList.value.length);
     })
     .finally(() => {
       loading.value = false;
@@ -730,22 +730,56 @@ function getProductTitle(row: Product): string {
   return row.productTitle || row.productName || "未命名商品";
 }
 
-function getMainImage(row: Product): string {
-  if ( row.mainMediaUrl){
-    return baseUrl + row.mainMediaUrl;
-  } else if (row.mediaUrlList?.length) {
-    return baseUrl + row.mediaUrlList?.[0];
+/**
+ * 将媒体地址转换为可访问地址，完整外链直接使用。
+ */
+function resolveMediaUrl(url?: string | null): string {
+  if (!url) {
+    return "";
   }
-  return "";
+  if (/^(https?:)?\/\//i.test(url) || /^(data|blob):/i.test(url)) {
+    return url;
+  }
+  return baseUrl + url;
 }
 
+/**
+ * 规范化分页总数，保留后端返回的 0，避免空列表时误显示当前页条数。
+ */
+function normalizeTotal(value: unknown, fallback = 0): number {
+  const totalValue = value ?? fallback;
+  const parsedTotal = Number(totalValue);
+  return Number.isFinite(parsedTotal) ? parsedTotal : fallback;
+}
+
+/**
+ * 读取媒体优先展示地址，NAS 为空时回退到 Shopify。
+ */
+function getMediaSource(media?: NonNullable<Product["mediaList"]>[number] | null): string {
+  return media?.nasMediaUrl || media?.shopifyMediaUrl || media?.transcodedMediaUrl || "";
+}
+
+/**
+ * 获取商品列表主图地址。
+ */
+function getMainImage(row: Product): string {
+  const mainMedia = row.mediaList?.find((media) => media.mediaId === row.mainMediaId);
+  const source =
+    row.mainMediaUrl ||
+    getMediaSource(mainMedia) ||
+    row.mediaUrlList?.find(Boolean) ||
+    getMediaSource(row.mediaList?.[0]);
+  return resolveMediaUrl(source);
+}
+
+/**
+ * 获取商品速览图集地址。
+ */
 function getMediaUrls(row: Product): string[] {
-  if (row.mediaUrlList?.length) {
-    return row.mediaUrlList;
-  }
-  return (row.mediaList || [])
-    .map((media) => media.nasMediaUrl || media.shopifyMediaUrl || media.transcodedMediaUrl || "")
-    .filter(Boolean);
+  const sources = row.mediaList?.length
+    ? row.mediaList.map(getMediaSource)
+    : row.mediaUrlList || [];
+  return sources.map(resolveMediaUrl).filter(Boolean);
 }
 
 function getSyncState(row: Product) {

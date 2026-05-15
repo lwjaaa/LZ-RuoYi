@@ -78,7 +78,7 @@ public class ProductVo implements Serializable
     private String syncMessage;
 
     /** 最后同步时间 */
-    @JsonFormat(pattern = "yyyy-MM-dd")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private Date lastSyncTime;
 
     /** 乐观锁版本号 */
@@ -100,14 +100,14 @@ public class ProductVo implements Serializable
     private String packageInclude;
 
     /** 创建时间 */
-    @JsonFormat(pattern = "yyyy-MM-dd")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private Date createTime;
 
     /** 创建人 */
     private String createBy;
 
     /** 更新时间 */
-    @JsonFormat(pattern = "yyyy-MM-dd")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private Date updateTime;
 
     /** 更新人 */
