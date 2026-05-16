@@ -205,7 +205,10 @@ const taskTypeOptions = [
   { label: '商品批量同步', value: 'PRODUCT_SYNC_BATCH' },
   { label: '商品同步', value: 'PRODUCT_SYNC' },
   { label: '媒体批量同步', value: 'MEDIA_SYNC_BATCH' },
-  { label: '媒体同步', value: 'MEDIA_SYNC' }
+  { label: '媒体同步', value: 'MEDIA_SYNC' },
+  { label: '订单轮询', value: 'ORDER_SYNC' },
+  { label: '发货回传', value: 'FULFILLMENT_SYNC' },
+  { label: '退款同步', value: 'REFUND_SYNC' }
 ]
 
 const statusOptions = [

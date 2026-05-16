@@ -13,7 +13,9 @@ import com.ruoyi.erp.shopify.model.ProductPage;
 import com.ruoyi.erp.shopify.model.PublicationInfo;
 import com.ruoyi.erp.shopify.model.PublicationInput;
 import com.ruoyi.erp.shopify.model.PublicationResult;
+import com.ruoyi.erp.shopify.model.FulfillmentCreateResult;
 import com.ruoyi.erp.shopify.model.StagedUploadResult;
+import com.ruoyi.erp.shopify.model.ShopifyOrderPage;
 import com.ruoyi.erp.shopify.model.VariantInput;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Component;
@@ -39,6 +41,8 @@ public class ShopifyGraphQLClient {
     private ShopifyPublicationGraphQLClient publicationClient;
     @Resource
     private ShopifyProductImportGraphQLClient productImportClient;
+    @Resource
+    private ShopifyOrderGraphQLClient orderClient;
 
     public void invalidateStoreCache(Long storeId) {
         transport.invalidateStoreCache(storeId);
@@ -128,5 +132,45 @@ public class ShopifyGraphQLClient {
     }
     public List<ShopifyImportedProduct> parseLocalJsonlProducts(String filePath) {
         return productImportClient.parseLocalJsonlProducts(filePath);
+    }
+
+    /**
+     * 按订单更新时间分页查询 Shopify 订单。
+     *
+     * @param storeId 店铺ID
+     * @param since 更新时间下限
+     * @param cursor 分页游标
+     * @param first 每页数量
+     * @return 订单分页结果
+     */
+    public ShopifyOrderPage queryUpdatedOrders(Long storeId, Date since, String cursor, int first) {
+        return orderClient.queryUpdatedOrders(storeId, since, cursor, first);
+    }
+
+    /**
+     * 查询订单可履约的 FulfillmentOrder ID。
+     *
+     * @param storeId 店铺ID
+     * @param shopifyOrderId Shopify 订单ID
+     * @return FulfillmentOrder ID 列表
+     */
+    public List<String> getFulfillmentOrderIds(Long storeId, String shopifyOrderId) {
+        return orderClient.getFulfillmentOrderIds(storeId, shopifyOrderId);
+    }
+
+    /**
+     * 创建 Shopify 履约并回传物流信息。
+     *
+     * @param storeId 店铺ID
+     * @param fulfillmentOrderId FulfillmentOrder ID
+     * @param trackingCompany 物流公司
+     * @param trackingNumber 运单号
+     * @param trackingUrl 物流查询链接
+     * @return Shopify 履约创建结果
+     */
+    public FulfillmentCreateResult createFulfillment(Long storeId, String fulfillmentOrderId,
+                                                     String trackingCompany, String trackingNumber,
+                                                     String trackingUrl) {
+        return orderClient.createFulfillment(storeId, fulfillmentOrderId, trackingCompany, trackingNumber, trackingUrl);
     }
 }

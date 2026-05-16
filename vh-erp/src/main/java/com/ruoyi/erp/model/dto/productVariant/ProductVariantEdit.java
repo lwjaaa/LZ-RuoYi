@@ -17,8 +17,14 @@ public class ProductVariantEdit implements Serializable
 {
     private static final long serialVersionUID = 1L;
 
+    /** 本地主键 */
+    private Long variantId;
+
     /** 关联商品主表ID */
     private Long productId;
+
+    /** 所属 Shopify 店铺 ID */
+    private Long storeId;
 
     /** Shopify平台变体ID */
     private String shopifyVariantId;
@@ -67,6 +73,9 @@ public class ProductVariantEdit implements Serializable
 
     /** 运费是否来自实际发货数据(0:否, 1:是) */
     private String isActualShipment;
+
+    /** 是否可用(0:否, 1:是) */
+    private String isActiveAvailable;
 
     /** 商品成本价（分） */
     private Integer unitCostPrice;

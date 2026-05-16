@@ -9,6 +9,11 @@ public enum ShopifyTaskDetailItemType {
     PRODUCT("PRODUCT"),
     VARIANT("VARIANT"),
     MEDIA("MEDIA"),
+    ORDER("ORDER"),
+    ORDER_LINE("ORDER_LINE"),
+    PURCHASE("PURCHASE"),
+    FULFILLMENT("FULFILLMENT"),
+    REFUND("REFUND"),
     UNKNOWN("UNKNOWN");
 
     private final String code;

@@ -3,6 +3,9 @@ package com.ruoyi.erp.mapper;
 import java.util.List;
 import com.ruoyi.erp.model.domain.ProductVariant;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.ruoyi.erp.model.dto.productVariant.ProductVariantQuery;
+import com.ruoyi.erp.model.vo.productVariant.ProductVariantSummaryVo;
+import com.ruoyi.erp.model.vo.productVariant.ProductVariantVo;
 
 /**
  * erp商品变体Mapper接口
@@ -27,6 +30,22 @@ public interface ProductVariantMapper extends BaseMapper<ProductVariant>
      * @return erp商品变体集合
      */
     public List<ProductVariant> selectProductVariantList(ProductVariant productVariant);
+
+    /**
+     * 查询 SKU 运营台列表。
+     *
+     * @param query SKU 查询条件
+     * @return SKU 运营列表
+     */
+    public List<ProductVariantVo> selectSkuOperationList(ProductVariantQuery query);
+
+    /**
+     * 查询 SKU 运营台汇总指标。
+     *
+     * @param query SKU 查询条件
+     * @return SKU 汇总指标
+     */
+    public ProductVariantSummaryVo selectSkuOperationSummary(ProductVariantQuery query);
 
     /**
      * 新增erp商品变体

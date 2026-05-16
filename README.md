@@ -213,6 +213,47 @@ npm run dev
 默认账号: `admin`  
 默认密码: `admin123`
 
+## Shopify 订单轻闭环功能使用说明
+
+本地新增的 Shopify ERP 订单轻闭环不依赖 Webhook，也不维护库存中心。业务路径是：订单轮询 -> 人工采购辅助 -> 发货回传 Shopify -> 售后退款同步 -> 利润复盘。
+
+### 使用方式
+
+1. 执行数据库脚本 `sql/20260515_shopify_order_loop.sql`，创建订单、订单行、客户、采购任务、发货记录、退款记录、订单同步游标等表，并写入菜单和 Quartz 定时任务。
+2. 在 Shopify 店铺管理中确认店铺已启用，API 版本保持 `2026-04`，Access Token 具备读取订单、读取履约订单、创建履约等权限。
+3. 订单同步有两种入口：
+   - 定时任务：`shopifyOrderPollTask.pollOrders()` 默认每 5 分钟增量轮询订单。
+   - 补偿任务：`shopifyOrderPollTask.backfillRecentOrders()` 夜间补拉近 30 天订单，防止漏单。
+   - 页面手动触发：前端“订单中心”选择店铺后点击“增量轮询”或“近30天补拉”。
+4. 订单进入系统后，订单行会按 Shopify 变体 ID 或 SKU 匹配本地商品变体，并自动生成采购任务。采购人员可在“采购任务”页面打开来源链接、复制收货信息、标记已采购、记录实际采购金额和异常备注。
+5. 发货时在“订单中心”或“发货回传”页面录入物流公司、运单号、物流查询链接和物流费用。系统会通过 Shopify Fulfillment Order 流程调用 `fulfillmentCreate` 回传运单。
+6. 售后记录来自订单轮询中的退款数据。“售后记录”页面用于查看退款金额、原因、备注和责任归类；退款金额会进入利润统计。
+7. “订单利润报表”按店铺和时间汇总销售额、采购成本、物流费、退款额、毛利和毛利率，并列出订单明细。
+
+### 主要代码位置
+
+| 功能 | 代码位置 |
+| ---- | -------- |
+| 订单轮询、采购任务、履约回传、利润统计 Service | `vh-erp/src/main/java/com/ruoyi/erp/service/IShopifyOrderService.java`、`vh-erp/src/main/java/com/ruoyi/erp/service/impl/ShopifyOrderServiceImpl.java` |
+| 订单任务游标和诊断明细支撑 | `vh-erp/src/main/java/com/ruoyi/erp/order/ShopifyOrderTaskSupport.java` |
+| Shopify GraphQL 订单和履约客户端 | `vh-erp/src/main/java/com/ruoyi/erp/shopify/client/ShopifyOrderGraphQLClient.java`、`vh-erp/src/main/java/com/ruoyi/erp/shopify/query/ShopifyGraphQLQueries.java` |
+| REST 接口 | `vh-erp/src/main/java/com/ruoyi/erp/controller/ShopifyOrderController.java`、`PurchaseTaskController.java`、`FulfillmentRecordController.java`、`RefundRecordController.java`、`OrderProfitReportController.java` |
+| 定时任务入口 | `vh-erp/src/main/java/com/ruoyi/erp/task/ShopifyOrderPollTask.java` |
+| 数据实体和 Mapper | `vh-erp/src/main/java/com/ruoyi/erp/model/domain/ShopifyOrder*.java`、`PurchaseTask.java`、`FulfillmentRecord.java`、`RefundRecord.java`、`vh-erp/src/main/java/com/ruoyi/erp/mapper/*Order*Mapper.java` 等 |
+| 前端 API 和类型 | `RuoYi-Vue3/src/api/erp/order.ts`、`RuoYi-Vue3/src/types/erp.d.ts` |
+| 前端页面 | `RuoYi-Vue3/src/views/erp/order/`、`purchase/`、`fulfillment/`、`refund/`、`profit/` |
+| 任务诊断类型扩展 | `vh-erp/src/main/java/com/ruoyi/erp/shopify/enums/ShopifyTaskType.java`、`ShopifyTaskDetailItemType.java`、`ShopifyTaskStep.java`、`RuoYi-Vue3/src/views/erp/task/index.vue` |
+| 数据库和菜单脚本 | `sql/20260515_shopify_order_loop.sql` |
+
+### 验证命令
+
+```bash
+mvn -pl vh-erp -Dtest=ShopifyOrderServiceImplTest test
+mvn -pl vh-erp -DskipTests compile
+cd RuoYi-Vue3
+npm run type-check
+```
+
 ### 生产环境部署
 
 1. **前端打包**

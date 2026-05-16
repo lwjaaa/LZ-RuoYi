@@ -2,13 +2,54 @@ import request from '@/utils/request'
 import type { ApiResponse, ProductVariant, PageQuery } from '@/types/erp'
 
 export interface VariantQuery extends PageQuery {
+  storeId?: number
   productId?: number
+  productKeyword?: string
   sku?: string
+  shopifyVariantId?: string
+  syncStatus?: string
+  isActiveAvailable?: string
+  purchaseUrlMissing?: boolean
+  lowProfitOnly?: boolean
+  beginCreateTime?: string
+  endCreateTime?: string
+  params?: Record<string, unknown>
+}
+
+export interface VariantSummary {
+  totalCount?: number
+  needSyncCount?: number
+  lowProfitCount?: number
+  missingPurchaseUrlCount?: number
+  orderedSkuCount30d?: number
+}
+
+export interface VariantBatchEdit {
+  variantIds: number[]
+  price?: number
+  compareAtPrice?: number
+  purchasePrice?: number
+  purchaseUrl?: string
+  freight?: number
+  pkWidth?: number
+  pkHeight?: number
+  pkLength?: number
+  pkWeight?: number
+  isActiveAvailable?: string
+  remark?: string
 }
 
 export function listVariant(query: VariantQuery): Promise<ApiResponse<ProductVariant[]>> {
   return request({
     url: '/erp/variant/list',
+    method: 'get',
+    params: query
+  })
+}
+
+export function getVariantSummary(query: VariantQuery): Promise<ApiResponse<VariantSummary>> {
+  return request({
+    url: '/erp/variant/summary',
     method: 'get',
     params: query
   })
@@ -34,6 +75,14 @@ export function updateVariant(data: ProductVariant): Promise<ApiResponse<void>> 
     url: '/erp/variant',
     method: 'put',
     data: data
+  })
+}
+
+export function batchUpdateVariant(data: VariantBatchEdit): Promise<ApiResponse<void>> {
+  return request({
+    url: '/erp/variant/batch',
+    method: 'put',
+    data
   })
 }
 

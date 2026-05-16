@@ -29,8 +29,14 @@ public class ProductVariantQuery implements Serializable
     /** Shopify平台变体ID */
     private String shopifyVariantId;
 
+    /** 商品标题、SPU 或商品ID关键字 */
+    private String productKeyword;
+
     /** SKU */
     private String sku;
+
+    /** 商品同步状态 */
+    private String syncStatus;
 
     /** 销售价格(美元*100) */
     private Integer price;
@@ -40,6 +46,21 @@ public class ProductVariantQuery implements Serializable
 
     /** 运费是否来自实际发货数据(0:否, 1:是) */
     private String isActualShipment;
+
+    /** 是否可售(0:否, 1:是) */
+    private String isActiveAvailable;
+
+    /** 仅查看缺采购链接 */
+    private Boolean purchaseUrlMissing;
+
+    /** 仅查看低毛利 SKU */
+    private Boolean lowProfitOnly;
+
+    /** 创建开始日期 */
+    private Date beginCreateTime;
+
+    /** 创建结束日期 */
+    private Date endCreateTime;
 
     /** 创建时间 */
     private Date createTime;

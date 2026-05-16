@@ -26,7 +26,12 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="pkWeight"    column="pk_weight"    />
         <result property="freight"    column="freight"    />
         <result property="isActualShipment"    column="is_actual_shipment"    />
+        <result property="exchangeRate"    column="exchange_rate"    />
         <result property="unitCostPrice"    column="unit_cost_price"    />
+        <result property="suggestedPrice"    column="suggested_price"    />
+        <result property="profitRate"    column="profit_rate"    />
+        <result property="profit"    column="profit"    />
+        <result property="isActiveAvailable"    column="is_active_available"    />
         <result property="createBy"    column="create_by"    />
         <result property="createTime"    column="create_time"    />
         <result property="updateBy"    column="update_by"    />
@@ -35,8 +40,116 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="delFlag"    column="del_flag"    />
     </resultMap>
 
+    <resultMap type="com.ruoyi.erp.model.vo.productVariant.ProductVariantVo" id="SkuOperationResult">
+        <result property="variantId" column="variant_id" />
+        <result property="productId" column="product_id" />
+        <result property="productTitle" column="product_title" />
+        <result property="spu" column="spu" />
+        <result property="shopName" column="shop_name" />
+        <result property="mainMediaUrl" column="main_media_url" />
+        <result property="productSyncStatus" column="product_sync_status" />
+        <result property="storeId" column="store_id" />
+        <result property="shopifyVariantId" column="shopify_variant_id" />
+        <result property="shopifyInventoryItemId" column="shopify_inventory_item_id" />
+        <result property="lastShopifyImportTime" column="last_shopify_import_time" />
+        <result property="sku" column="sku" />
+        <result property="price" column="price" />
+        <result property="compareAtPrice" column="compare_at_price" />
+        <result property="purchasePrice" column="purchase_price" />
+        <result property="purchaseUrl" column="purchase_url" />
+        <result property="optionValues" column="option_values" />
+        <result property="mediaId" column="media_id" />
+        <result property="mediaUrl" column="media_url" />
+        <result property="position" column="position" />
+        <result property="pkWidth" column="pk_width" />
+        <result property="pkHeight" column="pk_height" />
+        <result property="pkLength" column="pk_length" />
+        <result property="materialWeight" column="material_weight" />
+        <result property="pkWeight" column="pk_weight" />
+        <result property="freight" column="freight" />
+        <result property="isActualShipment" column="is_actual_shipment" />
+        <result property="unitCostPrice" column="unit_cost_price" />
+        <result property="suggestedPrice" column="suggested_price" />
+        <result property="profitRate" column="profit_rate" />
+        <result property="profit" column="profit" />
+        <result property="isActiveAvailable" column="is_active_available" />
+        <result property="missingFlags" column="missing_flags" />
+        <result property="needSync" column="need_sync" />
+        <result property="orderCount30d" column="order_count_30d" />
+        <result property="salesAmount30d" column="sales_amount_30d" />
+        <result property="refundAmount30d" column="refund_amount_30d" />
+        <result property="pendingPurchaseCount" column="pending_purchase_count" />
+        <result property="fulfillmentExceptionCount" column="fulfillment_exception_count" />
+        <result property="remark" column="remark" />
+    </resultMap>
+
     <sql id="selectProductVariantVo">
-        select variant_id, product_id, store_id, shopify_variant_id, shopify_inventory_item_id, last_shopify_import_time, sku, price, compare_at_price, purchase_price, purchase_url, option_values, media_id, position, pk_width, pk_height, pk_length, material_weight, pk_weight, freight, is_actual_shipment, unit_cost_price, create_by, create_time, update_by, update_time, remark, del_flag from erp_product_variant
+        select variant_id, product_id, store_id, shopify_variant_id, shopify_inventory_item_id, last_shopify_import_time, sku, price, compare_at_price, purchase_price, purchase_url, option_values, media_id, position, pk_width, pk_height, pk_length, material_weight, pk_weight, freight, is_actual_shipment, exchange_rate, unit_cost_price, suggested_price, profit_rate, profit, is_active_available, create_by, create_time, update_by, update_time, remark, del_flag from erp_product_variant
+    </sql>
+
+    <sql id="skuOperationMetrics">
+        left join (
+            select
+                order_metric.variant_id,
+                count(1) as order_count_30d,
+                coalesce(sum(order_metric.sales_amount), 0) as sales_amount_30d,
+                coalesce(sum(order_metric.refund_amount), 0) as refund_amount_30d,
+                coalesce(sum(order_metric.pending_purchase_count), 0) as pending_purchase_count,
+                coalesce(sum(order_metric.fulfillment_exception_count), 0) as fulfillment_exception_count
+            from (
+                select
+                    oli.variant_id,
+                    o.order_id,
+                    coalesce(sum(oli.total_price), 0) as sales_amount,
+                    coalesce(max(o.total_refund), 0) as refund_amount,
+                    coalesce(sum(case when pt.purchase_status = 'PENDING' then 1 else 0 end), 0) as pending_purchase_count,
+                    max(case when fr.sync_status = 'FAILED' then 1 else 0 end) as fulfillment_exception_count
+                from erp_shopify_order_line_item oli
+                inner join erp_shopify_order o on o.order_id = oli.order_id
+                left join erp_purchase_task pt on pt.order_line_item_id = oli.line_item_id
+                left join erp_fulfillment_record fr on fr.order_id = o.order_id
+                where oli.variant_id is not null
+                  and o.placed_at >= date_sub(now(), interval 30 day)
+                group by oli.variant_id, o.order_id
+            ) order_metric
+            group by order_metric.variant_id
+        ) metric on metric.variant_id = v.variant_id
+    </sql>
+
+    <sql id="skuOperationFilters">
+        <where>
+            <if test="productId != null"> and v.product_id = #{productId}</if>
+            <if test="storeId != null"> and v.store_id = #{storeId}</if>
+            <if test="shopifyVariantId != null and shopifyVariantId != ''"> and v.shopify_variant_id = #{shopifyVariantId}</if>
+            <if test="sku != null and sku != ''"> and v.sku like concat('%', #{sku}, '%')</if>
+            <if test="productKeyword != null and productKeyword != ''">
+                and (
+                    p.product_title like concat('%', #{productKeyword}, '%')
+                    or p.spu like concat('%', #{productKeyword}, '%')
+                    or cast(v.product_id as char) = #{productKeyword}
+                )
+            </if>
+            <if test="syncStatus != null and syncStatus != ''"> and p.sync_status = #{syncStatus}</if>
+            <if test="price != null"> and v.price = #{price}</if>
+            <if test="purchasePrice != null"> and v.purchase_price = #{purchasePrice}</if>
+            <if test="isActualShipment != null and isActualShipment != ''"> and v.is_actual_shipment = #{isActualShipment}</if>
+            <if test="isActiveAvailable != null and isActiveAvailable != ''"> and v.is_active_available = #{isActiveAvailable}</if>
+            <if test="purchaseUrlMissing != null and purchaseUrlMissing">
+                and (v.purchase_url is null or v.purchase_url = '')
+            </if>
+            <if test="lowProfitOnly != null and lowProfitOnly">
+                and coalesce(v.profit_rate,
+                    case when v.price is not null and v.price &gt; 0
+                    then (v.price - coalesce(v.purchase_price, 0) - coalesce(v.freight, 0)) / v.price
+                    else 1 end
+                ) &lt; 0.1500
+            </if>
+            <if test="beginCreateTime != null"> and v.create_time &gt;= #{beginCreateTime}</if>
+            <if test="endCreateTime != null"> and v.create_time &lt;= #{endCreateTime}</if>
+            <if test="params != null and params.beginCreateTime != null and params.beginCreateTime != '' and params.endCreateTime != null and params.endCreateTime != ''">
+                and DATE_FORMAT(v.create_time, '%Y-%m-%d') between #{params.beginCreateTime} and #{params.endCreateTime}
+            </if>
+        </where>
     </sql>
 
     <select id="selectProductVariantList" parameterType="ProductVariant" resultMap="ProductVariantResult">
@@ -56,6 +169,88 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     <select id="selectProductVariantByVariantId" parameterType="Long" resultMap="ProductVariantResult">
         <include refid="selectProductVariantVo"/>
         where variant_id = #{variantId}
+    </select>
+
+    <select id="selectSkuOperationList" parameterType="com.ruoyi.erp.model.dto.productVariant.ProductVariantQuery" resultMap="SkuOperationResult">
+        select
+            v.variant_id,
+            v.product_id,
+            p.product_title,
+            p.spu,
+            coalesce(s.store_name, s.shop_name) as shop_name,
+            coalesce(pm.nas_media_url, pm.shopify_media_url, pm.transcoded_media_url) as main_media_url,
+            p.sync_status as product_sync_status,
+            v.store_id,
+            v.shopify_variant_id,
+            v.shopify_inventory_item_id,
+            v.last_shopify_import_time,
+            v.sku,
+            v.price,
+            v.compare_at_price,
+            v.purchase_price,
+            v.purchase_url,
+            v.option_values,
+            v.media_id,
+            coalesce(vm.nas_media_url, vm.shopify_media_url, vm.transcoded_media_url) as media_url,
+            v.position,
+            v.pk_width,
+            v.pk_height,
+            v.pk_length,
+            v.material_weight,
+            v.pk_weight,
+            v.freight,
+            v.is_actual_shipment,
+            v.unit_cost_price,
+            v.suggested_price,
+            v.profit_rate,
+            v.profit,
+            v.is_active_available,
+            concat_ws(',',
+                if(v.sku is null or v.sku = '', 'SKU_MISSING', null),
+                if(v.purchase_url is null or v.purchase_url = '', 'PURCHASE_URL_MISSING', null),
+                if(v.shopify_variant_id is null or v.shopify_variant_id = '', 'SHOPIFY_ID_MISSING', null),
+                if(v.pk_width is null or v.pk_height is null or v.pk_length is null or v.pk_weight is null, 'PACKAGE_MISSING', null),
+                if(coalesce(v.profit_rate,
+                    case when v.price is not null and v.price &gt; 0
+                    then (v.price - coalesce(v.purchase_price, 0) - coalesce(v.freight, 0)) / v.price
+                    else 1 end
+                ) &lt; 0.1500, 'LOW_PROFIT', null)
+            ) as missing_flags,
+            case when p.sync_status is null or p.sync_status != '1' then 1 else 0 end as need_sync,
+            coalesce(metric.order_count_30d, 0) as order_count_30d,
+            coalesce(metric.sales_amount_30d, 0) as sales_amount_30d,
+            coalesce(metric.refund_amount_30d, 0) as refund_amount_30d,
+            coalesce(metric.pending_purchase_count, 0) as pending_purchase_count,
+            coalesce(metric.fulfillment_exception_count, 0) as fulfillment_exception_count,
+            v.remark
+        from erp_product_variant v
+        left join erp_product p on p.product_id = v.product_id
+        left join erp_shopify_store s on s.store_id = v.store_id
+        left join erp_media vm on vm.media_id = v.media_id
+        left join erp_media pm on pm.media_id = p.main_media_id
+        <include refid="skuOperationMetrics"/>
+        <include refid="skuOperationFilters"/>
+        order by metric.order_count_30d desc, v.update_time desc, v.create_time desc
+    </select>
+
+    <select id="selectSkuOperationSummary" parameterType="com.ruoyi.erp.model.dto.productVariant.ProductVariantQuery" resultType="com.ruoyi.erp.model.vo.productVariant.ProductVariantSummaryVo">
+        select
+            count(1) as totalCount,
+            coalesce(sum(case when p.sync_status is null or p.sync_status != '1' then 1 else 0 end), 0) as needSyncCount,
+            coalesce(sum(case when coalesce(v.profit_rate,
+                case when v.price is not null and v.price &gt; 0
+                then (v.price - coalesce(v.purchase_price, 0) - coalesce(v.freight, 0)) / v.price
+                else 1 end
+            ) &lt; 0.1500 then 1 else 0 end), 0) as lowProfitCount,
+            coalesce(sum(case when v.purchase_url is null or v.purchase_url = '' then 1 else 0 end), 0) as missingPurchaseUrlCount,
+            coalesce(sum(case when metric.order_count_30d &gt; 0 then 1 else 0 end), 0) as orderedSkuCount30d
+        from erp_product_variant v
+        left join erp_product p on p.product_id = v.product_id
+        left join erp_shopify_store s on s.store_id = v.store_id
+        left join erp_media vm on vm.media_id = v.media_id
+        left join erp_media pm on pm.media_id = p.main_media_id
+        <include refid="skuOperationMetrics"/>
+        <include refid="skuOperationFilters"/>
     </select>
 
     <insert id="insertProductVariant" parameterType="ProductVariant" useGeneratedKeys="true" keyProperty="variantId">
@@ -81,7 +276,12 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="pkWeight != null">pk_weight,</if>
             <if test="freight != null">freight,</if>
             <if test="isActualShipment != null">is_actual_shipment,</if>
+            <if test="exchangeRate != null">exchange_rate,</if>
             <if test="unitCostPrice != null">unit_cost_price,</if>
+            <if test="suggestedPrice != null">suggested_price,</if>
+            <if test="profitRate != null">profit_rate,</if>
+            <if test="profit != null">profit,</if>
+            <if test="isActiveAvailable != null">is_active_available,</if>
             <if test="createBy != null">create_by,</if>
             <if test="createTime != null">create_time,</if>
             <if test="updateBy != null">update_by,</if>
@@ -110,7 +310,12 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="pkWeight != null">#{pkWeight},</if>
             <if test="freight != null">#{freight},</if>
             <if test="isActualShipment != null">#{isActualShipment},</if>
+            <if test="exchangeRate != null">#{exchangeRate},</if>
             <if test="unitCostPrice != null">#{unitCostPrice},</if>
+            <if test="suggestedPrice != null">#{suggestedPrice},</if>
+            <if test="profitRate != null">#{profitRate},</if>
+            <if test="profit != null">#{profit},</if>
+            <if test="isActiveAvailable != null">#{isActiveAvailable},</if>
             <if test="createBy != null">#{createBy},</if>
             <if test="createTime != null">#{createTime},</if>
             <if test="updateBy != null">#{updateBy},</if>
@@ -143,7 +348,12 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="pkWeight != null">pk_weight = #{pkWeight},</if>
             <if test="freight != null">freight = #{freight},</if>
             <if test="isActualShipment != null">is_actual_shipment = #{isActualShipment},</if>
+            <if test="exchangeRate != null">exchange_rate = #{exchangeRate},</if>
             <if test="unitCostPrice != null">unit_cost_price = #{unitCostPrice},</if>
+            <if test="suggestedPrice != null">suggested_price = #{suggestedPrice},</if>
+            <if test="profitRate != null">profit_rate = #{profitRate},</if>
+            <if test="profit != null">profit = #{profit},</if>
+            <if test="isActiveAvailable != null">is_active_available = #{isActiveAvailable},</if>
             <if test="createBy != null">create_by = #{createBy},</if>
             <if test="createTime != null">create_time = #{createTime},</if>
             <if test="updateBy != null">update_by = #{updateBy},</if>

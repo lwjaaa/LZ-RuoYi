@@ -20,6 +20,7 @@ import com.ruoyi.common.core.domain.AjaxResult;
 import com.ruoyi.common.enums.BusinessType;
 import com.ruoyi.erp.model.domain.ProductVariant;
 import com.ruoyi.erp.model.vo.productVariant.ProductVariantVo;
+import com.ruoyi.erp.model.dto.productVariant.ProductVariantBatchEdit;
 import com.ruoyi.erp.model.dto.productVariant.ProductVariantQuery;
 import com.ruoyi.erp.model.dto.productVariant.ProductVariantInsert;
 import com.ruoyi.erp.model.dto.productVariant.ProductVariantEdit;
@@ -47,13 +48,19 @@ public class ProductVariantController extends BaseController
     @GetMapping("/list")
     public TableDataInfo list(ProductVariantQuery productVariantQuery)
     {
-        ProductVariant productVariant = ProductVariantQuery.queryToObj(productVariantQuery);
         startPage();
-        List<ProductVariant> list = productVariantService.selectProductVariantList(productVariant);
-        List<ProductVariantVo> listVo= list.stream().map(ProductVariantVo::objToVo).collect(Collectors.toList());
-        TableDataInfo table = getDataTable(list);
-        table.setRows(listVo);
-        return table;
+        List<ProductVariantVo> list = productVariantService.selectSkuOperationList(productVariantQuery);
+        return getDataTable(list);
+    }
+
+    /**
+     * 查询 SKU 运营台汇总指标
+     */
+    @PreAuthorize("@ss.hasPermi('erp:variant:list')")
+    @GetMapping("/summary")
+    public AjaxResult summary(ProductVariantQuery productVariantQuery)
+    {
+        return success(productVariantService.selectSkuOperationSummary(productVariantQuery));
     }
 
     /**
@@ -103,6 +110,17 @@ public class ProductVariantController extends BaseController
     {
         ProductVariant productVariant = ProductVariantEdit.editToObj(productVariantEdit);
         return toAjax(productVariantService.updateProductVariant(productVariant));
+    }
+
+    /**
+     * 批量更新 SKU 运营字段
+     */
+    @PreAuthorize("@ss.hasPermi('erp:variant:edit')")
+    @Log(title = "SKU运营台", businessType = BusinessType.UPDATE)
+    @PutMapping("/batch")
+    public AjaxResult batchEdit(@RequestBody ProductVariantBatchEdit productVariantBatchEdit)
+    {
+        return toAjax(productVariantService.batchUpdateSkuOperations(productVariantBatchEdit));
     }
 
     /**

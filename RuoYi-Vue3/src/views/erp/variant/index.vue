@@ -1,532 +1,769 @@
 <template>
-  <div class="app-container">
-    <el-form :model="queryParams" ref="queryForm" size="small" :inline="true" v-show="showSearch" label-width="68px">
-      <el-form-item label="关联商品主表ID" prop="productId">
-        <el-input
-          v-model="queryParams.productId"
-          placeholder="请输入关联商品主表ID"
-          clearable
-          @keyup.enter.native="handleQuery"
-        />
+  <div class="app-container sku-console">
+    <el-form ref="queryRef" :model="queryParams" :inline="true" v-show="showSearch" label-width="78px" class="sku-filter">
+      <el-form-item label="店铺" prop="storeId">
+        <el-select v-model="queryParams.storeId" placeholder="全部店铺" clearable filterable class="w-180" @change="handleQuery">
+          <el-option v-for="store in storeOptions" :key="store.storeId" :label="store.storeName || store.shopName" :value="store.storeId" />
+        </el-select>
       </el-form-item>
-      <el-form-item label="Shopify平台变体ID" prop="shopifyVariantId">
-        <el-input
-          v-model="queryParams.shopifyVariantId"
-          placeholder="请输入Shopify平台变体ID"
-          clearable
-          @keyup.enter.native="handleQuery"
-        />
+      <el-form-item label="商品" prop="productKeyword">
+        <el-input v-model="queryParams.productKeyword" placeholder="标题/SPU/ID" clearable class="w-180" @keyup.enter="handleQuery" />
       </el-form-item>
       <el-form-item label="SKU" prop="sku">
-        <el-input
-          v-model="queryParams.sku"
-          placeholder="请输入SKU"
-          clearable
-          @keyup.enter.native="handleQuery"
-        />
+        <el-input v-model="queryParams.sku" placeholder="SKU" clearable class="w-170" @keyup.enter="handleQuery" />
       </el-form-item>
-      <el-form-item label="销售价格(美元*100)" prop="price">
-        <el-input
-          v-model="queryParams.price"
-          placeholder="请输入销售价格(美元*100)"
-          clearable
-          @keyup.enter.native="handleQuery"
-        />
+      <el-form-item label="Shopify" prop="shopifyVariantId">
+        <el-input v-model="queryParams.shopifyVariantId" placeholder="Variant ID" clearable class="w-180" @keyup.enter="handleQuery" />
       </el-form-item>
-      <el-form-item label="采购价" prop="purchasePrice">
-        <el-input
-          v-model="queryParams.purchasePrice"
-          placeholder="请输入采购价"
-          clearable
-          @keyup.enter.native="handleQuery"
-        />
+      <el-form-item label="同步" prop="syncStatus">
+        <el-select v-model="queryParams.syncStatus" placeholder="全部" clearable class="w-130" @change="handleQuery">
+          <el-option label="待同步" value="0" />
+          <el-option label="成功" value="1" />
+          <el-option label="失败" value="2" />
+          <el-option label="同步中" value="3" />
+          <el-option label="部分成功" value="4" />
+        </el-select>
       </el-form-item>
-      <el-form-item label="运费是否来自实际发货数据(0:否, 1:是)" prop="isActualShipment">
-        <el-select v-model="queryParams.isActualShipment" placeholder="请选择运费是否来自实际发货数据(0:否, 1:是)" clearable>
-          <el-option
-            v-for="dict in dict.type.erp_product_variant_is_actual_shipment"
-            :key="dict.value"
-            :label="dict.label"
-            :value="dict.value"
-          />
+      <el-form-item label="可售" prop="isActiveAvailable">
+        <el-select v-model="queryParams.isActiveAvailable" placeholder="全部" clearable class="w-110" @change="handleQuery">
+          <el-option label="可售" value="1" />
+          <el-option label="停用" value="0" />
         </el-select>
       </el-form-item>
       <el-form-item label="创建时间">
         <el-date-picker
-          v-model="daterangeCreateTime"
-          style="width: 240px"
-          value-format="yyyy-MM-dd"
+          v-model="dateRange"
           type="daterange"
+          value-format="YYYY-MM-DD"
           range-separator="-"
           start-placeholder="开始日期"
           end-placeholder="结束日期"
-        ></el-date-picker>
+          class="w-240"
+        />
       </el-form-item>
       <el-form-item>
-        <el-button type="primary" icon="el-icon-search" size="mini" @click="handleQuery">搜索</el-button>
-        <el-button icon="el-icon-refresh" size="mini" @click="resetQuery">重置</el-button>
+        <el-checkbox v-model="queryParams.purchaseUrlMissing" @change="handleQuery">缺采购链接</el-checkbox>
+        <el-checkbox v-model="queryParams.lowProfitOnly" @change="handleQuery">低毛利</el-checkbox>
+      </el-form-item>
+      <el-form-item>
+        <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
+        <el-button icon="Refresh" @click="resetQuery">重置</el-button>
       </el-form-item>
     </el-form>
 
-    <el-row :gutter="10" class="mb8">
+    <section class="metric-grid">
+      <button type="button" class="metric" @click="clearQuickFilters">
+        <span>SKU 总数</span>
+        <strong>{{ summary.totalCount || 0 }}</strong>
+      </button>
+      <button type="button" class="metric warning" @click="applySyncFilter">
+        <span>待同步</span>
+        <strong>{{ summary.needSyncCount || 0 }}</strong>
+      </button>
+      <button type="button" class="metric danger" @click="applyLowProfitFilter">
+        <span>低毛利</span>
+        <strong>{{ summary.lowProfitCount || 0 }}</strong>
+      </button>
+      <button type="button" class="metric danger" @click="applyMissingPurchaseFilter">
+        <span>缺采购链接</span>
+        <strong>{{ summary.missingPurchaseUrlCount || 0 }}</strong>
+      </button>
+      <button type="button" class="metric success">
+        <span>近30天有单</span>
+        <strong>{{ summary.orderedSkuCount30d || 0 }}</strong>
+      </button>
+    </section>
+
+    <el-row :gutter="10" class="mb8 toolbar-row">
       <el-col :span="1.5">
-        <el-button
-          type="primary"
-          plain
-          icon="el-icon-plus"
-          size="mini"
-          @click="handleAdd"
-          v-hasPermi="['erp:variant:add']"
-        >新增</el-button>
+        <el-button type="primary" plain icon="Edit" :disabled="multiple" @click="openBatchEdit" v-hasPermi="['erp:variant:edit']">批量编辑</el-button>
       </el-col>
       <el-col :span="1.5">
-        <el-button
-          type="success"
-          plain
-          icon="el-icon-edit"
-          size="mini"
-          :disabled="single"
-          @click="handleUpdate"
-          v-hasPermi="['erp:variant:edit']"
-        >修改</el-button>
+        <el-button type="info" plain icon="Upload" @click="handleImport" v-hasPermi="['erp:variant:import']">导入</el-button>
       </el-col>
       <el-col :span="1.5">
-        <el-button
-          type="danger"
-          plain
-          icon="el-icon-delete"
-          size="mini"
-          :disabled="multiple"
-          @click="handleDelete"
-          v-hasPermi="['erp:variant:remove']"
-        >删除</el-button>
+        <el-button type="warning" plain icon="Download" @click="handleExport" v-hasPermi="['erp:variant:export']">导出</el-button>
       </el-col>
       <el-col :span="1.5">
-        <el-button
-          type="info"
-          plain
-          icon="el-icon-upload2"
-          size="mini"
-          @click="handleImport"
-          v-hasPermi="['erp:variant:import']"
-        >导入</el-button>
+        <el-button icon="Refresh" @click="refreshAll">刷新</el-button>
       </el-col>
-      <el-col :span="1.5">
-        <el-button
-          type="warning"
-          plain
-          icon="el-icon-download"
-          size="mini"
-          @click="handleExport"
-          v-hasPermi="['erp:variant:export']"
-        >导出</el-button>
-      </el-col>
-      <right-toolbar :showSearch.sync="showSearch" @queryTable="getList" :columns="columns"></right-toolbar>
+      <right-toolbar v-model:showSearch="showSearch" @queryTable="getList" />
     </el-row>
 
-    <el-table v-loading="loading" :data="variantList" @selection-change="handleSelectionChange">
-      <el-table-column type="selection" width="55" align="center" />
-      <el-table-column label="本地主键" align="center" v-if="columns[0].visible" prop="variantId" />
-        <el-table-column label="关联商品主表ID" :show-overflow-tooltip="true" align="center" v-if="columns[1].visible" prop="productId" />
-        <el-table-column label="Shopify平台变体ID" :show-overflow-tooltip="true" align="center" v-if="columns[2].visible" prop="shopifyVariantId" />
-        <el-table-column label="SKU" :show-overflow-tooltip="true" align="center" v-if="columns[3].visible" prop="sku" />
-        <el-table-column label="销售价格(美元*100)" :show-overflow-tooltip="true" align="center" v-if="columns[4].visible" prop="price" />
-        <el-table-column label="原价/对比价(美元*100)" :show-overflow-tooltip="true" align="center" v-if="columns[5].visible" prop="compareAtPrice" />
-        <el-table-column label="采购价" :show-overflow-tooltip="true" align="center" v-if="columns[6].visible" prop="purchasePrice" />
-        <el-table-column label="采购链接" :show-overflow-tooltip="true" align="center" v-if="columns[7].visible" prop="purchaseUrl" />
-        <el-table-column label="采购产品名称" :show-overflow-tooltip="true" align="center" v-if="columns[8].visible" prop="purchaseProductName" />
-        <el-table-column label="变体对应的选项" :show-overflow-tooltip="true" align="center" v-if="columns[9].visible" prop="optionValues" />
-        <el-table-column label="关联的图片ID (若有)" align="center" v-if="columns[10].visible" prop="mediaId" width="100">
-        <template slot-scope="scope">
-          <image-preview :src="scope.row.mediaId" :width="50" :height="50"/>
+    <el-table
+      v-loading="loading"
+      :data="variantList"
+      border
+      row-key="variantId"
+      height="640"
+      :header-cell-style="{ background: '#f7f8fb', color: '#303133' }"
+      @selection-change="handleSelectionChange"
+    >
+      <el-table-column type="selection" width="45" align="center" fixed />
+      <el-table-column label="SKU" min-width="270" fixed>
+        <template #default="{ row }">
+          <div class="sku-cell">
+            <el-image class="sku-thumb" :src="row.mediaUrl || row.mainMediaUrl" fit="cover">
+              <template #error>
+                <div class="sku-thumb-empty">IMG</div>
+              </template>
+            </el-image>
+            <div class="sku-main">
+              <button type="button" class="sku-code" @click="openDetail(row)">{{ row.sku || '未填写 SKU' }}</button>
+              <div class="sku-subline">{{ row.productTitle || '-' }}</div>
+              <div class="sku-tags">
+                <el-tag v-if="row.spu" size="small" effect="plain">SPU {{ row.spu }}</el-tag>
+                <el-tag size="small" :type="activeTag(row.isActiveAvailable)" effect="light">{{ activeLabel(row.isActiveAvailable) }}</el-tag>
+              </div>
+            </div>
+          </div>
         </template>
       </el-table-column>
-        <el-table-column label="排序位置 列表中的第一个位置是 1" :show-overflow-tooltip="true" align="center" v-if="columns[11].visible" prop="position" />
-        <el-table-column label="包装宽度" :show-overflow-tooltip="true" align="center" v-if="columns[12].visible" prop="pkWidth" />
-        <el-table-column label="包装高度" :show-overflow-tooltip="true" align="center" v-if="columns[13].visible" prop="pkHeight" />
-        <el-table-column label="包装长度" :show-overflow-tooltip="true" align="center" v-if="columns[14].visible" prop="pkLength" />
-        <el-table-column label="材积重" :show-overflow-tooltip="true" align="center" v-if="columns[15].visible" prop="materialWeight" />
-        <el-table-column label="常规包装重量" :show-overflow-tooltip="true" align="center" v-if="columns[16].visible" prop="pkWeight" />
-        <el-table-column label="运费" :show-overflow-tooltip="true" align="center" v-if="columns[17].visible" prop="freight" />
-        <el-table-column label="运费是否来自实际发货数据(0:否, 1:是)" align="center" v-if="columns[18].visible" prop="isActualShipment">
-        <template slot-scope="scope">
-          <dict-tag :options="dict.type.erp_product_variant_is_actual_shipment" :value="scope.row.isActualShipment"/>
+      <el-table-column label="店铺/Shopify" min-width="210" show-overflow-tooltip>
+        <template #default="{ row }">
+          <div>{{ row.shopName || '-' }}</div>
+          <div class="muted">{{ shortId(row.shopifyVariantId) || '未绑定 Variant ID' }}</div>
         </template>
       </el-table-column>
-        <el-table-column label="商品成本价" :show-overflow-tooltip="true" align="center" v-if="columns[19].visible" prop="unitCostPrice" />
-        <el-table-column label="备注" :show-overflow-tooltip="true" align="center" v-if="columns[20].visible" prop="remark" />
-        <el-table-column label="操作" align="center" class-name="small-padding fixed-width">
-        <template slot-scope="scope">
-          <el-button
-            size="mini"
-            type="text"
-            icon="el-icon-edit"
-            @click="handleUpdate(scope.row)"
-            v-hasPermi="['erp:variant:edit']"
-          >修改</el-button>
-          <el-button
-            size="mini"
-            type="text"
-            icon="el-icon-delete"
-            @click="handleDelete(scope.row)"
-            v-hasPermi="['erp:variant:remove']"
-          >删除</el-button>
+      <el-table-column label="选项" prop="optionValues" min-width="180" show-overflow-tooltip />
+      <el-table-column label="价格" width="150" align="right">
+        <template #default="{ row }">
+          <div>{{ money(row.price) }}</div>
+          <div class="muted">对比 {{ money(row.compareAtPrice) }}</div>
+        </template>
+      </el-table-column>
+      <el-table-column label="成本" width="155" align="right">
+        <template #default="{ row }">
+          <div>采购 {{ money(row.purchasePrice) }}</div>
+          <div class="muted">运费 {{ money(row.freight) }}</div>
+        </template>
+      </el-table-column>
+      <el-table-column label="毛利" width="145" align="right">
+        <template #default="{ row }">
+          <div :class="{ danger: Number(row.profit || 0) < 0 }">{{ money(row.profit) }}</div>
+          <div :class="{ danger: Number(row.profitRate || 0) < 0.15 }">{{ percent(row.profitRate) }}</div>
+        </template>
+      </el-table-column>
+      <el-table-column label="包裹" width="160">
+        <template #default="{ row }">
+          <div>{{ packageSize(row) }}</div>
+          <div class="muted">重 {{ row.pkWeight ?? '-' }}</div>
+        </template>
+      </el-table-column>
+      <el-table-column label="近30天表现" width="180" align="right">
+        <template #default="{ row }">
+          <div>订单 {{ row.orderCount30d || 0 }} / 销售 {{ money(row.salesAmount30d) }}</div>
+          <div class="muted">退款 {{ money(row.refundAmount30d) }}</div>
+        </template>
+      </el-table-column>
+      <el-table-column label="采购/履约" width="145" align="center">
+        <template #default="{ row }">
+          <el-tag :type="Number(row.pendingPurchaseCount || 0) > 0 ? 'warning' : 'success'" effect="light">待采购 {{ row.pendingPurchaseCount || 0 }}</el-tag>
+          <el-tag class="mt4" :type="Number(row.fulfillmentExceptionCount || 0) > 0 ? 'danger' : 'info'" effect="plain">履约异常 {{ row.fulfillmentExceptionCount || 0 }}</el-tag>
+        </template>
+      </el-table-column>
+      <el-table-column label="健康检查" min-width="190">
+        <template #default="{ row }">
+          <div class="flag-list">
+            <el-tag v-for="flag in missingFlags(row)" :key="flag" size="small" :type="flagTag(flag)" effect="light">{{ flagLabel(flag) }}</el-tag>
+            <el-tag v-if="!missingFlags(row).length" size="small" type="success" effect="light">资料完整</el-tag>
+          </div>
+        </template>
+      </el-table-column>
+      <el-table-column label="同步" width="150" align="center">
+        <template #default="{ row }">
+          <el-tag :type="syncTag(row.productSyncStatus)" effect="light">{{ syncLabel(row.productSyncStatus) }}</el-tag>
+          <div class="muted">{{ formatTime(row.lastShopifyImportTime) }}</div>
+        </template>
+      </el-table-column>
+      <el-table-column label="采购链接" min-width="160" show-overflow-tooltip>
+        <template #default="{ row }">
+          <el-link v-if="row.purchaseUrl" type="primary" :href="row.purchaseUrl" target="_blank">打开来源</el-link>
+          <span v-else class="danger">缺失</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="操作" width="230" align="center" fixed="right">
+        <template #default="{ row }">
+          <el-button link type="primary" icon="Edit" @click="openQuickEdit(row)" v-hasPermi="['erp:variant:edit']">快编</el-button>
+          <el-button link type="primary" icon="View" @click="openDetail(row)">详情</el-button>
+          <el-dropdown trigger="click">
+            <el-button link type="primary">跳转<el-icon class="el-icon--right"><ArrowDown /></el-icon></el-button>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item @click="goProduct(row)">父商品</el-dropdown-item>
+                <el-dropdown-item @click="goOrders(row)">订单中心</el-dropdown-item>
+                <el-dropdown-item @click="goPurchase(row)">采购任务</el-dropdown-item>
+                <el-dropdown-item @click="goTasks(row)">任务诊断</el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
         </template>
       </el-table-column>
     </el-table>
 
-    <pagination
-      v-show="total>0"
-      :total="total"
-      :page.sync="queryParams.pageNum"
-      :limit.sync="queryParams.pageSize"
-      @pagination="getList"
-    />
+    <pagination v-show="total > 0" :total="total" v-model:page="queryParams.pageNum" v-model:limit="queryParams.pageSize" @pagination="getList" />
 
-    <!-- 添加或修改erp商品变体对话框 -->
-    <el-dialog :title="title" :visible.sync="open" width="500px" append-to-body>
-      <el-form ref="form" :model="form" :rules="rules" label-width="80px">
-        <el-form-item label="关联商品主表ID" prop="productId">
-          <el-input v-model="form.productId" placeholder="请输入关联商品主表ID" />
-        </el-form-item>
-        <el-form-item label="Shopify平台变体ID" prop="shopifyVariantId">
-          <el-input v-model="form.shopifyVariantId" placeholder="请输入Shopify平台变体ID" />
-        </el-form-item>
-        <el-form-item label="SKU" prop="sku">
-          <el-input v-model="form.sku" placeholder="请输入SKU" />
-        </el-form-item>
-        <el-form-item label="销售价格(美元*100)" prop="price">
-          <el-input v-model="form.price" placeholder="请输入销售价格(美元*100)" />
-        </el-form-item>
-        <el-form-item label="原价/对比价(美元*100)" prop="compareAtPrice">
-          <el-input v-model="form.compareAtPrice" placeholder="请输入原价/对比价(美元*100)" />
-        </el-form-item>
-        <el-form-item label="采购价" prop="purchasePrice">
-          <el-input v-model="form.purchasePrice" placeholder="请输入采购价" />
-        </el-form-item>
-        <el-form-item label="采购链接" prop="purchaseUrl">
-          <el-input v-model="form.purchaseUrl" type="textarea" placeholder="请输入内容" />
-        </el-form-item>
-        <el-form-item label="采购产品名称" prop="purchaseProductName">
-          <el-input v-model="form.purchaseProductName" placeholder="请输入采购产品名称" />
-        </el-form-item>
-        <el-form-item label="变体对应的选项" prop="optionValues">
-          <el-input v-model="form.optionValues" placeholder="请输入变体对应的选项" />
-        </el-form-item>
-        <el-form-item label="关联的图片ID (若有)" prop="mediaId">
-          <image-upload v-model="form.mediaId"/>
-        </el-form-item>
-        <el-form-item label="排序位置 列表中的第一个位置是 1" prop="position">
-          <el-input v-model="form.position" placeholder="请输入排序位置 列表中的第一个位置是 1" />
-        </el-form-item>
-        <el-form-item label="包装宽度" prop="pkWidth">
-          <el-input v-model="form.pkWidth" placeholder="请输入包装宽度" />
-        </el-form-item>
-        <el-form-item label="包装高度" prop="pkHeight">
-          <el-input v-model="form.pkHeight" placeholder="请输入包装高度" />
-        </el-form-item>
-        <el-form-item label="包装长度" prop="pkLength">
-          <el-input v-model="form.pkLength" placeholder="请输入包装长度" />
-        </el-form-item>
-        <el-form-item label="材积重" prop="materialWeight">
-          <el-input v-model="form.materialWeight" placeholder="请输入材积重" />
-        </el-form-item>
-        <el-form-item label="常规包装重量" prop="pkWeight">
-          <el-input v-model="form.pkWeight" placeholder="请输入常规包装重量" />
-        </el-form-item>
-        <el-form-item label="运费" prop="freight">
-          <el-input v-model="form.freight" placeholder="请输入运费" />
-        </el-form-item>
-        <el-form-item label="运费是否来自实际发货数据(0:否, 1:是)" prop="isActualShipment">
-          <el-radio-group v-model="form.isActualShipment">
-            <el-radio
-              v-for="dict in dict.type.erp_product_variant_is_actual_shipment"
-              :key="dict.value"
-              :label="dict.value"
-            >{{dict.label}}</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="商品成本价" prop="unitCostPrice">
-          <el-input v-model="form.unitCostPrice" placeholder="请输入商品成本价" />
-        </el-form-item>
-        <el-form-item label="备注" prop="remark">
-          <el-input v-model="form.remark" type="textarea" placeholder="请输入内容" />
-        </el-form-item>
-        <el-form-item label="删除标志 (0代表存在 2代表删除)" prop="delFlag">
-          <el-input v-model="form.delFlag" placeholder="请输入删除标志 (0代表存在 2代表删除)" />
-        </el-form-item>
+    <el-dialog v-model="quickEditOpen" title="SKU 快速编辑" width="680px" append-to-body :close-on-click-modal="!saveLoading">
+      <el-form ref="quickEditRef" :model="quickForm" :rules="quickRules" label-width="120px">
+        <el-row :gutter="16">
+          <el-col :span="12">
+            <el-form-item label="SKU" prop="sku">
+              <el-input v-model="quickForm.sku" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="是否可售">
+              <el-switch v-model="quickForm.isActiveAvailable" active-value="1" inactive-value="0" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item label="售价(分)" prop="price">
+              <el-input-number v-model="quickForm.price" :min="0" :precision="0" controls-position="right" class="full" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item label="对比价(分)">
+              <el-input-number v-model="quickForm.compareAtPrice" :min="0" :precision="0" controls-position="right" class="full" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item label="采购价(分)">
+              <el-input-number v-model="quickForm.purchasePrice" :min="0" :precision="0" controls-position="right" class="full" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="24">
+            <el-form-item label="采购链接">
+              <el-input v-model="quickForm.purchaseUrl" type="textarea" :rows="2" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item label="宽">
+              <el-input-number v-model="quickForm.pkWidth" :min="0" :precision="0" controls-position="right" class="full" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item label="高">
+              <el-input-number v-model="quickForm.pkHeight" :min="0" :precision="0" controls-position="right" class="full" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item label="长">
+              <el-input-number v-model="quickForm.pkLength" :min="0" :precision="0" controls-position="right" class="full" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item label="重量">
+              <el-input-number v-model="quickForm.pkWeight" :min="0" :precision="0" controls-position="right" class="full" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item label="运费(分)">
+              <el-input-number v-model="quickForm.freight" :min="0" :precision="0" controls-position="right" class="full" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item label="实际运费">
+              <el-switch v-model="quickForm.isActualShipment" active-value="1" inactive-value="0" />
+            </el-form-item>
+          </el-col>
+        </el-row>
       </el-form>
-      <div slot="footer" class="dialog-footer">
-        <el-button type="primary" @click="submitForm">确 定</el-button>
-        <el-button @click="cancel">取 消</el-button>
-      </div>
+      <template #footer>
+        <el-button @click="quickEditOpen = false">取消</el-button>
+        <el-button type="primary" :loading="saveLoading" @click="submitQuickEdit">保存并标记待同步</el-button>
+      </template>
     </el-dialog>
 
-    <!-- erp商品变体导入对话框 -->
-    <el-dialog :title="upload.title" :visible.sync="upload.open" width="400px" append-to-body>
-      <el-upload ref="upload" :limit="1" accept=".xlsx, .xls" :headers="upload.headers" :action="upload.url + '?updateSupport=' + upload.updateSupport" :disabled="upload.isUploading" :on-progress="handleFileUploadProgress" :on-success="handleFileSuccess" :auto-upload="false" drag>
-        <i class="el-icon-upload"></i>
+    <el-dialog v-model="batchOpen" title="批量编辑 SKU" width="640px" append-to-body :close-on-click-modal="!saveLoading">
+      <el-alert type="info" show-icon :closable="false" class="mb16" :title="`已选择 ${selectedIds.length} 个 SKU；留空的字段不会更新。`" />
+      <el-form :model="batchForm" label-width="120px">
+        <el-row :gutter="16">
+          <el-col :span="12"><el-form-item label="售价(分)"><el-input-number v-model="batchForm.price" :min="0" :precision="0" controls-position="right" class="full" /></el-form-item></el-col>
+          <el-col :span="12"><el-form-item label="对比价(分)"><el-input-number v-model="batchForm.compareAtPrice" :min="0" :precision="0" controls-position="right" class="full" /></el-form-item></el-col>
+          <el-col :span="12"><el-form-item label="采购价(分)"><el-input-number v-model="batchForm.purchasePrice" :min="0" :precision="0" controls-position="right" class="full" /></el-form-item></el-col>
+          <el-col :span="12"><el-form-item label="运费(分)"><el-input-number v-model="batchForm.freight" :min="0" :precision="0" controls-position="right" class="full" /></el-form-item></el-col>
+          <el-col :span="12"><el-form-item label="是否可售"><el-select v-model="batchForm.isActiveAvailable" clearable class="full"><el-option label="可售" value="1" /><el-option label="停用" value="0" /></el-select></el-form-item></el-col>
+          <el-col :span="12"><el-form-item label="重量"><el-input-number v-model="batchForm.pkWeight" :min="0" :precision="0" controls-position="right" class="full" /></el-form-item></el-col>
+          <el-col :span="24"><el-form-item label="采购链接"><el-input v-model="batchForm.purchaseUrl" type="textarea" :rows="2" /></el-form-item></el-col>
+          <el-col :span="24"><el-form-item label="备注"><el-input v-model="batchForm.remark" type="textarea" :rows="2" /></el-form-item></el-col>
+        </el-row>
+      </el-form>
+      <template #footer>
+        <el-button @click="batchOpen = false">取消</el-button>
+        <el-button type="primary" :loading="saveLoading" @click="submitBatchEdit">批量保存</el-button>
+      </template>
+    </el-dialog>
+
+    <el-drawer v-model="detailOpen" title="SKU 详情" size="720px">
+      <template v-if="currentSku">
+        <el-descriptions :column="2" border>
+          <el-descriptions-item label="SKU">{{ currentSku.sku || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="店铺">{{ currentSku.shopName || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="商品">{{ currentSku.productTitle || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="SPU">{{ currentSku.spu || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="Shopify Variant" :span="2">{{ currentSku.shopifyVariantId || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="采购链接" :span="2">
+            <el-link v-if="currentSku.purchaseUrl" type="primary" :href="currentSku.purchaseUrl" target="_blank">{{ currentSku.purchaseUrl }}</el-link>
+            <span v-else class="danger">未填写</span>
+          </el-descriptions-item>
+          <el-descriptions-item label="售价">{{ money(currentSku.price) }}</el-descriptions-item>
+          <el-descriptions-item label="毛利率">{{ percent(currentSku.profitRate) }}</el-descriptions-item>
+          <el-descriptions-item label="近30天订单">{{ currentSku.orderCount30d || 0 }}</el-descriptions-item>
+          <el-descriptions-item label="待采购">{{ currentSku.pendingPurchaseCount || 0 }}</el-descriptions-item>
+          <el-descriptions-item label="健康检查" :span="2">
+            <div class="flag-list">
+              <el-tag v-for="flag in missingFlags(currentSku)" :key="flag" :type="flagTag(flag)" effect="light">{{ flagLabel(flag) }}</el-tag>
+              <el-tag v-if="!missingFlags(currentSku).length" type="success" effect="light">资料完整</el-tag>
+            </div>
+          </el-descriptions-item>
+        </el-descriptions>
+      </template>
+    </el-drawer>
+
+    <el-dialog :title="upload.title" v-model="upload.open" width="420px" append-to-body>
+      <el-upload
+        ref="uploadRef"
+        :limit="1"
+        accept=".xlsx, .xls"
+        :headers="upload.headers"
+        :action="upload.url + '?updateSupport=' + upload.updateSupport"
+        :disabled="upload.isUploading"
+        :on-progress="handleFileUploadProgress"
+        :on-success="handleFileSuccess"
+        :auto-upload="false"
+        drag
+      >
+        <el-icon class="el-icon--upload"><UploadFilled /></el-icon>
         <div class="el-upload__text">将文件拖到此处，或<em>点击上传</em></div>
-        <div class="el-upload__tip text-center" slot="tip">
-          <div class="el-upload__tip" slot="tip">
-            <el-checkbox v-model="upload.updateSupport" />是否更新已经存在的erp商品变体数据
+        <template #tip>
+          <div class="el-upload__tip text-center">
+            <el-checkbox v-model="upload.updateSupport" /> 更新已存在 SKU
+            <el-link type="primary" :underline="false" class="ml8" @click="importTemplate">下载模板</el-link>
           </div>
-          <span>仅允许导入xls、xlsx格式文件。</span>
-          <el-link type="primary" :underline="false" style="font-size: 12px; vertical-align: baseline" @click="importTemplate">下载模板</el-link>
-        </div>
+        </template>
       </el-upload>
-      <div slot="footer" class="dialog-footer">
-        <el-button type="primary" @click="submitFileForm">确 定</el-button>
-        <el-button @click="upload.open = false">取 消</el-button>
-      </div>
+      <template #footer>
+        <el-button type="primary" @click="submitFileForm">确定</el-button>
+        <el-button @click="upload.open = false">取消</el-button>
+      </template>
     </el-dialog>
   </div>
 </template>
 
-<script>
-import { listVariant, getVariant, delVariant, addVariant, updateVariant, importVariant, importTemplateVariant } from "@/api/erp/variant";
-import { getToken } from "@/utils/auth";
+<script setup lang="ts">
+import { computed, getCurrentInstance, onMounted, reactive, ref, toRefs } from 'vue'
+import { useRouter } from 'vue-router'
+import { ArrowDown, UploadFilled } from '@element-plus/icons-vue'
+import type { FormInstance, FormRules, UploadInstance } from 'element-plus'
+import { batchUpdateVariant, getVariantSummary, importTemplateVariant, listVariant, updateVariant, type VariantBatchEdit, type VariantQuery, type VariantSummary } from '@/api/erp/variant'
+import { listActiveStores } from '@/api/erp/store'
+import { getToken } from '@/utils/auth'
+import { parseTime } from '@/utils/ruoyi'
+import type { ProductVariant, ShopifyStore } from '@/types/erp'
 
-export default {
-  name: "Variant",
-  dicts: ['erp_product_variant_is_actual_shipment'],
-  data() {
-    return {
-      //表格展示列
-      columns: [
-        { key: 0, label: '本地主键', visible: true },
-          { key: 1, label: '关联商品主表ID', visible: true },
-          { key: 2, label: 'Shopify平台变体ID', visible: true },
-          { key: 3, label: 'SKU', visible: true },
-          { key: 4, label: '销售价格(美元*100)', visible: true },
-          { key: 5, label: '原价/对比价(美元*100)', visible: true },
-          { key: 6, label: '采购价', visible: true },
-          { key: 7, label: '采购链接', visible: true },
-          { key: 8, label: '采购产品名称', visible: true },
-          { key: 9, label: '变体对应的选项', visible: true },
-          { key: 10, label: '关联的图片ID (若有)', visible: true },
-          { key: 11, label: '排序位置 列表中的第一个位置是 1', visible: true },
-          { key: 12, label: '包装宽度', visible: true },
-          { key: 13, label: '包装高度', visible: true },
-          { key: 14, label: '包装长度', visible: true },
-          { key: 15, label: '材积重', visible: true },
-          { key: 16, label: '常规包装重量', visible: true },
-          { key: 17, label: '运费', visible: true },
-          { key: 18, label: '运费是否来自实际发货数据(0:否, 1:是)', visible: true },
-          { key: 19, label: '商品成本价', visible: true },
-          { key: 20, label: '备注', visible: true },
-        ],
-      // 遮罩层
-      loading: true,
-      // 选中数组
-      ids: [],
-      // 非单个禁用
-      single: true,
-      // 非多个禁用
-      multiple: true,
-      // 显示搜索条件
-      showSearch: true,
-      // 总条数
-      total: 0,
-      // erp商品变体表格数据
-      variantList: [],
-      // 弹出层标题
-      title: "",
-      // 是否显示弹出层
-      open: false,
-      // 删除标志 (0代表存在 2代表删除)时间范围
-      daterangeCreateTime: [],
-      // 查询参数
-      queryParams: {
-        pageNum: 1,
-        pageSize: 10,
-        productId: null,
-        shopifyVariantId: null,
-        sku: null,
-        price: null,
-        purchasePrice: null,
-        isActualShipment: null,
-        createTime: null,
-      },
-      // 表单参数
-      form: {},
-      // 导出地址
-      exportUrl: 'erp/variant/export',
-      // erp商品变体导入参数
-      upload: {
-        // 是否显示弹出层（erp商品变体导入）
-        open: false,
-        // 弹出层标题（erp商品变体导入）
-        title: "",
-        // 是否禁用上传
-        isUploading: false,
-        // 是否更新已经存在的erp商品变体数据
-        updateSupport: 0,
-        // 设置上传的请求头部
-        headers: { Authorization: "Bearer " + getToken() },
-        // 上传的地址
-        url:  import.meta.env.VITE_APP_BASE_API + "/erp/variant/importData",
-        // 下载模板的地址
-        templateUrl: 'erp/variant/importTemplate'
-      },
-      // 表单校验
-      rules: {
-        productId: [
-          { required: true, message: "关联商品主表ID不能为空", trigger: "blur" }
-        ],
-      }
-    };
-  },
-  created() {
-    this.getList();
-  },
-  methods: {
-    /** 查询erp商品变体列表 */
-    getList() {
-      this.loading = true;
-      this.queryParams.params = {};
-      if (null != this.daterangeCreateTime && '' != this.daterangeCreateTime) {
-        this.queryParams.params["beginCreateTime"] = this.daterangeCreateTime[0];
-        this.queryParams.params["endCreateTime"] = this.daterangeCreateTime[1];
-      }
-      listVariant(this.queryParams).then(response => {
-        this.variantList = response.rows;
-        this.total = response.total;
-        this.loading = false;
-      });
-    },
-    // 取消按钮
-    cancel() {
-      this.open = false;
-      this.reset();
-    },
-    // 表单重置
-    reset() {
-      this.form = {
-        variantId: null,
-        productId: null,
-        shopifyVariantId: null,
-        sku: null,
-        price: null,
-        compareAtPrice: null,
-        purchasePrice: null,
-        purchaseUrl: null,
-        purchaseProductName: null,
-        optionValues: null,
-        mediaId: null,
-        position: null,
-        pkWidth: null,
-        pkHeight: null,
-        pkLength: null,
-        materialWeight: null,
-        pkWeight: null,
-        freight: null,
-        isActualShipment: null,
-        unitCostPrice: null,
-        createBy: null,
-        createTime: null,
-        updateBy: null,
-        updateTime: null,
-        remark: null,
-        delFlag: null
-      };
-      this.resetForm("form");
-    },
-    /** 搜索按钮操作 */
-    handleQuery() {
-      this.queryParams.pageNum = 1;
-      this.getList();
-    },
-    /** 重置按钮操作 */
-    resetQuery() {
-      this.daterangeCreateTime = [];
-      this.resetForm("queryForm");
-      this.handleQuery();
-    },
-    // 多选框选中数据
-    handleSelectionChange(selection) {
-      this.ids = selection.map(item => item.variantId)
-      this.single = selection.length!==1
-      this.multiple = !selection.length
-    },
-    /** 新增按钮操作 */
-    handleAdd() {
-      this.reset();
-      this.open = true;
-      this.title = "添加erp商品变体";
-    },
-    /** 修改按钮操作 */
-    handleUpdate(row) {
-      this.reset();
-      const variantId = row.variantId || this.ids
-      getVariant(variantId).then(response => {
-        this.form = response.data;
-        this.open = true;
-        this.title = "修改erp商品变体";
-      });
-    },
-    /** 提交按钮 */
-    submitForm() {
-      this.$refs["form"].validate(valid => {
-        if (valid) {
-          if (this.form.variantId != null) {
-            updateVariant(this.form).then(response => {
-              this.$modal.msgSuccess("修改成功");
-              this.open = false;
-              this.getList();
-            });
-          } else {
-            addVariant(this.form).then(response => {
-              this.$modal.msgSuccess("新增成功");
-              this.open = false;
-              this.getList();
-            });
-          }
-        }
-      });
-    },
-    /** 删除按钮操作 */
-    handleDelete(row) {
-      const variantIds = row.variantId || this.ids;
-      this.$modal.confirm('是否确认删除erp商品变体编号为"' + variantIds + '"的数据项？').then(function() {
-        return delVariant(variantIds);
-      }).then(() => {
-        this.getList();
-        this.$modal.msgSuccess("删除成功");
-      }).catch(() => {});
-    },
-    /** 导出按钮操作 */
-    handleExport() {
-      this.download(this.exportUrl, {
-        ...this.queryParams
-      }, `variant_${new Date().getTime()}.xlsx`)
-    },
-    /** 导入按钮操作 */
-    handleImport() {
-      this.upload.title = "erp商品变体导入";
-      this.upload.open = true;
-    },
-    /** 下载模板操作 */
-    importTemplate() {
-      this.download(this.upload.templateUrl, {
-      }, `variant_template_${new Date().getTime()}.xlsx`)
-    },
-    // 文件上传中处理
-    handleFileUploadProgress(event, file, fileList) {
-      this.upload.isUploading = true;
-    },
-    // 文件上传成功处理
-    handleFileSuccess(response, file, fileList) {
-      this.upload.open = false;
-      this.upload.isUploading = false;
-      this.$refs.upload.clearFiles();
-      this.$alert("<div style='overflow: auto;overflow-x: hidden;max-height: 70vh;padding: 10px 20px 0;'>" + response.msg + "</div>", "导入结果", { dangerouslyUseHTMLString: true });
-      this.getList();
-    },
-    // 提交上传文件
-    submitFileForm() {
-      this.$refs.upload.submit();
-    }
+const { proxy } = getCurrentInstance() as any
+const router = useRouter()
+
+const loading = ref(false)
+const saveLoading = ref(false)
+const showSearch = ref(true)
+const total = ref(0)
+const variantList = ref<ProductVariant[]>([])
+const storeOptions = ref<ShopifyStore[]>([])
+const selectedIds = ref<number[]>([])
+const summary = ref<VariantSummary>({})
+const dateRange = ref<string[]>([])
+const quickEditOpen = ref(false)
+const batchOpen = ref(false)
+const detailOpen = ref(false)
+const currentSku = ref<ProductVariant | null>(null)
+const quickEditRef = ref<FormInstance>()
+const uploadRef = ref<UploadInstance>()
+
+const data = reactive({
+  queryParams: {
+    pageNum: 1,
+    pageSize: 10,
+    storeId: undefined,
+    productKeyword: undefined,
+    sku: undefined,
+    shopifyVariantId: undefined,
+    syncStatus: undefined,
+    isActiveAvailable: undefined,
+    purchaseUrlMissing: false,
+    lowProfitOnly: false,
+    params: {}
+  } as VariantQuery
+})
+
+const { queryParams } = toRefs(data)
+const multiple = computed(() => selectedIds.value.length === 0)
+
+const quickForm = reactive<Partial<ProductVariant>>({})
+const batchForm = reactive<Partial<VariantBatchEdit>>({})
+
+const quickRules: FormRules = {
+  sku: [{ required: true, message: 'SKU 不能为空', trigger: 'blur' }],
+  price: [{ required: true, message: '售价不能为空', trigger: 'blur' }]
+}
+
+const upload = reactive({
+  open: false,
+  title: 'SKU 导入',
+  isUploading: false,
+  updateSupport: false,
+  headers: { Authorization: `Bearer ${getToken()}` },
+  url: `${import.meta.env.VITE_APP_BASE_API}/erp/variant/importData`,
+  templateUrl: 'erp/variant/importTemplate'
+})
+
+function applyDateRange(): VariantQuery {
+  const params: Record<string, unknown> = {}
+  if (dateRange.value?.length === 2) {
+    params.beginCreateTime = dateRange.value[0]
+    params.endCreateTime = dateRange.value[1]
   }
-};
+  return { ...queryParams.value, params }
+}
+
+function getList(): void {
+  loading.value = true
+  const params = applyDateRange()
+  Promise.all([listVariant(params), getVariantSummary(params)]).then(([listRes, summaryRes]: any[]) => {
+    variantList.value = listRes.rows || []
+    total.value = listRes.total || 0
+    summary.value = summaryRes.data || {}
+  }).finally(() => {
+    loading.value = false
+  })
+}
+
+function refreshAll(): void {
+  getList()
+}
+
+function handleQuery(): void {
+  queryParams.value.pageNum = 1
+  getList()
+}
+
+function resetQuery(): void {
+  dateRange.value = []
+  queryParams.value.purchaseUrlMissing = false
+  queryParams.value.lowProfitOnly = false
+  proxy.resetForm('queryRef')
+  handleQuery()
+}
+
+function clearQuickFilters(): void {
+  queryParams.value.syncStatus = undefined
+  queryParams.value.purchaseUrlMissing = false
+  queryParams.value.lowProfitOnly = false
+  handleQuery()
+}
+
+function applySyncFilter(): void {
+  queryParams.value.syncStatus = '0'
+  handleQuery()
+}
+
+function applyLowProfitFilter(): void {
+  queryParams.value.lowProfitOnly = true
+  handleQuery()
+}
+
+function applyMissingPurchaseFilter(): void {
+  queryParams.value.purchaseUrlMissing = true
+  handleQuery()
+}
+
+function handleSelectionChange(selection: ProductVariant[]): void {
+  selectedIds.value = selection.map((item) => item.variantId)
+}
+
+function openQuickEdit(row: ProductVariant): void {
+  Object.assign(quickForm, row)
+  currentSku.value = row
+  quickEditOpen.value = true
+}
+
+function submitQuickEdit(): void {
+  quickEditRef.value?.validate((valid) => {
+    if (!valid) return
+    saveLoading.value = true
+    updateVariant(quickForm as ProductVariant).then(() => {
+      proxy.$modal.msgSuccess('SKU 已保存，父商品已标记待同步')
+      quickEditOpen.value = false
+      getList()
+    }).finally(() => {
+      saveLoading.value = false
+    })
+  })
+}
+
+function openBatchEdit(): void {
+  Object.keys(batchForm).forEach((key) => delete (batchForm as Record<string, unknown>)[key])
+  batchOpen.value = true
+}
+
+function submitBatchEdit(): void {
+  saveLoading.value = true
+  batchUpdateVariant({ ...batchForm, variantIds: selectedIds.value } as VariantBatchEdit).then(() => {
+    proxy.$modal.msgSuccess('批量更新完成，相关父商品已标记待同步')
+    batchOpen.value = false
+    getList()
+  }).finally(() => {
+    saveLoading.value = false
+  })
+}
+
+function openDetail(row: ProductVariant): void {
+  currentSku.value = row
+  detailOpen.value = true
+}
+
+function handleExport(): void {
+  proxy.download('erp/variant/export', applyDateRange(), `sku_${new Date().getTime()}.xlsx`)
+}
+
+function handleImport(): void {
+  upload.title = 'SKU 导入'
+  upload.open = true
+}
+
+function importTemplate(): void {
+  proxy.download(upload.templateUrl, {}, `sku_template_${new Date().getTime()}.xlsx`)
+}
+
+function submitFileForm(): void {
+  uploadRef.value?.submit()
+}
+
+function handleFileUploadProgress(): void {
+  upload.isUploading = true
+}
+
+function handleFileSuccess(response: any): void {
+  upload.open = false
+  upload.isUploading = false
+  uploadRef.value?.clearFiles()
+  proxy.$alert(`<div style='overflow:auto;overflow-x:hidden;max-height:70vh;padding:10px 20px 0;'>${response.msg}</div>`, '导入结果', { dangerouslyUseHTMLString: true })
+  getList()
+}
+
+function goProduct(row: ProductVariant): void {
+  router.push({ path: '/erp/product', query: { productId: row.productId } })
+}
+
+function goOrders(row: ProductVariant): void {
+  router.push({ path: '/erp/order', query: { sku: row.sku } })
+}
+
+function goPurchase(row: ProductVariant): void {
+  router.push({ path: '/erp/purchase', query: { sku: row.sku } })
+}
+
+function goTasks(row: ProductVariant): void {
+  router.push({ path: '/erp/task', query: { productId: row.productId } })
+}
+
+function money(value?: number | null): string {
+  return ((Number(value || 0)) / 100).toFixed(2)
+}
+
+function percent(value?: number | null): string {
+  return `${(Number(value || 0) * 100).toFixed(2)}%`
+}
+
+function shortId(value?: string): string {
+  if (!value) return ''
+  const parts = value.split('/')
+  return parts[parts.length - 1] || value
+}
+
+function packageSize(row: ProductVariant): string {
+  return `${row.pkLength ?? '-'} x ${row.pkWidth ?? '-'} x ${row.pkHeight ?? '-'}`
+}
+
+function formatTime(value?: string | Date | null): string {
+  return parseTime(value as any, '{y}-{m}-{d} {h}:{i}') || '-'
+}
+
+function missingFlags(row: ProductVariant): string[] {
+  return (row.missingFlags || '').split(',').filter(Boolean)
+}
+
+function flagLabel(flag: string): string {
+  const labels: Record<string, string> = {
+    SKU_MISSING: '缺 SKU',
+    PURCHASE_URL_MISSING: '缺采购链接',
+    SHOPIFY_ID_MISSING: '未绑定 Shopify',
+    PACKAGE_MISSING: '缺包裹',
+    LOW_PROFIT: '低毛利'
+  }
+  return labels[flag] || flag
+}
+
+function flagTag(flag: string): 'success' | 'warning' | 'danger' | 'info' {
+  if (flag === 'LOW_PROFIT' || flag === 'PURCHASE_URL_MISSING') return 'danger'
+  if (flag === 'SHOPIFY_ID_MISSING' || flag === 'PACKAGE_MISSING') return 'warning'
+  return 'info'
+}
+
+function syncLabel(status?: string): string {
+  return ({ '0': '待同步', '1': '成功', '2': '失败', '3': '同步中', '4': '部分成功' } as Record<string, string>)[status || ''] || '待同步'
+}
+
+function syncTag(status?: string): 'success' | 'warning' | 'danger' | 'info' | 'primary' {
+  if (status === '1') return 'success'
+  if (status === '2') return 'danger'
+  if (status === '3') return 'primary'
+  if (status === '4') return 'warning'
+  return 'info'
+}
+
+function activeLabel(value?: string): string {
+  return value === '0' ? '停用' : '可售'
+}
+
+function activeTag(value?: string): 'success' | 'info' {
+  return value === '0' ? 'info' : 'success'
+}
+
+onMounted(() => {
+  listActiveStores().then((res: any) => {
+    storeOptions.value = res.data || []
+  })
+  getList()
+})
 </script>
+
+<style scoped lang="scss">
+.sku-console {
+  .w-110 { width: 110px; }
+  .w-130 { width: 130px; }
+  .w-170 { width: 170px; }
+  .w-180 { width: 180px; }
+  .w-240 { width: 240px; }
+}
+
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  margin: 10px 0 14px;
+}
+
+.metric {
+  text-align: left;
+  border: 1px solid #ebeef5;
+  border-radius: 6px;
+  background: #fff;
+  padding: 12px 14px;
+  cursor: pointer;
+
+  span {
+    display: block;
+    color: #909399;
+    font-size: 12px;
+    margin-bottom: 5px;
+  }
+
+  strong {
+    font-size: 22px;
+    color: #1f2f3d;
+  }
+
+  &.warning strong { color: #e6a23c; }
+  &.danger strong { color: #f56c6c; }
+  &.success strong { color: #67c23a; }
+}
+
+.toolbar-row {
+  align-items: center;
+}
+
+.sku-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.sku-thumb,
+.sku-thumb-empty {
+  width: 52px;
+  height: 52px;
+  border-radius: 6px;
+  background: #f5f7fa;
+  border: 1px solid #ebeef5;
+  flex: 0 0 52px;
+}
+
+.sku-thumb-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #c0c4cc;
+  font-size: 12px;
+}
+
+.sku-main {
+  min-width: 0;
+}
+
+.sku-code {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: #1f2f3d;
+  font-weight: 600;
+  cursor: pointer;
+  max-width: 190px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sku-subline {
+  color: #606266;
+  font-size: 12px;
+  max-width: 190px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sku-tags,
+.flag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.muted {
+  color: #909399;
+  font-size: 12px;
+}
+
+.danger {
+  color: #f56c6c;
+}
+
+.mt4 {
+  margin-top: 4px;
+}
+
+.mb16 {
+  margin-bottom: 16px;
+}
+
+.ml8 {
+  margin-left: 8px;
+}
+
+.full {
+  width: 100%;
+}
+</style>

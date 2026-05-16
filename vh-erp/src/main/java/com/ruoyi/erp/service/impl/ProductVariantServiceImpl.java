@@ -6,9 +6,14 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.ruoyi.common.exception.ServiceException;
 import com.ruoyi.common.utils.DateUtils;
 import com.ruoyi.common.utils.StringUtils;
+import com.ruoyi.erp.constant.ProductConstants;
+import com.ruoyi.erp.mapper.ProductMapper;
 import com.ruoyi.erp.mapper.ProductVariantMapper;
+import com.ruoyi.erp.model.domain.Product;
 import com.ruoyi.erp.model.domain.ProductVariant;
+import com.ruoyi.erp.model.dto.productVariant.ProductVariantBatchEdit;
 import com.ruoyi.erp.model.dto.productVariant.ProductVariantQuery;
+import com.ruoyi.erp.model.vo.productVariant.ProductVariantSummaryVo;
 import com.ruoyi.erp.model.vo.productVariant.ProductVariantVo;
 import com.ruoyi.erp.service.IProductQualityService;
 import com.ruoyi.erp.service.IProductVariantService;
@@ -30,6 +35,8 @@ public class ProductVariantServiceImpl extends ServiceImpl<ProductVariantMapper,
 
     @Resource
     private ProductVariantMapper productVariantMapper;
+    @Resource
+    private ProductMapper productMapper;
     @Resource
     private IProductQualityService productQualityService;
 
@@ -59,6 +66,29 @@ public class ProductVariantServiceImpl extends ServiceImpl<ProductVariantMapper,
     }
 
     /**
+     * 查询 SKU 运营台列表。
+     *
+     * @param query SKU 查询条件
+     * @return SKU 运营列表
+     */
+    @Override
+    public List<ProductVariantVo> selectSkuOperationList(ProductVariantQuery query) {
+        return productVariantMapper.selectSkuOperationList(query);
+    }
+
+    /**
+     * 查询 SKU 运营台汇总指标。
+     *
+     * @param query SKU 查询条件
+     * @return SKU 汇总指标
+     */
+    @Override
+    public ProductVariantSummaryVo selectSkuOperationSummary(ProductVariantQuery query) {
+        ProductVariantSummaryVo summary = productVariantMapper.selectSkuOperationSummary(query);
+        return summary == null ? new ProductVariantSummaryVo() : summary;
+    }
+
+    /**
      * 新增erp商品变体
      *
      * @param productVariant erp商品变体
@@ -67,8 +97,10 @@ public class ProductVariantServiceImpl extends ServiceImpl<ProductVariantMapper,
     @Override
     public int insertProductVariant(ProductVariant productVariant)
     {
+        validateSkuUnique(productVariant, null);
         productVariant.setCreateTime(DateUtils.getNowDate());
         int rows = productVariantMapper.insertProductVariant(productVariant);
+        markProductsWaitingSync(List.of(productVariant.getProductId()));
         return rows;
     }
 
@@ -82,6 +114,15 @@ public class ProductVariantServiceImpl extends ServiceImpl<ProductVariantMapper,
     public int updateProductVariant(ProductVariant productVariant)
     {
         ProductVariant oldVariant = productVariant.getVariantId() == null ? null : productVariantMapper.selectById(productVariant.getVariantId());
+        if (oldVariant != null) {
+            if (productVariant.getStoreId() == null) {
+                productVariant.setStoreId(oldVariant.getStoreId());
+            }
+            if (productVariant.getProductId() == null) {
+                productVariant.setProductId(oldVariant.getProductId());
+            }
+        }
+        validateSkuUnique(productVariant, productVariant.getVariantId());
         productVariant.setUpdateTime(DateUtils.getNowDate());
         int rows = productVariantMapper.updateProductVariant(productVariant);
         List<Long> productIds = new ArrayList<>();
@@ -89,6 +130,33 @@ public class ProductVariantServiceImpl extends ServiceImpl<ProductVariantMapper,
             productIds.add(oldVariant.getProductId());
         }
         productIds.add(productVariant.getProductId());
+        markProductsWaitingSync(productIds);
+        return rows;
+    }
+
+    /**
+     * 批量更新 SKU 运营字段，并标记父商品待同步。
+     *
+     * @param edit 批量编辑请求
+     * @return 影响 SKU 数
+     */
+    @Override
+    public int batchUpdateSkuOperations(ProductVariantBatchEdit edit) {
+        validateBatchEdit(edit);
+        List<ProductVariant> variants = productVariantMapper.selectBatchIds(edit.getVariantIds());
+        if (StringUtils.isEmpty(variants)) {
+            throw new ServiceException("未找到可更新的 SKU");
+        }
+        int rows = 0;
+        Date now = DateUtils.getNowDate();
+        for (ProductVariant variant : variants) {
+            ProductVariant update = new ProductVariant();
+            update.setVariantId(variant.getVariantId());
+            copyBatchFields(edit, update);
+            update.setUpdateTime(now);
+            rows += productVariantMapper.updateById(update);
+        }
+        markProductsWaitingSync(variants.stream().map(ProductVariant::getProductId).toList());
         return rows;
     }
 
@@ -106,6 +174,7 @@ public class ProductVariantServiceImpl extends ServiceImpl<ProductVariantMapper,
                 .filter(Objects::nonNull)
                 .toList();
         int rows = productVariantMapper.deleteProductVariantByVariantIds(variantIds);
+        markProductsWaitingSync(productIds);
         return rows;
     }
 
@@ -120,6 +189,9 @@ public class ProductVariantServiceImpl extends ServiceImpl<ProductVariantMapper,
     {
         ProductVariant variant = productVariantMapper.selectById(variantId);
         int rows = productVariantMapper.deleteProductVariantByVariantId(variantId);
+        if (variant != null) {
+            markProductsWaitingSync(List.of(variant.getProductId()));
+        }
         return rows;
     }
     //endregion
@@ -243,5 +315,116 @@ public class ProductVariantServiceImpl extends ServiceImpl<ProductVariantMapper,
     @Override
     public List<ProductVariant> selectListByProductId(Long productId) {
         return this.list(new LambdaQueryWrapper<>(ProductVariant.class).eq(ProductVariant::getProductId, productId));
+    }
+
+    /**
+     * 校验同店铺 SKU 唯一性。
+     *
+     * @param variant SKU 实体
+     * @param currentVariantId 当前 SKU 主键
+     */
+    private void validateSkuUnique(ProductVariant variant, Long currentVariantId) {
+        if (variant == null || StringUtils.isEmpty(variant.getSku()) || variant.getStoreId() == null) {
+            return;
+        }
+        QueryWrapper<ProductVariant> wrapper = new QueryWrapper<ProductVariant>()
+                .eq("store_id", variant.getStoreId())
+                .eq("sku", variant.getSku())
+                .ne(currentVariantId != null, "variant_id", currentVariantId);
+        ProductVariant duplicate = productVariantMapper.selectOne(wrapper);
+        if (duplicate != null) {
+            throw new ServiceException("同一店铺下 SKU 已存在，请更换 SKU");
+        }
+    }
+
+    /**
+     * 校验 SKU 批量编辑请求。
+     *
+     * @param edit 批量编辑请求
+     */
+    private void validateBatchEdit(ProductVariantBatchEdit edit) {
+        if (edit == null || StringUtils.isEmpty(edit.getVariantIds())) {
+            throw new ServiceException("请选择需要更新的 SKU");
+        }
+        validateNonNegative(edit.getPrice(), "销售价格不能小于0");
+        validateNonNegative(edit.getCompareAtPrice(), "对比价不能小于0");
+        validateNonNegative(edit.getPurchasePrice(), "采购价不能小于0");
+        validateNonNegative(edit.getFreight(), "运费不能小于0");
+        validateNonNegative(edit.getPkWidth(), "包装宽度不能小于0");
+        validateNonNegative(edit.getPkHeight(), "包装高度不能小于0");
+        validateNonNegative(edit.getPkLength(), "包装长度不能小于0");
+        validateNonNegative(edit.getPkWeight(), "包装重量不能小于0");
+    }
+
+    /**
+     * 校验非负数字。
+     *
+     * @param value 字段值
+     * @param message 错误提示
+     */
+    private void validateNonNegative(Integer value, String message) {
+        if (value != null && value < 0) {
+            throw new ServiceException(message);
+        }
+    }
+
+    /**
+     * 复制批量编辑中填写的字段。
+     *
+     * @param edit 批量编辑请求
+     * @param update SKU 更新实体
+     */
+    private void copyBatchFields(ProductVariantBatchEdit edit, ProductVariant update) {
+        if (edit.getPrice() != null) {
+            update.setPrice(edit.getPrice());
+        }
+        if (edit.getCompareAtPrice() != null) {
+            update.setCompareAtPrice(edit.getCompareAtPrice());
+        }
+        if (edit.getPurchasePrice() != null) {
+            update.setPurchasePrice(edit.getPurchasePrice());
+        }
+        if (edit.getPurchaseUrl() != null) {
+            update.setPurchaseUrl(edit.getPurchaseUrl());
+        }
+        if (edit.getFreight() != null) {
+            update.setFreight(edit.getFreight());
+        }
+        if (edit.getPkWidth() != null) {
+            update.setPkWidth(edit.getPkWidth());
+        }
+        if (edit.getPkHeight() != null) {
+            update.setPkHeight(edit.getPkHeight());
+        }
+        if (edit.getPkLength() != null) {
+            update.setPkLength(edit.getPkLength());
+        }
+        if (edit.getPkWeight() != null) {
+            update.setPkWeight(edit.getPkWeight());
+        }
+        if (edit.getIsActiveAvailable() != null) {
+            update.setIsActiveAvailable(edit.getIsActiveAvailable());
+        }
+        if (edit.getRemark() != null) {
+            update.setRemark(edit.getRemark());
+        }
+    }
+
+    /**
+     * 将父商品标记为待同步。
+     *
+     * @param productIds 父商品ID列表
+     */
+    private void markProductsWaitingSync(List<Long> productIds) {
+        if (StringUtils.isEmpty(productIds)) {
+            return;
+        }
+        productIds.stream().filter(Objects::nonNull).distinct().forEach(productId -> {
+            Product product = new Product();
+            product.setProductId(productId);
+            product.setSyncStatus(ProductConstants.SYNC_STATUS_WAITING);
+            product.setUpdateTime(DateUtils.getNowDate());
+            productMapper.updateById(product);
+        });
     }
 }

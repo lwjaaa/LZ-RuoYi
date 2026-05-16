@@ -3,7 +3,9 @@ package com.ruoyi.erp.service;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.ruoyi.erp.model.domain.ProductVariant;
+import com.ruoyi.erp.model.dto.productVariant.ProductVariantBatchEdit;
 import com.ruoyi.erp.model.dto.productVariant.ProductVariantQuery;
+import com.ruoyi.erp.model.vo.productVariant.ProductVariantSummaryVo;
 import com.ruoyi.erp.model.vo.productVariant.ProductVariantVo;
 
 import java.util.List;
@@ -33,6 +35,22 @@ public interface IProductVariantService extends IService<ProductVariant>
     public List<ProductVariant> selectProductVariantList(ProductVariant productVariant);
 
     /**
+     * 查询 SKU 运营台列表。
+     *
+     * @param query SKU 查询条件
+     * @return SKU 运营列表
+     */
+    List<ProductVariantVo> selectSkuOperationList(ProductVariantQuery query);
+
+    /**
+     * 查询 SKU 运营台汇总指标。
+     *
+     * @param query SKU 查询条件
+     * @return SKU 汇总指标
+     */
+    ProductVariantSummaryVo selectSkuOperationSummary(ProductVariantQuery query);
+
+    /**
      * 新增erp商品变体
      * 
      * @param productVariant erp商品变体
@@ -47,6 +65,14 @@ public interface IProductVariantService extends IService<ProductVariant>
      * @return 结果
      */
     public int updateProductVariant(ProductVariant productVariant);
+
+    /**
+     * 批量更新 SKU 运营字段，并标记父商品待同步。
+     *
+     * @param edit 批量编辑请求
+     * @return 影响 SKU 数
+     */
+    int batchUpdateSkuOperations(ProductVariantBatchEdit edit);
 
     /**
      * 批量删除erp商品变体

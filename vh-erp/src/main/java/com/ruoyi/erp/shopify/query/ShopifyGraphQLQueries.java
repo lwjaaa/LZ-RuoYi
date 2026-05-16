@@ -384,6 +384,106 @@ public enum ShopifyGraphQLQueries {
             }
           }
         }
+        """),
+
+    ORDER_IMPORT_PAGE("""
+        query ordersForImport($first: Int!, $after: String, $query: String) {
+          orders(first: $first, after: $after, query: $query, sortKey: UPDATED_AT) {
+            pageInfo {
+              hasNextPage
+              endCursor
+            }
+            edges {
+              node {
+                id
+                name
+                orderNumber: number
+                email
+                phone
+                displayFinancialStatus
+                displayFulfillmentStatus
+                currencyCode
+                createdAt
+                updatedAt
+                cancelledAt
+                closedAt
+                totalPriceSet { shopMoney { amount currencyCode } }
+                subtotalPriceSet { shopMoney { amount currencyCode } }
+                totalTaxSet { shopMoney { amount currencyCode } }
+                totalShippingPriceSet { shopMoney { amount currencyCode } }
+                totalRefundedSet { shopMoney { amount currencyCode } }
+                customer {
+                  id
+                  email
+                  phone
+                  firstName
+                  lastName
+                  displayName
+                }
+                shippingAddress {
+                  name
+                  phone
+                  country
+                  province
+                  city
+                  zip
+                  address1
+                  address2
+                }
+                lineItems(first: 250) {
+                  edges {
+                    node {
+                      id
+                      title
+                      variantTitle
+                      sku
+                      quantity
+                      originalUnitPriceSet { shopMoney { amount currencyCode } }
+                      discountedTotalSet { shopMoney { amount currencyCode } }
+                      product { id }
+                      variant { id sku }
+                    }
+                  }
+                }
+                refunds {
+                  id
+                  createdAt
+                  note
+                  totalRefundedSet { shopMoney { amount currencyCode } }
+                }
+              }
+            }
+          }
+        }
+        """),
+
+    FULFILLMENT_ORDERS_BY_ORDER("""
+        query fulfillmentOrdersByOrder($id: ID!) {
+          node(id: $id) {
+            ... on Order {
+              fulfillmentOrders(first: 50) {
+                edges {
+                  node {
+                    id
+                    status
+                  }
+                }
+              }
+            }
+          }
+        }
+        """),
+
+    FULFILLMENT_CREATE("""
+        mutation fulfillmentCreate($fulfillment: FulfillmentInput!, $message: String) {
+          fulfillmentCreate(fulfillment: $fulfillment, message: $message) {
+            userErrors { field message code }
+            fulfillment {
+              id
+              status
+            }
+          }
+        }
         """);
 
     private final String query;

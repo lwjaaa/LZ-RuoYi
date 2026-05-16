@@ -98,6 +98,11 @@ export interface ProductOptionValue {
 export interface ProductVariant {
   variantId: number
   productId: number
+  productTitle?: string
+  spu?: string
+  shopName?: string
+  mainMediaUrl?: string
+  productSyncStatus?: string
   storeId?: number
   shopifyVariantId?: string
   shopifyInventoryItemId?: string
@@ -111,6 +116,7 @@ export interface ProductVariant {
   optionValueList: ProductVariantOption[]
   mediaId?: number
   media?: Media
+  mediaUrl?: string
   position: number
   pkWidth?: number
   pkHeight?: number
@@ -125,6 +131,13 @@ export interface ProductVariant {
   suggestedPrice?: number | null
   profit?: number | null
   profitRate?: number | null
+  missingFlags?: string
+  needSync?: boolean
+  orderCount30d?: number
+  salesAmount30d?: number
+  refundAmount30d?: number
+  pendingPurchaseCount?: number
+  fulfillmentExceptionCount?: number
   createBy?: string
   createTime?: Date
   updateBy?: string
@@ -318,6 +331,150 @@ export interface ShopifyProductImportCursor {
   lastErrorSummary?: string
   createTime?: string | Date
   updateTime?: string | Date
+}
+
+export interface ShopifyOrderSyncCursor {
+  cursorId?: number
+  storeId?: number
+  status?: string
+  lastSuccessUpdatedAt?: string | Date | null
+  lastSuccessSyncTime?: string | Date | null
+  lastTaskId?: number
+  lastErrorSummary?: string
+  createTime?: string | Date
+  updateTime?: string | Date
+}
+
+export interface ShopifyOrderLineItem {
+  lineItemId?: number
+  orderId?: number
+  storeId?: number
+  shopifyLineItemId?: string
+  shopifyProductId?: string
+  shopifyVariantId?: string
+  productId?: number
+  variantId?: number
+  sku?: string
+  title?: string
+  variantTitle?: string
+  quantity?: number
+  unitPrice?: number
+  totalPrice?: number
+  sourceUrl?: string
+  purchaseUrl?: string
+  purchasePrice?: number
+  purchaseAmount?: number
+  purchaseStatus?: string
+  purchaseRemark?: string
+  createTime?: string | Date
+  updateTime?: string | Date
+}
+
+export interface ShopifyOrder {
+  orderId?: number
+  storeId?: number
+  shopName?: string
+  shopifyOrderId?: string
+  orderName?: string
+  orderNumber?: number
+  customerId?: number
+  customerName?: string
+  email?: string
+  phone?: string
+  shippingName?: string
+  shippingPhone?: string
+  shippingCountry?: string
+  shippingProvince?: string
+  shippingCity?: string
+  shippingZip?: string
+  shippingAddress1?: string
+  shippingAddress2?: string
+  financialStatus?: string
+  fulfillmentStatus?: string
+  purchaseStatus?: string
+  fulfillmentSyncStatus?: string
+  currencyCode?: string
+  totalPrice?: number
+  subtotalPrice?: number
+  totalTax?: number
+  totalShippingPrice?: number
+  totalRefund?: number
+  purchaseCost?: number
+  shippingCost?: number
+  grossProfit?: number
+  grossProfitRate?: number
+  placedAt?: string | Date
+  shopifyUpdatedAt?: string | Date
+  cancelledAt?: string | Date
+  closedAt?: string | Date
+  lastShopifyImportTime?: string | Date
+  remark?: string
+  createTime?: string | Date
+  updateTime?: string | Date
+  lineItems?: ShopifyOrderLineItem[]
+}
+
+export interface PurchaseTask {
+  purchaseTaskId?: number
+  orderId?: number
+  orderLineItemId?: number
+  storeId?: number
+  orderName?: string
+  sku?: string
+  itemTitle?: string
+  quantity?: number
+  purchaseUrl?: string
+  expectedPurchaseAmount?: number
+  actualPurchaseAmount?: number
+  purchaseStatus?: string
+  exceptionReason?: string
+  remark?: string
+  purchasedAt?: string | Date
+  createTime?: string | Date
+  updateTime?: string | Date
+}
+
+export interface FulfillmentRecord {
+  fulfillmentId?: number
+  orderId?: number
+  storeId?: number
+  shopifyOrderId?: string
+  shopifyFulfillmentOrderId?: string
+  shopifyFulfillmentId?: string
+  trackingCompany?: string
+  trackingNumber?: string
+  trackingUrl?: string
+  shippingFee?: number
+  syncStatus?: string
+  errorMessage?: string
+  fulfilledAt?: string | Date
+  createTime?: string | Date
+  updateTime?: string | Date
+}
+
+export interface RefundRecord {
+  refundId?: number
+  orderId?: number
+  storeId?: number
+  shopifyRefundId?: string
+  refundAmount?: number
+  currencyCode?: string
+  reason?: string
+  note?: string
+  responsibility?: string
+  refundTime?: string | Date
+  createTime?: string | Date
+  updateTime?: string | Date
+}
+
+export interface OrderProfitSummary {
+  orderCount?: number
+  salesAmount?: number
+  refundAmount?: number
+  purchaseCost?: number
+  shippingCost?: number
+  grossProfit?: number
+  grossProfitRate?: number
 }
 
 export interface ProductTag {
